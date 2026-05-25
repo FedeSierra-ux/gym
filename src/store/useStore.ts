@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 
@@ -27,6 +27,7 @@ interface AppState {
   routines: Routine[]
   workouts: Workout[]
   prs: PR[]
+  exerciseTips: ExerciseTips
   userName: string
   seeded: boolean
 
@@ -55,6 +56,9 @@ interface AppState {
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
 
+  // Tips
+  setExerciseTip: (exerciseId: string, tip: string) => void
+
   // Seed
   seedData: () => void
 }
@@ -71,6 +75,7 @@ export const useStore = create<AppState>()(
       routines: [],
       workouts: [],
       prs: [],
+      exerciseTips: {},
       userName: 'Atleta',
       seeded: false,
 
@@ -269,6 +274,9 @@ export const useStore = create<AppState>()(
 
       cancelWorkout: () => set({ activeWorkout: null }),
 
+      setExerciseTip: (exerciseId, tip) =>
+        set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
+
       dismissRestTimer: () =>
         set((s) => {
           if (!s.activeWorkout) return {}
@@ -327,6 +335,7 @@ export const useStore = create<AppState>()(
         routines: state.routines,
         workouts: state.workouts,
         prs: state.prs,
+        exerciseTips: state.exerciseTips,
         userName: state.userName,
         seeded: state.seeded,
       }),
