@@ -3,6 +3,60 @@ import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
 
+function TipsRow({ exerciseId }: { exerciseId: string }) {
+  const { exerciseTips, setExerciseTip } = useStore()
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState(exerciseTips[exerciseId] ?? '')
+  const tip = exerciseTips[exerciseId]
+
+  const handleSave = () => {
+    setExerciseTip(exerciseId, draft.trim())
+    setOpen(false)
+  }
+
+  return (
+    <div className="border-t border-border">
+      {!open ? (
+        <button
+          onClick={() => { setDraft(tip ?? ''); setOpen(true) }}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors"
+        >
+          <span className="text-sm">📝</span>
+          <span className={`flex-1 text-xs ${tip ? 'text-gray-300' : 'text-gray-600'}`}>
+            {tip || 'Agregar tip / recordatorio de técnica...'}
+          </span>
+          <span className="text-[10px] text-gray-600">{tip ? '✏️' : '＋'}</span>
+        </button>
+      ) : (
+        <div className="px-3 py-2 flex flex-col gap-2">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Ej: Escápulas retraídas, bajar lento 3s, codos a 45°..."
+            rows={3}
+            className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary resize-none"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setOpen(false)}
+              className="text-xs text-gray-500 px-3 py-1 rounded-lg border border-border hover:border-gray-500 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              className="text-xs font-bold text-black bg-primary px-3 py-1 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function formatElapsed(ms: number) {
   const totalSeconds = Math.floor(ms / 1000)
   const h = Math.floor(totalSeconds / 3600)
@@ -203,6 +257,9 @@ export function ActiveWorkoutScreen() {
                     </p>
                   </div>
                 )}
+
+                {/* Tips */}
+                <TipsRow exerciseId={ex.id} />
 
                 {/* Add set */}
                 <div className="px-3 py-2 border-t border-border">
