@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymPro — Visual Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .page-title h1 {
+    font-size: 36px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00ff88, #00d4ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+  .page-title p {
+    color: #666;
+    font-size: 15px;
+    margin-top: 6px;
+  }
+
+  .screens-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    justify-content: center;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .screen-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #00ff88;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* PHONE MOCKUP */
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: #111118;
+    border-radius: 50px;
+    border: 2px solid #222;
+    box-shadow:
+      0 0 0 1px #333,
+      0 40px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px 8px;
+    flex-shrink: 0;
+  }
+  .status-time { font-size: 15px; font-weight: 600; }
+  .status-icons { display: flex; gap: 6px; align-items: center; font-size: 12px; color: #fff; }
+
+  /* SCREEN CONTENT */
+  .screen-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* NAV BAR */
+  .nav-bar {
+    display: flex;
+    background: #16161f;
+    border-top: 1px solid #222;
+    padding: 8px 0 20px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; color: #555; }
+  .nav-item.active .nav-icon { filter: none; }
+  .nav-item.active .nav-label { color: #00ff88; }
+  .nav-dot {
+    width: 4px; height: 4px;
+    background: #00ff88;
+    border-radius: 50%;
+    margin-top: 2px;
+  }
+
+  /* ============ SCREEN 1: HOME ============ */
+  .home-bg {
+    background: linear-gradient(160deg, #0d1117 0%, #111118 100%);
+    height: 100%;
+    padding: 0 0 80px;
+    overflow-y: auto;
+  }
+
+  .home-header {
+    padding: 20px 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .home-greeting { font-size: 13px; color: #666; margin-bottom: 2px; }
+  .home-name { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  .avatar {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #00ff88, #00d4ff);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #000;
+  }
+
+  .streak-banner {
+    margin: 0 24px 20px;
+    background: linear-gradient(135deg, #1a2a1a, #1a2820);
+    border: 1px solid #00ff8833;
+    border-radius: 20px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .streak-fire { font-size: 36px; }
+  .streak-text h3 { font-size: 22px; font-weight: 800; color: #00ff88; }
+  .streak-text p { font-size: 12px; color: #666; margin-top: 2px; }
+  .streak-badge {
+    margin-left: auto;
+    background: #00ff8820;
+    border: 1px solid #00ff8844;
+    color: #00ff88;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .section-title {
+    padding: 0 24px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 24px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    flex: 1;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-value { font-size: 22px; font-weight: 800; color: #fff; }
+  .stat-label { font-size: 10px; color: #555; margin-top: 2px; }
+  .stat-trend { font-size: 10px; color: #00ff88; margin-top: 4px; }
+
+  .today-workout {
+    margin: 0 24px 20px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid #333;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .today-workout-header {
+    padding: 16px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .today-workout-title { font-size: 16px; font-weight: 700; }
+  .today-badge {
+    background: #00d4ff22;
+    color: #00d4ff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid #00d4ff44;
+  }
+  .today-exercises { padding: 0 20px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .exercise-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+  }
+  .exercise-thumb {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .exercise-info { flex: 1; }
+  .exercise-name { font-size: 13px; font-weight: 600; }
+  .exercise-detail { font-size: 11px; color: #555; margin-top: 2px; }
+  .exercise-pr { font-size: 11px; color: #ffd700; }
+
+  .start-btn {
+    margin: 0 24px 16px;
+    background: linear-gradient(135deg, #00ff88, #00cc70);
+    color: #000;
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 800;
+    width: calc(100% - 48px);
+    text-align: center;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 24px rgba(0,255,136,0.3);
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: 12px;
+    padding: 0 24px;
+    margin-bottom: 8px;
+  }
+  .quick-btn {
+    flex: 1;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .quick-btn-icon { font-size: 22px; }
+  .quick-btn-label { font-size: 11px; color: #666; margin-top: 6px; }
+
+  /* ============ SCREEN 2: CALENDAR ============ */
+  .calendar-screen {
+    background: #111118;
+    height: 100%;
+    padding-bottom: 80px;
+    overflow-y: auto;
+  }
+  .cal-header {
+    padding: 20px 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cal-title { font-size: 22px; font-weight: 800; }
+  .cal-nav { display: flex; gap: 8px; }
+  .cal-nav-btn {
+    width: 32px; height: 32px;
+    background: #16161f;
+    border: 1px solid #333;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #888;
+  }
+
+  .month-stats {
+    display: flex;
+    gap: 10px;
+    padding: 0 24px 20px;
+  }
+  .month-stat {
+    flex: 1;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+  }
+  .month-stat-val { font-size: 20px; font-weight: 800; }
+  .month-stat-val.green { color: #00ff88; }
+  .month-stat-val.blue { color: #00d4ff; }
+  .month-stat-val.gold { color: #ffd700; }
+  .month-stat-lbl { font-size: 10px; color: #555; margin-top: 2px; }
+
+  .calendar-grid {
+    margin: 0 24px 20px;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 12px 8px 6px;
+  }
+  .cal-weekday {
+    text-align: center;
+    font-size: 11px;
+    color: #444;
+    font-weight: 600;
+  }
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    padding: 4px 8px 12px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #555;
+    position: relative;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .cal-day.gym-day {
+    background: #00ff8818;
+    color: #fff;
+    font-weight: 600;
+  }
+  .cal-day.gym-day::after {
+    content: '';
+    width: 4px; height: 4px;
+    background: #00ff88;
+    border-radius: 50%;
+    display: block;
+  }
+  .cal-day.today {
+    background: linear-gradient(135deg, #00ff88, #00cc70);
+    color: #000;
+    font-weight: 800;
+  }
+  .cal-day.today::after { background: #000; }
+  .cal-day.rest-day { color: #ff444420; }
+  .cal-day.future { color: #333; }
+
+  .consistency-bar {
+    margin: 0 24px 16px;
+  }
+  .consistency-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .consistency-title { font-size: 14px; font-weight: 700; }
+  .consistency-pct { font-size: 14px; font-weight: 700; color: #00ff88; }
+  .bar-bg {
+    height: 8px;
+    background: #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88, #00d4ff);
+    border-radius: 4px;
+  }
+
+  .workout-history { padding: 0 24px; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .history-date {
+    width: 44px;
+    text-align: center;
+    background: #16161f;
+    border-radius: 10px;
+    padding: 6px 4px;
+    flex-shrink: 0;
+  }
+  .history-day { font-size: 18px; font-weight: 800; color: #00ff88; }
+  .history-month { font-size: 10px; color: #555; }
+  .history-info { flex: 1; }
+  .history-name { font-size: 13px; font-weight: 600; }
+  .history-meta { font-size: 11px; color: #555; margin-top: 2px; }
+  .history-duration {
+    font-size: 12px;
+    color: #00d4ff;
+    font-weight: 600;
+  }
+
+  /* ============ SCREEN 3: ACTIVE WORKOUT ============ */
+  .workout-screen {
+    background: #0d0d14;
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 100px;
+  }
+
+  .workout-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #111118;
+    border-bottom: 1px solid #1a1a1a;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .workout-name-sm { font-size: 15px; font-weight: 700; }
+  .workout-timer-sm {
+    font-size: 14px;
+    font-weight: 700;
+    color: #00ff88;
+    font-variant-numeric: tabular-nums;
+  }
+  .finish-btn {
+    background: linear-gradient(135deg, #00ff88, #00cc70);
+    color: #000;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 20px;
+  }
+
+  .exercise-card {
+    margin: 16px;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  .exercise-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .exercise-visual {
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #1a2a1a, #0d1a0d);
+    border: 1px solid #00ff8833;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+  }
+  .exercise-card-info { flex: 1; }
+  .exercise-card-name { font-size: 16px; font-weight: 700; }
+  .exercise-card-muscle {
+    font-size: 11px;
+    color: #00ff88;
+    background: #00ff8815;
+    border: 1px solid #00ff8830;
+    padding: 3px 8px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .exercise-card-pr { font-size: 11px; color: #ffd700; margin-top: 4px; }
+
+  .sets-header {
+    display: grid;
+    grid-template-columns: 36px 1fr 1fr 1fr 36px;
+    gap: 8px;
+    padding: 10px 18px;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .sets-header span {
+    font-size: 11px;
+    color: #444;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .set-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 1fr 1fr 36px;
+    gap: 8px;
+    padding: 10px 18px;
+    align-items: center;
+    border-bottom: 1px solid #0f0f18;
+  }
+  .set-row.completed { background: #00ff8808; }
+  .set-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: #1a1a2a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #555;
+  }
+  .set-row.completed .set-num { background: #00ff8820; color: #00ff88; }
+  .set-input {
+    background: #1a1a2a;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .set-row.completed .set-input {
+    background: #00ff8810;
+    border-color: #00ff8830;
+    color: #00ff88;
+  }
+  .set-input.active {
+    border-color: #00ff88;
+    box-shadow: 0 0 0 2px #00ff8820;
+  }
+  .check-btn {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: #1a1a2a;
+    border: 1px solid #2a2a3a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .check-btn.done { background: #00ff88; border-color: #00ff88; }
+
+  .add-set-btn {
+    margin: 10px 18px 18px;
+    border: 1px dashed #2a2a3a;
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    color: #444;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .prev-note {
+    margin: 0 18px 16px;
+    background: #1a1a0d;
+    border: 1px solid #333320;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #888;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* REST TIMER OVERLAY */
+  .rest-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #0a0a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 20;
+  }
+  .rest-title { font-size: 13px; color: #555; text-transform: uppercase; letter-spacing: 2px; }
+  .rest-circle {
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rest-circle-bg {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: 6px solid #1a1a2a;
+  }
+  .rest-circle-progress {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: 6px solid transparent;
+    border-top-color: #00ff88;
+    border-right-color: #00ff88;
+    border-bottom-color: #00ff88;
+    transform: rotate(-30deg);
+  }
+  .rest-time {
+    font-size: 56px;
+    font-weight: 900;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -2px;
+  }
+  .rest-time span { font-size: 24px; color: #555; font-weight: 400; }
+  .rest-subtitle { font-size: 13px; color: #555; }
+  .rest-btns { display: flex; gap: 16px; margin-top: 10px; }
+  .rest-btn {
+    padding: 12px 24px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    background: #16161f;
+    border: 1px solid #333;
+    color: #888;
+  }
+  .rest-btn.primary {
+    background: linear-gradient(135deg, #00ff88, #00cc70);
+    color: #000;
+    border: none;
+  }
+  .rest-next-set {
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 14px 24px;
+    text-align: center;
+    width: 280px;
+  }
+  .rest-next-label { font-size: 11px; color: #555; margin-bottom: 4px; }
+  .rest-next-name { font-size: 14px; font-weight: 700; }
+  .rest-next-detail { font-size: 12px; color: #00ff88; margin-top: 2px; }
+
+  /* ============ SCREEN 4: PROGRESS ============ */
+  .progress-screen {
+    background: #111118;
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 80px;
+  }
+  .prog-header {
+    padding: 20px 24px 16px;
+  }
+  .prog-title { font-size: 22px; font-weight: 800; }
+  .prog-subtitle { font-size: 13px; color: #555; margin-top: 4px; }
+
+  .period-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 24px 20px;
+  }
+  .period-tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #16161f;
+    border: 1px solid #222;
+    color: #555;
+  }
+  .period-tab.active {
+    background: #00ff8820;
+    border-color: #00ff8860;
+    color: #00ff88;
+  }
+
+  .chart-card {
+    margin: 0 24px 20px;
+    background: #16161f;
+    border: 1px solid #222;
+    border-radius: 20px;
+    padding: 18px;
+  }
+  .chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .chart-exercise-name { font-size: 15px; font-weight: 700; }
+  .chart-current { font-size: 22px; font-weight: 900; color: #00ff88; }
+  .chart-change { font-size: 12px; color: #00ff88; }
+
+  /* Simple SVG bar chart */
+  .simple-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 80px;
+    padding: 0 4px;
+  }
+  .chart-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .chart-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    min-height: 8px;
+  }
+  .chart-bar.prev { background: #2a2a3a; }
+  .chart-bar.curr { background: linear-gradient(180deg, #00ff88, #00cc70); }
+  .chart-month { font-size: 9px; color: #444; }
+
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #666; }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+  }
+  .legend-dot.prev { background: #2a2a3a; }
+  .legend-dot.curr { background: #00ff88; }
+
+  .comparison-badge {
+    background: #00ff8815;
+    border: 1px solid #00ff8830;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .comp-arrow { font-size: 24px; }
+  .comp-text { font-size: 13px; color: #aaa; }
+  .comp-text strong { color: #00ff88; }
+
+  /* ============ SCREEN 5: RECORDS ============ */
+  .records-screen {
+    background: #111118;
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 80px;
+  }
+  .rec-header {
+    padding: 20px 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .rec-title { font-size: 22px; font-weight: 800; }
+
+  .trophy-banner {
+    margin: 0 24px 20px;
+    background: linear-gradient(135deg, #2a1a00, #1a1000);
+    border: 1px solid #ffd70033;
+    border-radius: 20px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .trophy-icon { font-size: 40px; }
+  .trophy-text h3 { font-size: 18px; font-weight: 800; color: #ffd700; }
+  .trophy-text p { font-size: 12px; color: #888; margin-top: 2px; }
+
+  .pr-list { padding: 0 24px; }
+  .pr-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  .pr-rank {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .pr-rank.gold { background: #ffd70020; }
+  .pr-rank.silver { background: #c0c0c020; }
+  .pr-rank.bronze { background: #cd7f3220; }
+  .pr-rank.other { background: #16161f; font-size: 12px; color: #555; font-weight: 700; }
+
+  .pr-info { flex: 1; }
+  .pr-exercise { font-size: 13px; font-weight: 600; }
+  .pr-date { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .pr-value-col { text-align: right; }
+  .pr-weight { font-size: 18px; font-weight: 800; }
+  .pr-weight.gold-text { color: #ffd700; }
+  .pr-reps { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .pr-new-badge {
+    font-size: 9px;
+    font-weight: 700;
+    background: #00ff88;
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+  }
+
+  /* confetti animation hint */
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(0,255,136,0); }
+  }
+  .pr-item.new-pr { animation: pulse-green 2s infinite; border-radius: 12px; padding: 14px 12px; margin: 0 -12px; background: #00ff8806; }
+
+  /* ============ SECTION DIVIDERS ============ */
+  .screens-section-title {
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    padding: 40px 0 20px;
+  }
+
+  /* scrollbar hide */
+  .screen-content::-webkit-scrollbar,
+  .home-bg::-webkit-scrollbar,
+  .calendar-screen::-webkit-scrollbar,
+  .workout-screen::-webkit-scrollbar,
+  .progress-screen::-webkit-scrollbar,
+  .records-screen::-webkit-scrollbar { display: none; }
+
+  /* Color palette preview */
+  .palette-section {
+    max-width: 900px;
+    margin: 60px auto 0;
+    padding: 0 20px;
+  }
+  .palette-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .palette-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .color-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .color-swatch {
+    width: 60px; height: 60px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .color-name { font-size: 10px; color: #555; }
+  .color-hex { font-size: 10px; color: #333; }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>GymPro — Visual Preview</h1>
+  <p>Todas las pantallas · Tema oscuro · Acentos verde neón</p>
+</div>
+
+<div class="screens-grid">
+
+  <!-- ===== SCREEN 1: HOME ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Home / Dashboard</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content">
+        <div class="home-bg">
+          <div class="home-header">
+            <div>
+              <div class="home-greeting">Buenos días,</div>
+              <div class="home-name">Fede 💪</div>
+            </div>
+            <div class="avatar">FS</div>
+          </div>
+
+          <div class="streak-banner">
+            <div class="streak-fire">🔥</div>
+            <div class="streak-text">
+              <h3>12 días seguidos</h3>
+              <p>Mejor racha personal · ¡Sigue así!</p>
+            </div>
+            <div class="streak-badge">RÉCORD</div>
+          </div>
+
+          <div class="section-title">Este mes</div>
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-value" style="color:#00ff88">18</div>
+              <div class="stat-label">Entrenos</div>
+              <div class="stat-trend">↑ +3 vs Abr</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" style="color:#00d4ff">47h</div>
+              <div class="stat-label">Tiempo total</div>
+              <div class="stat-trend">↑ +5h vs Abr</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" style="color:#ffd700">5</div>
+              <div class="stat-label">PRs nuevos</div>
+              <div class="stat-trend">🏆 Mayo</div>
+            </div>
+          </div>
+
+          <div class="section-title">Entreno de hoy</div>
+          <div class="today-workout">
+            <div class="today-workout-header">
+              <div class="today-workout-title">Push Day · Pecho & Tríceps</div>
+              <div class="today-badge">HOY</div>
+            </div>
+            <div class="today-exercises">
+              <div class="exercise-preview">
+                <div class="exercise-thumb" style="background:#1a2a1a;">🏋️</div>
+                <div class="exercise-info">
+                  <div class="exercise-name">Press Banca</div>
+                  <div class="exercise-detail">4 series · 8-10 reps</div>
+                </div>
+                <div class="exercise-pr">PR: 100kg</div>
+              </div>
+              <div class="exercise-preview">
+                <div class="exercise-thumb" style="background:#1a1a2a;">💪</div>
+                <div class="exercise-info">
+                  <div class="exercise-name">Press Inclinado DB</div>
+                  <div class="exercise-detail">3 series · 10-12 reps</div>
+                </div>
+                <div class="exercise-pr">PR: 36kg</div>
+              </div>
+              <div class="exercise-preview">
+                <div class="exercise-thumb" style="background:#2a1a1a;">🔻</div>
+                <div class="exercise-info">
+                  <div class="exercise-name">Fondos (Dips)</div>
+                  <div class="exercise-detail">3 series · 12 reps</div>
+                </div>
+                <div class="exercise-pr">PR: +25kg</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="start-btn">▶  Iniciar Entreno</div>
+
+          <div class="quick-actions">
+            <div class="quick-btn">
+              <div class="quick-btn-icon">⏱️</div>
+              <div class="quick-btn-label">Cronómetro</div>
+            </div>
+            <div class="quick-btn">
+              <div class="quick-btn-icon">📊</div>
+              <div class="quick-btn-label">Progreso</div>
+            </div>
+            <div class="quick-btn">
+              <div class="quick-btn-icon">🏆</div>
+              <div class="quick-btn-label">Récords</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-item active">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">Home</div>
+            <div class="nav-dot"></div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">Calendario</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">📈</div>
+            <div class="nav-label">Progreso</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">🏆</div>
+            <div class="nav-label">Récords</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 2: CALENDARIO ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Calendario de Asistencia</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content">
+        <div class="calendar-screen">
+          <div class="cal-header">
+            <div class="cal-title">Mayo 2026</div>
+            <div class="cal-nav">
+              <div class="cal-nav-btn">‹</div>
+              <div class="cal-nav-btn">›</div>
+            </div>
+          </div>
+
+          <div class="month-stats">
+            <div class="month-stat">
+              <div class="month-stat-val green">18</div>
+              <div class="month-stat-lbl">Días gym</div>
+            </div>
+            <div class="month-stat">
+              <div class="month-stat-val blue">8</div>
+              <div class="month-stat-lbl">Descanso</div>
+            </div>
+            <div class="month-stat">
+              <div class="month-stat-val gold">75%</div>
+              <div class="month-stat-lbl">Consistencia</div>
+            </div>
+          </div>
+
+          <div class="calendar-grid">
+            <div class="cal-weekdays">
+              <div class="cal-weekday">L</div>
+              <div class="cal-weekday">M</div>
+              <div class="cal-weekday">X</div>
+              <div class="cal-weekday">J</div>
+              <div class="cal-weekday">V</div>
+              <div class="cal-weekday">S</div>
+              <div class="cal-weekday">D</div>
+            </div>
+            <div class="cal-days">
+              <!-- Week 1 -->
+              <div class="cal-day future"></div>
+              <div class="cal-day future"></div>
+              <div class="cal-day future"></div>
+              <div class="cal-day gym-day">1</div>
+              <div class="cal-day gym-day">2</div>
+              <div class="cal-day rest-day">3</div>
+              <div class="cal-day rest-day">4</div>
+              <!-- Week 2 -->
+              <div class="cal-day gym-day">5</div>
+              <div class="cal-day gym-day">6</div>
+              <div class="cal-day gym-day">7</div>
+              <div class="cal-day rest-day">8</div>
+              <div class="cal-day gym-day">9</div>
+              <div class="cal-day gym-day">10</div>
+              <div class="cal-day rest-day">11</div>
+              <!-- Week 3 -->
+              <div class="cal-day gym-day">12</div>
+              <div class="cal-day gym-day">13</div>
+              <div class="cal-day gym-day">14</div>
+              <div class="cal-day gym-day">15</div>
+              <div class="cal-day rest-day">16</div>
+              <div class="cal-day gym-day">17</div>
+              <div class="cal-day gym-day">18</div>
+              <!-- Week 4 -->
+              <div class="cal-day gym-day">19</div>
+              <div class="cal-day gym-day">20</div>
+              <div class="cal-day rest-day">21</div>
+              <div class="cal-day gym-day">22</div>
+              <div class="cal-day gym-day">23</div>
+              <div class="cal-day gym-day">24</div>
+              <div class="cal-day today">25</div>
+              <!-- Remaining -->
+              <div class="cal-day future">26</div>
+              <div class="cal-day future">27</div>
+              <div class="cal-day future">28</div>
+              <div class="cal-day future">29</div>
+              <div class="cal-day future">30</div>
+              <div class="cal-day future">31</div>
+              <div class="cal-day future"></div>
+            </div>
+          </div>
+
+          <div class="consistency-bar">
+            <div class="consistency-header">
+              <div class="consistency-title">Consistencia mayo</div>
+              <div class="consistency-pct">75%</div>
+            </div>
+            <div class="bar-bg">
+              <div class="bar-fill" style="width:75%"></div>
+            </div>
+          </div>
+
+          <div class="section-title">Historial reciente</div>
+          <div class="workout-history">
+            <div class="history-item">
+              <div class="history-date">
+                <div class="history-day">24</div>
+                <div class="history-month">MAY</div>
+              </div>
+              <div class="history-info">
+                <div class="history-name">Push Day</div>
+                <div class="history-meta">8 ejercicios · 32 series</div>
+              </div>
+              <div class="history-duration">58 min</div>
+            </div>
+            <div class="history-item">
+              <div class="history-date">
+                <div class="history-day">23</div>
+                <div class="history-month">MAY</div>
+              </div>
+              <div class="history-info">
+                <div class="history-name">Leg Day</div>
+                <div class="history-meta">6 ejercicios · 24 series</div>
+              </div>
+              <div class="history-duration">67 min</div>
+            </div>
+            <div class="history-item">
+              <div class="history-date">
+                <div class="history-day">22</div>
+                <div class="history-month">MAY</div>
+              </div>
+              <div class="history-info">
+                <div class="history-name">Pull Day</div>
+                <div class="history-meta">7 ejercicios · 28 series</div>
+              </div>
+              <div class="history-duration">72 min</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-item">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">Home</div>
+          </div>
+          <div class="nav-item active">
+            <div class="nav-icon">📅</div>
+            <div class="nav-label">Calendario</div>
+            <div class="nav-dot"></div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">📈</div>
+            <div class="nav-label">Progreso</div>
+          </div>
+          <div class="nav-item">
+            <div class="nav-icon">🏆</div>
+            <div class="nav-label">Récords</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 3: ENTRENO ACTIVO ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Entreno Activo</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">10:22</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content">
+        <div class="workout-screen">
+          <div class="workout-top-bar">
+            <div style="font-size:12px;color:#555">Push Day</div>
+            <div class="workout-timer-sm">⏱ 00:42:18</div>
+            <div class="finish-btn">Terminar</div>
+          </div>
+
+          <!-- Exercise 1: Bench Press (active) -->
+          <div class="exercise-card">
+            <div class="exercise-card-header">
+              <div class="exercise-visual">🏋️</div>
+              <div class="exercise-card-info">
+                <div class="exercise-card-name">Press de Banca</div>
+                <div class="exercise-card-muscle">Pecho · Tríceps · Deltoides</div>
+                <div class="exercise-card-pr">🏆 PR: 100kg × 5</div>
+              </div>
+              <div style="font-size:20px;color:#555">⋮</div>
+            </div>
+
+            <div class="sets-header">
+              <span>Set</span>
+              <span>Ant.</span>
+              <span>KG</span>
+              <span>Reps</span>
+              <span>✓</span>
+            </div>
+
+            <div class="set-row completed">
+              <div class="set-num">1</div>
+              <div class="set-input" style="color:#555;border:none;background:none;font-size:12px">90×8</div>
+              <div class="set-input">90</div>
+              <div class="set-input">8</div>
+              <div class="check-btn done">✓</div>
+            </div>
+            <div class="set-row completed">
+              <div class="set-num">2</div>
+              <div class="set-input" style="color:#555;border:none;background:none;font-size:12px">95×8</div>
+              <div class="set-input">95</div>
+              <div class="set-input">8</div>
+              <div class="check-btn done">✓</div>
+            </div>
+            <div class="set-row">
+              <div class="set-num" style="color:#fff;background:#00ff8820">3</div>
+              <div class="set-input" style="color:#555;border:none;background:none;font-size:12px">100×6</div>
+              <div class="set-input active">100</div>
+              <div class="set-input">8</div>
+              <div class="check-btn">○</div>
+            </div>
+            <div class="set-row">
+              <div class="set-num">4</div>
+              <div class="set-input" style="color:#555;border:none;background:none;font-size:12px">100×6</div>
+              <div class="set-input" style="color:#444">—</div>
+              <div class="set-input" style="color:#444">—</div>
+              <div class="check-btn">○</div>
+            </div>
+
+            <div class="prev-note">💡 Última vez: 4×8 con 95kg · Hoy subiste 5kg en set 3</div>
+
+            <div class="add-set-btn">＋ Agregar serie</div>
+          </div>
+
+          <!-- Exercise 2 preview -->
+          <div class="exercise-card" style="opacity:0.5">
+            <div class="exercise-card-header">
+              <div class="exercise-visual" style="font-size:28px">💪</div>
+              <div class="exercise-card-info">
+                <div class="exercise-card-name">Press Inclinado DB</div>
+                <div class="exercise-card-muscle">Pecho alto · Deltoides</div>
+                <div class="exercise-card-pr">PR: 36kg × 8</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 4: REST TIMER ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Cronómetro de Descanso</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">10:24</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content" style="background:#0a0a0f">
+        <!-- REST TIMER OVERLAY -->
+        <div class="rest-overlay" style="position:relative;height:100%">
+          <div class="rest-title">⏸ PAUSA ENTRE SERIES</div>
+
+          <div class="rest-circle">
+            <div class="rest-circle-bg"></div>
+            <div class="rest-circle-progress" style="background: conic-gradient(#00ff88 75%, transparent 75%);border:none;width:200px;height:200px;border-radius:50%;position:absolute;"></div>
+            <!-- Inner white circle to mask -->
+            <div style="width:176px;height:176px;background:#0a0a0f;border-radius:50%;position:absolute;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px">
+              <div class="rest-time">1<span>:30</span></div>
+              <div style="font-size:11px;color:#555">de 2:00</div>
+            </div>
+          </div>
+
+          <div class="rest-subtitle" style="color:#555">Serie 3 de 4 completada ✓</div>
+
+          <div class="rest-next-set">
+            <div class="rest-next-label">SIGUIENTE SERIE</div>
+            <div class="rest-next-name">Press de Banca — Serie 4</div>
+            <div class="rest-next-detail">Objetivo: 100kg × 8 reps</div>
+          </div>
+
+          <div class="rest-btns">
+            <div class="rest-btn">−30s</div>
+            <div class="rest-btn primary">Saltar</div>
+            <div class="rest-btn">+30s</div>
+          </div>
+
+          <!-- Timer presets -->
+          <div style="display:flex;gap:8px">
+            <div style="padding:7px 14px;background:#16161f;border:1px solid #333;border-radius:20px;font-size:12px;color:#555">1:00</div>
+            <div style="padding:7px 14px;background:#00ff8820;border:1px solid #00ff8844;border-radius:20px;font-size:12px;color:#00ff88">2:00 ✓</div>
+            <div style="padding:7px 14px;background:#16161f;border:1px solid #333;border-radius:20px;font-size:12px;color:#555">3:00</div>
+            <div style="padding:7px 14px;background:#16161f;border:1px solid #333;border-radius:20px;font-size:12px;color:#555">5:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 5: PROGRESO MES VS MES ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Progreso · Mes vs Mes</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content">
+        <div class="progress-screen">
+          <div class="prog-header">
+            <div class="prog-title">Mi Progreso</div>
+            <div class="prog-subtitle">Comparativa de peso por ejercicio</div>
+          </div>
+
+          <div class="period-tabs">
+            <div class="period-tab">3m</div>
+            <div class="period-tab active">6m</div>
+            <div class="period-tab">1a</div>
+          </div>
+
+          <!-- Chart 1: Bench Press -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div>
+                <div class="chart-exercise-name">🏋️ Press de Banca</div>
+                <div style="font-size:12px;color:#555;margin-top:2px">Peso máximo por mes</div>
+              </div>
+              <div>
+                <div class="chart-current">100 kg</div>
+                <div class="chart-change">↑ +15kg vs Dic</div>
+              </div>
+            </div>
+
+            <div class="simple-chart">
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:46px"></div>
+                <div class="chart-month">DIC</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:52px"></div>
+                <div class="chart-month">ENE</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:56px"></div>
+                <div class="chart-month">FEB</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:60px"></div>
+                <div class="chart-month">MAR</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:68px"></div>
+                <div class="chart-month">ABR</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar curr" style="height:80px"></div>
+                <div class="chart-month" style="color:#00ff88;font-weight:700">MAY</div>
+              </div>
+            </div>
+
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot prev"></div>Meses anteriores</div>
+              <div class="legend-item"><div class="legend-dot curr"></div>Mes actual</div>
+            </div>
+
+            <div class="comparison-badge">
+              <div class="comp-arrow">📈</div>
+              <div class="comp-text">Subiste <strong>+15kg (+18%)</strong> desde diciembre. ¡Excelente progreso!</div>
+            </div>
+          </div>
+
+          <!-- Chart 2: Squat -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div>
+                <div class="chart-exercise-name">🦵 Sentadilla</div>
+                <div style="font-size:12px;color:#555;margin-top:2px">Peso máximo por mes</div>
+              </div>
+              <div>
+                <div class="chart-current" style="color:#00d4ff">130 kg</div>
+                <div class="chart-change" style="color:#00d4ff">↑ +20kg vs Dic</div>
+              </div>
+            </div>
+
+            <div class="simple-chart">
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:40px;background:#1a2a3a"></div>
+                <div class="chart-month">DIC</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:48px;background:#1a2a3a"></div>
+                <div class="chart-month">ENE</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:55px;background:#1a2a3a"></div>
+                <div class="chart-month">FEB</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:62px;background:#1a2a3a"></div>
+                <div class="chart-month">MAR</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar prev" style="height:70px;background:#1a2a3a"></div>
+                <div class="chart-month">ABR</div>
+              </div>
+              <div class="chart-col">
+                <div class="chart-bar" style="height:80px;background:linear-gradient(180deg,#00d4ff,#0099cc)"></div>
+                <div class="chart-month" style="color:#00d4ff;font-weight:700">MAY</div>
+              </div>
+            </div>
+
+            <div class="comparison-badge" style="background:#00d4ff10;border-color:#00d4ff30">
+              <div class="comp-arrow">🚀</div>
+              <div class="comp-text">Subiste <strong style="color:#00d4ff">+20kg (+18%)</strong> desde diciembre.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📅</div><div class="nav-label">Calendario</div></div>
+          <div class="nav-item active"><div class="nav-icon">📈</div><div class="nav-label">Progreso</div><div class="nav-dot"></div></div>
+          <div class="nav-item"><div class="nav-icon">🏆</div><div class="nav-label">Récords</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 6: RÉCORDS ===== -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Récords Personales (PRs)</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">●●● WiFi 🔋</span>
+      </div>
+      <div class="screen-content">
+        <div class="records-screen">
+          <div class="rec-header">
+            <div class="rec-title">Mis Récords</div>
+            <div style="font-size:13px;color:#555">All time</div>
+          </div>
+
+          <div class="trophy-banner">
+            <div class="trophy-icon">🏆</div>
+            <div class="trophy-text">
+              <h3>5 nuevos PRs en Mayo</h3>
+              <p>Tu mejor mes hasta ahora · ¡Imparable!</p>
+            </div>
+          </div>
+
+          <div class="section-title">Hall of Fame</div>
+
+          <div class="pr-list">
+            <div class="pr-item new-pr">
+              <div class="pr-rank gold">🥇</div>
+              <div class="pr-info">
+                <div class="pr-exercise">
+                  Press de Banca
+                  <span class="pr-new-badge">NUEVO</span>
+                </div>
+                <div class="pr-date">25 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight gold-text">100 kg</div>
+                <div class="pr-reps">× 5 reps</div>
+              </div>
+            </div>
+
+            <div class="pr-item">
+              <div class="pr-rank gold">🥇</div>
+              <div class="pr-info">
+                <div class="pr-exercise">Sentadilla</div>
+                <div class="pr-date">23 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight gold-text">130 kg</div>
+                <div class="pr-reps">× 3 reps</div>
+              </div>
+            </div>
+
+            <div class="pr-item new-pr">
+              <div class="pr-rank gold">🥇</div>
+              <div class="pr-info">
+                <div class="pr-exercise">
+                  Peso Muerto
+                  <span class="pr-new-badge">NUEVO</span>
+                </div>
+                <div class="pr-date">20 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight gold-text">160 kg</div>
+                <div class="pr-reps">× 1 rep</div>
+              </div>
+            </div>
+
+            <div class="pr-item">
+              <div class="pr-rank silver">🥈</div>
+              <div class="pr-info">
+                <div class="pr-exercise">Press Militar</div>
+                <div class="pr-date">17 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight" style="color:#c0c0c0">65 kg</div>
+                <div class="pr-reps">× 5 reps</div>
+              </div>
+            </div>
+
+            <div class="pr-item">
+              <div class="pr-rank bronze">🥉</div>
+              <div class="pr-info">
+                <div class="pr-exercise">Dominadas con peso</div>
+                <div class="pr-date">15 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight" style="color:#cd7f32">+40 kg</div>
+                <div class="pr-reps">× 5 reps</div>
+              </div>
+            </div>
+
+            <div class="pr-item">
+              <div class="pr-rank other">6</div>
+              <div class="pr-info">
+                <div class="pr-exercise">Curl de Bíceps</div>
+                <div class="pr-date">10 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight" style="color:#fff">22 kg</div>
+                <div class="pr-reps">× 8 reps</div>
+              </div>
+            </div>
+
+            <div class="pr-item">
+              <div class="pr-rank other">7</div>
+              <div class="pr-info">
+                <div class="pr-exercise">Fondos (Dips)</div>
+                <div class="pr-date">8 mayo 2026</div>
+              </div>
+              <div class="pr-value-col">
+                <div class="pr-weight" style="color:#fff">+30 kg</div>
+                <div class="pr-reps">× 8 reps</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📅</div><div class="nav-label">Calendario</div></div>
+          <div class="nav-item"><div class="nav-icon">📈</div><div class="nav-label">Progreso</div></div>
+          <div class="nav-item active"><div class="nav-icon">🏆</div><div class="nav-label">Récords</div><div class="nav-dot"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COLOR PALETTE -->
+<div class="palette-section">
+  <div class="palette-title">Paleta de Colores</div>
+  <div class="palette-row">
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#0a0a0f"></div>
+      <div class="color-name">Background</div>
+      <div class="color-hex">#0a0a0f</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#111118"></div>
+      <div class="color-name">Surface</div>
+      <div class="color-hex">#111118</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#16161f"></div>
+      <div class="color-name">Card</div>
+      <div class="color-hex">#16161f</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#222230"></div>
+      <div class="color-name">Border</div>
+      <div class="color-hex">#222230</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#00ff88"></div>
+      <div class="color-name">Primary</div>
+      <div class="color-hex">#00ff88</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#00d4ff"></div>
+      <div class="color-name">Info</div>
+      <div class="color-hex">#00d4ff</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#ffd700"></div>
+      <div class="color-name">Gold / PR</div>
+      <div class="color-hex">#ffd700</div>
+    </div>
+    <div class="color-chip">
+      <div class="color-swatch" style="background:#ff4444"></div>
+      <div class="color-name">Error</div>
+      <div class="color-hex">#ff4444</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;padding:60px 20px 40px;color:#333;font-size:13px">
+  GymPro · PWA Instalable · 6 pantallas · Tema oscuro con acento verde neón
+</div>
+
+</body>
+</html>
