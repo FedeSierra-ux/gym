@@ -42,7 +42,6 @@ export function RoutineDetailScreen() {
 
   return (
     <div className="flex-1 flex flex-col screen-enter">
-      {/* Header */}
       <div className="flex-shrink-0 px-4 pt-12 pb-4 bg-background border-b border-border">
         <div className="flex items-center gap-3 mb-4">
           <button
@@ -75,7 +74,6 @@ export function RoutineDetailScreen() {
         </div>
       </div>
 
-      {/* Action buttons */}
       <div className="flex-shrink-0 px-4 py-3 flex gap-3 border-b border-border">
         <button
           onClick={() => startWorkout(routine.id)}
@@ -95,7 +93,6 @@ export function RoutineDetailScreen() {
         </button>
       </div>
 
-      {/* Exercise list */}
       <div className="flex-1 scroll-area px-4 py-3">
         <div className="flex flex-col gap-2">
           {routine.exercises
@@ -111,10 +108,9 @@ export function RoutineDetailScreen() {
                   className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
                 >
                   {editMode && (
-                    <span className="text-gray-600 text-lg cursor-grab select-none">⠇</span>
+                    <span className="text-gray-600 text-lg cursor-grab select-none">⠷</span>
                   )}
 
-                  {/* SVG Icon */}
                   <div
                     className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: config.color + '15' }}
@@ -153,7 +149,6 @@ export function RoutineDetailScreen() {
             })}
         </div>
 
-        {/* Add exercise button */}
         <button
           onClick={() => setShowExercisePicker(true)}
           className="w-full mt-3 border border-dashed border-border rounded-xl py-3 text-gray-500 flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors"
