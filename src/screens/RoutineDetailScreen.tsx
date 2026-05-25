@@ -111,7 +111,7 @@ export function RoutineDetailScreen() {
                   className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
                 >
                   {editMode && (
-                    <span className="text-gray-600 text-lg cursor-grab select-none">⠿</span>
+                    <span className="text-gray-600 text-lg cursor-grab select-none">⠇</span>
                   )}
 
                   {/* SVG Icon */}
