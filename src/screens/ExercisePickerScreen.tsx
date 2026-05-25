@@ -29,7 +29,6 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
 
   return (
     <div className="flex-1 flex flex-col screen-enter bg-background">
-      {/* Header */}
       <div className="flex-shrink-0 px-4 pt-12 pb-3 border-b border-border">
         <div className="flex items-center gap-3 mb-3">
           <button
@@ -40,7 +39,6 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
           <input
@@ -53,7 +51,6 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
         </div>
       </div>
 
-      {/* Muscle group grid */}
       <div className="flex-shrink-0 px-4 py-3 border-b border-border">
         <div className="grid grid-cols-3 gap-2">
           {muscleGroupOrder.map((mg) => {
@@ -82,7 +79,6 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
         </div>
       </div>
 
-      {/* Exercise list */}
       <div className="flex-1 scroll-area px-4 py-2">
         <div className="flex flex-col gap-2">
           {filtered.map((ex) => {
@@ -94,7 +90,6 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
                 key={ex.id}
                 className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
               >
-                {/* Icon */}
                 <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: cfg.color + '15' }}
