@@ -19,7 +19,6 @@ function CalendarioTab() {
   const lastDay = new Date(year, month + 1, 0)
   const daysInMonth = lastDay.getDate()
 
-  // Monday-first: 0=Mon..6=Sun
   let startDow = firstDay.getDay() - 1
   if (startDow < 0) startDow = 6
 
@@ -46,7 +45,6 @@ function CalendarioTab() {
     if (next <= new Date()) setViewDate(next)
   }
 
-  // Recent history
   const recentWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
     .sort((a, b) => b.startedAt - a.startedAt)
@@ -54,7 +52,6 @@ function CalendarioTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Month nav */}
       <div className="flex items-center justify-between">
         <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors">
           ‹
@@ -67,7 +64,6 @@ function CalendarioTab() {
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-card rounded-xl border border-border p-3 text-center">
           <p className="text-xl font-bold text-primary">{gymDaysCount}</p>
@@ -83,9 +79,7 @@ function CalendarioTab() {
         </div>
       </div>
 
-      {/* Calendar grid */}
       <div className="bg-card rounded-2xl border border-border p-4">
-        {/* Day names */}
         <div className="grid grid-cols-7 mb-2">
           {DAY_NAMES.map((d) => (
             <div key={d} className="text-center text-[10px] text-gray-600 font-medium py-1">
@@ -94,9 +88,7 @@ function CalendarioTab() {
           ))}
         </div>
 
-        {/* Days */}
         <div className="grid grid-cols-7 gap-1">
-          {/* Empty cells */}
           {Array.from({ length: startDow }).map((_, i) => (
             <div key={`empty-${i}`} />
           ))}
@@ -131,7 +123,6 @@ function CalendarioTab() {
         </div>
       </div>
 
-      {/* Consistency bar */}
       <div className="bg-card rounded-xl border border-border p-3">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-gray-400">Consistencia del mes</span>
@@ -145,7 +136,6 @@ function CalendarioTab() {
         </div>
       </div>
 
-      {/* Recent history */}
       <div>
         <h3 className="text-sm font-semibold text-gray-400 mb-2">Historial reciente</h3>
         <div className="flex flex-col gap-2">
@@ -193,7 +183,6 @@ function RecordsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Trophy banner */}
       <div className="bg-gold/10 border border-gold/20 rounded-2xl p-4 flex items-center gap-3">
         <span className="text-3xl">🏆</span>
         <div>
@@ -202,7 +191,6 @@ function RecordsTab() {
         </div>
       </div>
 
-      {/* PR list */}
       <div className="flex flex-col gap-2">
         {sortedPrs.map((pr, idx) => {
           const ex = exercises.find((e) => e.id === pr.exerciseId)
@@ -264,7 +252,6 @@ export function CalendarioScreen() {
       <div className="flex-shrink-0 px-4 pt-12 pb-0">
         <h1 className="text-2xl font-bold text-white mb-4">Seguimiento</h1>
 
-        {/* Sub-tabs */}
         <div className="flex bg-surface rounded-xl p-1 border border-border">
           {([['calendario', '📅 Calendario'], ['records', '🏆 Récords']] as [CalendarSubTab, string][]).map(
             ([id, label]) => (

@@ -30,13 +30,11 @@ export function ProgresoScreen() {
   const monthsBack = getMonthsBack(period)
   const now = new Date()
 
-  // Build months array
   const months = Array.from({ length: monthsBack }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (monthsBack - 1 - i), 1)
     return { year: d.getFullYear(), month: d.getMonth(), label: MONTH_NAMES_SHORT[d.getMonth()] }
   })
 
-  // For each exercise that has been done, calculate monthly max kg
   const exerciseProgressMap = new Map<string, ExerciseProgress>()
 
   for (const workout of workouts) {
@@ -67,7 +65,6 @@ export function ProgresoScreen() {
     }
   }
 
-  // Calculate stats
   const progressList: ExerciseProgress[] = []
   for (const [, ep] of exerciseProgressMap) {
     const nonZero = ep.months.filter((m) => m.maxKg > 0)
@@ -79,10 +76,8 @@ export function ProgresoScreen() {
     progressList.push(ep)
   }
 
-  // Sort by most improvement
   progressList.sort((a, b) => b.change - a.change)
 
-  // Show max 6 bars if period is 6m or less
   const barCount = Math.min(monthsBack, 6)
   const barsToShow = months.slice(-barCount)
 
@@ -91,7 +86,6 @@ export function ProgresoScreen() {
       <div className="flex-shrink-0 px-4 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-white">Progreso</h1>
 
-        {/* Period tabs */}
         <div className="flex bg-surface rounded-xl p-1 border border-border mt-4">
           {(['3m', '6m', '1a', 'todo'] as Period[]).map((p) => (
             <button
@@ -156,7 +150,6 @@ export function ProgresoScreen() {
                     )}
                   </div>
 
-                  {/* Bar chart */}
                   <div className="flex items-end gap-2 h-20">
                     {barsData.map((bar, i) => {
                       const heightPct = bar.maxKg > 0 ? (bar.maxKg / maxKg) * 100 : 3
