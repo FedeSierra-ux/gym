@@ -15,7 +15,7 @@ export interface Exercise {
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
-  icon: string // SVG string
+  icon: string
 }
 
 export interface RoutineExercise {
@@ -75,3 +75,5 @@ export interface ActiveWorkoutExercise {
   exerciseId: string
   sets: ActiveWorkoutSet[]
 }
+
+export type ExerciseTips = Record<string, string>

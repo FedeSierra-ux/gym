@@ -14,7 +14,6 @@ html, body {
   color: #ffffff;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   height: 100%;
   overflow: hidden;
 }
@@ -37,39 +36,22 @@ html, body {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
-.scroll-area::-webkit-scrollbar {
-  display: none;
-}
+.scroll-area::-webkit-scrollbar { display: none; }
 
 @keyframes pulse-green {
   0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
   50% { box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
 }
-.pulse-pr {
-  animation: pulse-green 2s ease-in-out infinite;
-}
+.pulse-pr { animation: pulse-green 2s ease-in-out infinite; }
 
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
-}
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
 
-.screen-enter {
-  animation: slideIn 0.2s ease-out;
-}
+.screen-enter { animation: slideIn 0.2s ease-out; }
 @keyframes slideIn {
   from { transform: translateX(30px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-  padding: 0;
-}
-p {
-  margin: 0;
-}
+h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
