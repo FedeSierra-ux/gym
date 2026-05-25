@@ -123,7 +123,6 @@ export const useStore = create<AppState>()(
         if (!routine) return
 
         const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          // Find previous sets for this exercise
           const prevWorkout = [...workouts]
             .filter((w) => w.routineId === routineId && w.finishedAt)
             .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
@@ -242,13 +241,11 @@ export const useStore = create<AppState>()(
           exercises: workoutExercises,
         }
 
-        // Calculate total sets done
         const totalSets = workoutExercises.reduce((acc, ex) => acc + ex.sets.length, 0)
         const routineExerciseCount = routines.find((r) => r.id === activeWorkout.routineId)?.exercises.length ?? 1
         void totalSets
         void routineExerciseCount
 
-        // Update PRs
         const newPrs = [...prs]
         for (const ex of workoutExercises) {
           for (const s of ex.sets) {
@@ -312,7 +309,6 @@ export const useStore = create<AppState>()(
         const { seeded } = get()
         if (seeded) return
 
-        // Seed PRs from seed workouts
         const prs: PR[] = [
           { exerciseId: 'pecho-01', kg: 85, reps: 6, date: Date.now() - 86400000 * 2 },
           { exerciseId: 'espalda-01', kg: 120, reps: 4, date: Date.now() - 86400000 * 4 },
