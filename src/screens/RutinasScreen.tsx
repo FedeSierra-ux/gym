@@ -18,6 +18,7 @@ function getApproxDuration(sets: number[]) {
 export function RutinasScreen() {
   const { routines, exercises, workouts, setActiveRoutineId, addRoutine } = useStore()
 
+  // Find which routine was used last
   const sortedWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
@@ -28,7 +29,7 @@ export function RutinasScreen() {
     addRoutine({
       id,
       name: 'Nueva Rutina',
-      emoji: '🏋️',
+      emoji: '🏗️',
       exercises: [],
       createdAt: Date.now(),
     })
@@ -52,6 +53,7 @@ export function RutinasScreen() {
           const duration = getApproxDuration(totalSets)
           const isLast = routine.id === lastRoutineId
 
+          // Primary muscle group
           const primaryGroup = muscleGroups[0]
           const primaryConfig = primaryGroup ? muscleGroupConfig[primaryGroup] : null
 
@@ -89,6 +91,7 @@ export function RutinasScreen() {
                 <span className="text-gray-600 text-lg">›</span>
               </div>
 
+              {/* Muscle group tags */}
               <div className="flex flex-wrap gap-1.5">
                 {muscleGroups.map((mg) => {
                   const cfg = muscleGroupConfig[mg]
@@ -108,6 +111,7 @@ export function RutinasScreen() {
         })}
       </div>
 
+      {/* Create button */}
       <div className="px-4 mt-4">
         <button
           onClick={handleCreateRoutine}
