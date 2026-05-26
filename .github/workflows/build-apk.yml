@@ -11,6 +11,10 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      CI: true
+      JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF8
+      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.welcome=never
     steps:
       - uses: actions/checkout@v4
 
@@ -23,11 +27,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
-
-      - name: Accept Android SDK licenses
-        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Generate keystore
         run: |
@@ -38,16 +42,19 @@ jobs:
             -storepass android -keypass android \
             -dname 'CN=GymPro, O=GymPro, C=AR' -noprompt
 
-      - name: Build APK
+      - name: Init Bubblewrap project
         run: |
           mkdir -p apk-build
           cp twa-manifest.json apk-build/
           cd apk-build
-          bubblewrap build \
+          bubblewrap update --skipPwaShellUpdate
+
+      - name: Build APK
+        working-directory: apk-build
+        run: |
+          printf 'android\nandroid\n' | bubblewrap build \
             --signing-key-path ../gympro.keystore \
-            --signing-key-alias gympro \
-            --ks-pass android \
-            --key-pass android
+            --signing-key-alias gympro
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
