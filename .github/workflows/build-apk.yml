@@ -44,10 +44,12 @@ jobs:
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle wrapper
+        run: cd android && /opt/gradle/gradle-8.4/bin/gradle wrapper --gradle-version 8.4
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace --project-dir android
+        run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
