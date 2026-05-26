@@ -15,7 +15,7 @@ export interface Exercise {
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
-  icon: string // SVG string
+  icon: string
 }
 
 export interface RoutineExercise {

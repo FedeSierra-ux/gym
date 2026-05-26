@@ -20,25 +20,21 @@ export function HomeScreen() {
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
 
-  // Last workout
   const sortedWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
   const lastWorkout = sortedWorkouts[0]
   const lastRoutine = lastWorkout ? routines.find((r) => r.id === lastWorkout.routineId) : null
 
-  // Completion % of last workout
   const lastRoutineEx = lastRoutine?.exercises.length ?? 1
   const lastWorkoutEx = lastWorkout?.exercises.length ?? 0
   const completionPct = Math.round((lastWorkoutEx / Math.max(lastRoutineEx, 1)) * 100)
 
-  // Monthly stats
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const monthWorkouts = workouts.filter((w) => w.startedAt >= startOfMonth && w.finishedAt)
   const monthHours = monthWorkouts.reduce((acc, w) => acc + (w.durationMin ?? 0), 0) / 60
   const monthPrs = prs.filter((p) => p.date >= startOfMonth).length
 
-  // Suggested routine: next one not done recently
   const lastRoutineIds = sortedWorkouts.slice(0, 3).map((w) => w.routineId)
   const suggestedRoutine =
     routines.find((r) => !lastRoutineIds.includes(r.id)) ?? routines[0]
@@ -56,7 +52,6 @@ export function HomeScreen() {
 
   return (
     <div className="flex-1 scroll-area px-4 pb-4">
-      {/* Header */}
       <div className="pt-12 pb-6">
         <p className="text-gray-400 text-sm">{formatDate(Date.now())}</p>
         <h1 className="text-2xl font-bold text-white mt-1">
@@ -64,7 +59,6 @@ export function HomeScreen() {
         </h1>
       </div>
 
-      {/* Last Workout */}
       {lastWorkout && lastRoutine ? (
         <div className="bg-card rounded-2xl border border-border p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
@@ -109,7 +103,6 @@ export function HomeScreen() {
         </div>
       )}
 
-      {/* Monthly Stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="bg-card rounded-xl border border-border p-3 text-center">
           <p className="text-2xl font-bold text-primary">{monthWorkouts.length}</p>
@@ -125,7 +118,6 @@ export function HomeScreen() {
         </div>
       </div>
 
-      {/* Suggested Routine */}
       {suggestedRoutine && (
         <div className="bg-card rounded-2xl border border-border p-4">
           <div className="flex items-center justify-between mb-3">
@@ -141,7 +133,6 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {/* Exercise previews */}
           <div className="flex flex-col gap-2 mb-4">
             {suggestedExercises.map((ex) => {
               if (!ex) return null

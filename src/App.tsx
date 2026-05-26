@@ -11,12 +11,10 @@ import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 function App() {
   const { activeTab, activeRoutineId, activeWorkout, seedData } = useStore()
 
-  // Seed data on first load
   useEffect(() => {
     seedData()
   }, [seedData])
 
-  // If active workout is running, show full screen workout
   if (activeWorkout) {
     return (
       <div className="flex flex-col h-full">
@@ -25,7 +23,6 @@ function App() {
     )
   }
 
-  // If in rutinas and a routine is selected, show detail
   const showRoutineDetail = activeTab === 'rutinas' && activeRoutineId !== null
 
   return (

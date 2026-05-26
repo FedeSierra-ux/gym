@@ -64,7 +64,6 @@ export function RestTimerOverlay() {
     ? exercises.find((e) => e.id === lastCompletedSet.exerciseId)
     : null
 
-  // Find next set
   const nextExercise = (() => {
     if (!lastCompletedSet) return null
     const exIdx = activeWorkout.exercises.findIndex((e) => e.exerciseId === lastCompletedSet.exerciseId)
@@ -83,12 +82,10 @@ export function RestTimerOverlay() {
 
   return (
     <div className="absolute inset-0 bg-background/97 backdrop-blur-sm flex flex-col items-center justify-between py-8 z-50 screen-enter">
-      {/* Top label */}
       <div className="text-center">
         <p className="text-info font-bold text-sm tracking-widest uppercase">⏸ DESCANSANDO</p>
       </div>
 
-      {/* Ring + timer */}
       <div className="flex flex-col items-center gap-6">
         <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -122,7 +119,6 @@ export function RestTimerOverlay() {
           </div>
         </div>
 
-        {/* Completed set info */}
         {lastCompletedSet && lastExercise && (
           <div className="text-center">
             <p className="text-sm text-gray-400">
@@ -134,7 +130,6 @@ export function RestTimerOverlay() {
           </div>
         )}
 
-        {/* Next set card */}
         {nextExercise && nextExercise.exercise && (
           <div className="bg-card border border-border rounded-xl px-6 py-3 text-center">
             <p className="text-[10px] text-gray-600 uppercase tracking-wider">Siguiente</p>
@@ -144,7 +139,6 @@ export function RestTimerOverlay() {
         )}
       </div>
 
-      {/* Controls */}
       <div className="flex flex-col items-center gap-4 w-full px-8">
         <div className="flex items-center gap-4">
           <button
@@ -167,7 +161,6 @@ export function RestTimerOverlay() {
           </button>
         </div>
 
-        {/* Preset pills */}
         <div className="flex gap-2 flex-wrap justify-center">
           {PRESETS.map((p) => (
             <button

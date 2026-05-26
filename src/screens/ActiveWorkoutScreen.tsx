@@ -111,7 +111,6 @@ export function ActiveWorkoutScreen() {
 
   return (
     <div className="flex-1 flex flex-col bg-background screen-enter">
-      {/* Top bar */}
       <div className="flex-shrink-0 px-4 pt-12 pb-3 bg-surface border-b border-border">
         <div className="flex items-center justify-between">
           <div>
@@ -137,7 +136,6 @@ export function ActiveWorkoutScreen() {
         </div>
       </div>
 
-      {/* Exercises */}
       <div className="flex-1 scroll-area px-4 py-3">
         <div className="flex flex-col gap-4">
           {activeWorkout.exercises.map((activeEx, exIdx) => {
@@ -145,10 +143,8 @@ export function ActiveWorkoutScreen() {
             if (!ex) return null
             const config = muscleGroupConfig[ex.muscleGroup]
 
-            // Get PR for this exercise
             const pr = prs.find((p) => p.exerciseId === ex.id)
 
-            // Get previous workout data for this routine + exercise
             const prevWorkout = [...workouts]
               .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
               .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
@@ -159,7 +155,6 @@ export function ActiveWorkoutScreen() {
 
             return (
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
-                {/* Exercise header */}
                 <div className="p-3 border-b border-border flex items-center gap-3">
                   <div
                     className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -186,7 +181,6 @@ export function ActiveWorkoutScreen() {
                   </div>
                 </div>
 
-                {/* Sets table header */}
                 <div className="grid grid-cols-[32px_1fr_72px_72px_40px] gap-2 px-3 py-2 border-b border-border">
                   <span className="text-[10px] text-gray-600 font-medium">SET</span>
                   <span className="text-[10px] text-gray-600 font-medium">ANTERIOR</span>
@@ -195,7 +189,6 @@ export function ActiveWorkoutScreen() {
                   <span className="text-[10px] text-gray-600 font-medium text-center">✓</span>
                 </div>
 
-                {/* Sets */}
                 {activeEx.sets.map((set, setIdx) => {
                   const prev = prevSets[setIdx]
                   return (
@@ -249,7 +242,6 @@ export function ActiveWorkoutScreen() {
                   )
                 })}
 
-                {/* Hint */}
                 {prevSets.length > 0 && (
                   <div className="px-3 py-2 bg-surface/50">
                     <p className="text-[10px] text-gray-600">
@@ -258,10 +250,8 @@ export function ActiveWorkoutScreen() {
                   </div>
                 )}
 
-                {/* Tips */}
                 <TipsRow exerciseId={ex.id} />
 
-                {/* Add set */}
                 <div className="px-3 py-2 border-t border-border">
                   <button
                     onClick={() => addSetToExercise(exIdx)}
@@ -279,7 +269,6 @@ export function ActiveWorkoutScreen() {
         <div className="h-8" />
       </div>
 
-      {/* Rest Timer Overlay */}
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
     </div>
   )

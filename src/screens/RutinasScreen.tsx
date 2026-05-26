@@ -29,7 +29,7 @@ export function RutinasScreen() {
     addRoutine({
       id,
       name: 'Nueva Rutina',
-      emoji: '🏋️',
+      emoji: '🏗️',
       exercises: [],
       createdAt: Date.now(),
     })
