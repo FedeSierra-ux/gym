@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { CalendarSubTab } from '../types'
+import type { CalendarSubTab, Workout } from '../types'
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -8,9 +8,92 @@ const MONTH_NAMES = [
 ]
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
+function WorkoutDetailSheet({ workout, onClose }: { workout: Workout; onClose: () => void }) {
+  const { routines, exercises, deleteWorkout } = useStore()
+  const routine = routines.find((r) => r.id === workout.routineId)
+  const date = new Date(workout.startedAt)
+  const totalSets = workout.exercises.reduce((a, e) => a + e.sets.length, 0)
+
+  return (
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-end" onClick={onClose}>
+      <div
+        className="w-full bg-card rounded-t-3xl border-t border-border px-4 pt-4 pb-8 max-h-[75vh] flex flex-col screen-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-1 bg-border rounded-full mx-auto mb-4" />
+
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-bold text-white text-lg">
+              {routine?.emoji} {routine?.name}
+            </h3>
+            <p className="text-gray-400 text-sm">
+              {date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
+        </div>
+
+        <div className="flex gap-3 mb-4">
+          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
+            <p className="text-primary font-bold text-lg">{workout.durationMin ?? 0}m</p>
+            <p className="text-[10px] text-gray-500">Duración</p>
+          </div>
+          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
+            <p className="text-info font-bold text-lg">{workout.exercises.length}</p>
+            <p className="text-[10px] text-gray-500">Ejercicios</p>
+          </div>
+          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
+            <p className="text-gold font-bold text-lg">{totalSets}</p>
+            <p className="text-[10px] text-gray-500">Series</p>
+          </div>
+          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
+            <p className="text-white font-bold text-lg">{workout.kcal ?? 0}</p>
+            <p className="text-[10px] text-gray-500">kcal</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-2">
+            {workout.exercises.map((we) => {
+              const ex = exercises.find((e) => e.id === we.exerciseId)
+              if (!ex) return null
+              const best = we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0])
+              return (
+                <div key={we.exerciseId} className="bg-surface rounded-xl border border-border p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-white text-sm font-semibold">{ex.nameEs}</p>
+                    <p className="text-gray-500 text-xs">{we.sets.length} series</p>
+                  </div>
+                  {best && (
+                    <p className="text-gray-300 text-sm font-medium">
+                      Mejor: {best.kg}kg × {best.reps}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            deleteWorkout(workout.id)
+            onClose()
+          }}
+          className="mt-4 w-full py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-sm font-semibold"
+        >
+          🗑 Eliminar este entreno
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CalendarioTab() {
   const { workouts, routines, deleteWorkout } = useStore()
   const [viewDate, setViewDate] = useState(new Date())
+  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null)
 
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -22,17 +105,22 @@ function CalendarioTab() {
   let startDow = firstDay.getDay() - 1
   if (startDow < 0) startDow = 6
 
-  const gymDays = new Set<number>()
+  const gymDayWorkouts = new Map<number, Workout[]>()
   workouts
     .filter((w) => {
       if (!w.finishedAt) return false
       const d = new Date(w.startedAt)
       return d.getFullYear() === year && d.getMonth() === month
     })
-    .forEach((w) => gymDays.add(new Date(w.startedAt).getDate()))
+    .forEach((w) => {
+      const day = new Date(w.startedAt).getDate()
+      if (!gymDayWorkouts.has(day)) gymDayWorkouts.set(day, [])
+      gymDayWorkouts.get(day)!.push(w)
+    })
 
-  const totalDays = daysInMonth
+  const gymDays = new Set(gymDayWorkouts.keys())
   const gymDaysCount = gymDays.size
+  const totalDays = daysInMonth
   const restDays = totalDays - gymDaysCount
   const today = new Date()
   const todayInMonth = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
@@ -98,11 +186,22 @@ function CalendarioTab() {
             const isGym = gymDays.has(day)
             const isToday = day === todayInMonth
             const isFuture = todayInMonth > 0 && day > todayInMonth
+            const dayWorkouts = gymDayWorkouts.get(day) ?? []
 
             return (
-              <div key={day} className="flex items-center justify-center aspect-square">
+              <div
+                key={day}
+                className="flex items-center justify-center aspect-square"
+                onClick={() => {
+                  if (isGym && dayWorkouts.length > 0) {
+                    setSelectedWorkout(dayWorkouts[0])
+                  }
+                }}
+              >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center relative transition-all ${
+                    isGym ? 'cursor-pointer active:scale-90' : ''
+                  } ${
                     isToday
                       ? 'bg-primary text-black font-bold'
                       : isFuture
@@ -144,7 +243,11 @@ function CalendarioTab() {
             const date = new Date(w.startedAt)
             const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
             return (
-              <div key={w.id} className="bg-card rounded-xl border border-border p-3 flex items-center gap-3">
+              <div
+                key={w.id}
+                className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
+                onClick={() => setSelectedWorkout(w)}
+              >
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 text-center flex-shrink-0 w-14">
                   <p className="text-primary font-bold text-sm">{date.getDate()}</p>
                   <p className="text-primary/70 text-[10px]">{MONTH_NAMES[date.getMonth()].slice(0, 3)}</p>
@@ -158,7 +261,7 @@ function CalendarioTab() {
                   </p>
                 </div>
                 <button
-                  onClick={() => deleteWorkout(w.id)}
+                  onClick={(e) => { e.stopPropagation(); deleteWorkout(w.id) }}
                   className="p-2 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
                 >
                   🗑
@@ -172,6 +275,13 @@ function CalendarioTab() {
           )}
         </div>
       </div>
+
+      {selectedWorkout && (
+        <WorkoutDetailSheet
+          workout={selectedWorkout}
+          onClose={() => setSelectedWorkout(null)}
+        />
+      )}
     </div>
   )
 }
@@ -206,8 +316,7 @@ function RecordsTab() {
             day: 'numeric',
             month: 'short',
           })
-          const daysSince = Math.floor((now - pr.date) / 86400000)
-          void daysSince
+          void now
 
           return (
             <div

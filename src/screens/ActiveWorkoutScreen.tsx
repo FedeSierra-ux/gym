@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import { vibrate } from '../utils/haptics'
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
   const { exerciseTips, setExerciseTip } = useStore()
@@ -82,6 +83,7 @@ export function ActiveWorkoutScreen() {
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
+  const [flashingSet, setFlashingSet] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeWorkout) return
@@ -188,7 +190,7 @@ export function ActiveWorkoutScreen() {
                       key={setIdx}
                       className={`grid grid-cols-[32px_1fr_72px_72px_40px] gap-2 px-3 py-2 items-center transition-colors ${
                         set.completed ? 'bg-primary/5' : ''
-                      }`}
+                      } ${flashingSet === `${exIdx}-${setIdx}` ? 'set-complete-flash' : ''}`}
                     >
                       <span className={`text-sm font-bold ${set.completed ? 'text-primary' : 'text-gray-500'}`}>
                         {setIdx + 1}
@@ -221,7 +223,15 @@ export function ActiveWorkoutScreen() {
                         }`}
                       />
                       <button
-                        onClick={() => completeSet(exIdx, setIdx)}
+                        onClick={() => {
+                          completeSet(exIdx, setIdx)
+                          if (!set.completed) {
+                            vibrate([40, 20, 40])
+                            const key = `${exIdx}-${setIdx}`
+                            setFlashingSet(key)
+                            setTimeout(() => setFlashingSet(null), 600)
+                          }
+                        }}
                         className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto transition-all ${
                           set.completed
                             ? 'bg-primary text-black'
