@@ -1,6 +1,11 @@
 name: Build Android APK
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'twa-manifest.json'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
 jobs:
@@ -31,7 +36,7 @@ jobs:
             -alias gympro \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
-            -dname "CN=GymPro, O=GymPro, C=AR" -noprompt
+            -dname 'CN=GymPro, O=GymPro, C=AR' -noprompt
 
       - name: Build APK
         run: |
