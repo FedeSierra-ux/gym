@@ -17,8 +17,6 @@ export function HomeScreen() {
   const { userName, workouts, routines, exercises, prs, startWorkout, setActiveTab } = useStore()
 
   const now = new Date()
-  const hour = now.getHours()
-  const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches'
 
   const sortedWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
@@ -55,7 +53,7 @@ export function HomeScreen() {
       <div className="pt-12 pb-6">
         <p className="text-gray-400 text-sm">{formatDate(Date.now())}</p>
         <h1 className="text-2xl font-bold text-white mt-1">
-          {greeting}, <span className="text-primary">{userName}</span> 👋
+          <span className="text-primary">{userName}</span> 👋
         </h1>
       </div>
 

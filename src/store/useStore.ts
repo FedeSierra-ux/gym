@@ -52,6 +52,8 @@ interface AppState {
   addSetToExercise: (exerciseIdx: number) => void
   finishWorkout: () => void
   cancelWorkout: () => void
+  deleteWorkout: (id: string) => void
+  deletePr: (exerciseId: string) => void
   dismissRestTimer: () => void
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
@@ -148,8 +150,8 @@ export const useStore = create<AppState>()(
             startedAt: Date.now(),
             exercises: activeExercises,
             restTimerVisible: false,
-            restSecondsLeft: 120,
-            restTotalSeconds: 120,
+            restSecondsLeft: 75,
+            restTotalSeconds: 75,
           },
         })
       },
@@ -193,8 +195,8 @@ export const useStore = create<AppState>()(
               exercises,
               lastCompletedSet,
               restTimerVisible: completedSet.completed,
-              restSecondsLeft: 120,
-              restTotalSeconds: 120,
+              restSecondsLeft: 75,
+              restTotalSeconds: 75,
             },
           }
         }),
@@ -271,6 +273,10 @@ export const useStore = create<AppState>()(
 
       cancelWorkout: () => set({ activeWorkout: null }),
 
+      deleteWorkout: (id) => set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) })),
+
+      deletePr: (exerciseId) => set((s) => ({ prs: s.prs.filter((p) => p.exerciseId !== exerciseId) })),
+
       setExerciseTip: (exerciseId, tip) =>
         set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
 
@@ -326,7 +332,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'gympro-storage',
+      name: 'gympro-storage-v2',
       partialize: (state) => ({
         routines: state.routines,
         workouts: state.workouts,

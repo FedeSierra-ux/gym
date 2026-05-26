@@ -81,6 +81,7 @@ export function ActiveWorkoutScreen() {
 
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
 
   useEffect(() => {
     if (!activeWorkout) return
@@ -97,17 +98,8 @@ export function ActiveWorkoutScreen() {
 
   const routine = routines.find((r) => r.id === activeWorkout.routineId)
 
-  const handleFinish = () => {
-    if (confirm('¿Terminar el entrenamiento?')) {
-      finishWorkout()
-    }
-  }
-
-  const handleCancel = () => {
-    if (confirm('¿Cancelar el entrenamiento? Se perderá el progreso.')) {
-      cancelWorkout()
-    }
-  }
+  const handleFinish = () => setConfirmAction('finish')
+  const handleCancel = () => setConfirmAction('cancel')
 
   return (
     <div className="flex-1 flex flex-col bg-background screen-enter">
@@ -270,6 +262,41 @@ export function ActiveWorkoutScreen() {
       </div>
 
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
+
+      {confirmAction && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-white font-bold text-lg mb-2">
+              {confirmAction === 'finish' ? '¿Terminar entreno?' : '¿Cancelar entreno?'}
+            </h3>
+            {confirmAction === 'cancel' && (
+              <p className="text-gray-400 text-sm mb-4">Se perderá todo el progreso de esta sesión.</p>
+            )}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 py-3 rounded-xl border border-border text-gray-400 text-sm font-medium hover:border-gray-500 transition-colors"
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmAction(null)
+                  if (confirmAction === 'finish') finishWorkout()
+                  else cancelWorkout()
+                }}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
+                  confirmAction === 'finish'
+                    ? 'bg-primary text-black hover:bg-primary/90'
+                    : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
+                }`}
+              >
+                {confirmAction === 'finish' ? '✓ Terminar' : '✕ Cancelar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

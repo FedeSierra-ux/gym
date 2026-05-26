@@ -9,7 +9,7 @@ const MONTH_NAMES = [
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
 function CalendarioTab() {
-  const { workouts, routines } = useStore()
+  const { workouts, routines, deleteWorkout } = useStore()
   const [viewDate, setViewDate] = useState(new Date())
 
   const year = viewDate.getFullYear()
@@ -157,6 +157,12 @@ function CalendarioTab() {
                     {w.exercises.length} ejercicios · {totalSets} series · {w.durationMin}min
                   </p>
                 </div>
+                <button
+                  onClick={() => deleteWorkout(w.id)}
+                  className="p-2 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  🗑
+                </button>
               </div>
             )
           })}
@@ -171,7 +177,7 @@ function CalendarioTab() {
 }
 
 function RecordsTab() {
-  const { prs, exercises } = useStore()
+  const { prs, exercises, deletePr } = useStore()
 
   const now = Date.now()
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
@@ -232,6 +238,12 @@ function RecordsTab() {
                 <p className="font-bold text-white text-sm">{pr.kg}kg × {pr.reps}</p>
                 <p className="text-[10px] text-gray-600">Vol: {pr.kg * pr.reps}kg</p>
               </div>
+              <button
+                onClick={() => deletePr(pr.exerciseId)}
+                className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+              >
+                🗑
+              </button>
             </div>
           )
         })}

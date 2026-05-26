@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { BottomNav } from './components/BottomNav'
 import { HomeScreen } from './screens/HomeScreen'
@@ -9,11 +8,7 @@ import { ProgresoScreen } from './screens/ProgresoScreen'
 import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 
 function App() {
-  const { activeTab, activeRoutineId, activeWorkout, seedData } = useStore()
-
-  useEffect(() => {
-    seedData()
-  }, [seedData])
+  const { activeTab, activeRoutineId, activeWorkout } = useStore()
 
   if (activeWorkout) {
     return (

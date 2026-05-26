@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore'
 const PRESETS = [
   { label: '0:45', seconds: 45 },
   { label: '1:00', seconds: 60 },
+  { label: '1:15', seconds: 75 },
   { label: '2:00', seconds: 120 },
   { label: '3:00', seconds: 180 },
   { label: '5:00', seconds: 300 },
