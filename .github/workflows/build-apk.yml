@@ -35,47 +35,46 @@ jobs:
 
       - name: Write twa-manifest.json
         run: |
-          cat > twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.fedesierra.gympro",
-            "host": "fedesierra-ux.github.io",
-            "name": "GymPro",
-            "launcherName": "GymPro",
-            "display": "standalone",
-            "themeColor": "#07070d",
-            "navigationColor": "#07070d",
-            "navigationColorDark": "#07070d",
-            "navigationDividerColor": "#07070d",
-            "navigationDividerColorDark": "#07070d",
-            "backgroundColor": "#07070d",
-            "startUrl": "/gym/",
-            "iconUrl": "https://fedesierra-ux.github.io/gym/icons/icon-512.svg",
-            "maskableIconUrl": "https://fedesierra-ux.github.io/gym/icons/icon-512.svg",
-            "monochromeIconUrl": "",
-            "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "../gympro.keystore",
-              "alias": "gympro"
-            },
-            "appVersionCode": 1,
-            "appVersionName": "1.0.0",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://fedesierra-ux.github.io/gym/manifest.webmanifest",
-            "fallbackType": "customtabs",
-            "features": {},
-            "alphaDependencies": { "enabled": false },
-            "enableNotifications": false,
-            "orientation": "portrait",
-            "fingerprints": [],
-            "serviceAccountJsonFile": ""
-          }
-          EOF
+          python3 -c "
+import json
+manifest = {
+  'packageId': 'com.fedesierra.gympro',
+  'host': 'fedesierra-ux.github.io',
+  'name': 'GymPro',
+  'launcherName': 'GymPro',
+  'display': 'standalone',
+  'themeColor': '#07070d',
+  'navigationColor': '#07070d',
+  'navigationColorDark': '#07070d',
+  'navigationDividerColor': '#07070d',
+  'navigationDividerColorDark': '#07070d',
+  'backgroundColor': '#07070d',
+  'startUrl': '/gym/',
+  'iconUrl': 'https://fedesierra-ux.github.io/gym/icons/icon-512.svg',
+  'maskableIconUrl': 'https://fedesierra-ux.github.io/gym/icons/icon-512.svg',
+  'monochromeIconUrl': '',
+  'splashScreenFadeOutDuration': 300,
+  'signingKey': {'path': '../gympro.keystore', 'alias': 'gympro'},
+  'appVersionCode': 1,
+  'appVersionName': '1.0.0',
+  'shortcuts': [],
+  'generatorApp': 'bubblewrap-cli',
+  'webManifestUrl': 'https://fedesierra-ux.github.io/gym/manifest.webmanifest',
+  'fallbackType': 'customtabs',
+  'features': {},
+  'alphaDependencies': {'enabled': False},
+  'enableNotifications': False,
+  'orientation': 'portrait',
+  'fingerprints': [],
+  'serviceAccountJsonFile': ''
+}
+with open('apk-build/twa-manifest.json', 'w') as f:
+  json.dump(manifest, f, indent=2)
+"
 
       - name: Build APK
         run: |
-          mkdir apk-build
-          cp twa-manifest.json apk-build/
+          mkdir -p apk-build
           cd apk-build
           bubblewrap build \
             --signing-key-path ../gympro.keystore \
