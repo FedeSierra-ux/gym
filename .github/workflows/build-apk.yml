@@ -24,7 +24,7 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Generate debug keystore
+      - name: Generate keystore
         run: |
           keytool -genkey -v \
             -keystore gympro.keystore \
@@ -33,48 +33,10 @@ jobs:
             -storepass android -keypass android \
             -dname "CN=GymPro, O=GymPro, C=AR" -noprompt
 
-      - name: Write twa-manifest.json
-        run: |
-          python3 -c "
-import json
-manifest = {
-  'packageId': 'com.fedesierra.gympro',
-  'host': 'fedesierra-ux.github.io',
-  'name': 'GymPro',
-  'launcherName': 'GymPro',
-  'display': 'standalone',
-  'themeColor': '#07070d',
-  'navigationColor': '#07070d',
-  'navigationColorDark': '#07070d',
-  'navigationDividerColor': '#07070d',
-  'navigationDividerColorDark': '#07070d',
-  'backgroundColor': '#07070d',
-  'startUrl': '/gym/',
-  'iconUrl': 'https://fedesierra-ux.github.io/gym/icons/icon-512.svg',
-  'maskableIconUrl': 'https://fedesierra-ux.github.io/gym/icons/icon-512.svg',
-  'monochromeIconUrl': '',
-  'splashScreenFadeOutDuration': 300,
-  'signingKey': {'path': '../gympro.keystore', 'alias': 'gympro'},
-  'appVersionCode': 1,
-  'appVersionName': '1.0.0',
-  'shortcuts': [],
-  'generatorApp': 'bubblewrap-cli',
-  'webManifestUrl': 'https://fedesierra-ux.github.io/gym/manifest.webmanifest',
-  'fallbackType': 'customtabs',
-  'features': {},
-  'alphaDependencies': {'enabled': False},
-  'enableNotifications': False,
-  'orientation': 'portrait',
-  'fingerprints': [],
-  'serviceAccountJsonFile': ''
-}
-with open('apk-build/twa-manifest.json', 'w') as f:
-  json.dump(manifest, f, indent=2)
-"
-
       - name: Build APK
         run: |
           mkdir -p apk-build
+          cp twa-manifest.json apk-build/
           cd apk-build
           bubblewrap build \
             --signing-key-path ../gympro.keystore \
@@ -82,7 +44,7 @@ with open('apk-build/twa-manifest.json', 'w') as f:
             --ks-pass android \
             --key-pass android
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GymPro-Android
