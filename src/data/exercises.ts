@@ -137,7 +137,7 @@ export const exercises: Exercise[] = [
   { id: 'hombros-07', nameEs: 'Remo Vertical', muscleGroup: 'hombros', primaryMuscles: ['Deltoides', 'Trapecios'], equipment: 'Barra', icon: svgs.hombros },
   { id: 'hombros-08', nameEs: 'Elevación Lateral Cable', muscleGroup: 'hombros', primaryMuscles: ['Deltoides lateral'], equipment: 'Cable', icon: svgs.hombros },
   { id: 'hombros-09', nameEs: 'Press Máquina', muscleGroup: 'hombros', primaryMuscles: ['Deltoides'], equipment: 'Máquina', icon: svgs.hombros },
-  // BÍCEPS (8)
+  // BICEPS (8)
   { id: 'biceps-01', nameEs: 'Curl Barra', muscleGroup: 'biceps', primaryMuscles: ['Bíceps braquial'], equipment: 'Barra', icon: svgs.biceps },
   { id: 'biceps-02', nameEs: 'Curl Mancuerna', muscleGroup: 'biceps', primaryMuscles: ['Bíceps'], equipment: 'Mancuernas', icon: svgs.biceps },
   { id: 'biceps-03', nameEs: 'Curl Martillo', muscleGroup: 'biceps', primaryMuscles: ['Braquial', 'Braquiorradial'], equipment: 'Mancuernas', icon: svgs.biceps },
@@ -146,7 +146,7 @@ export const exercises: Exercise[] = [
   { id: 'biceps-06', nameEs: 'Curl Concentrado', muscleGroup: 'biceps', primaryMuscles: ['Bíceps pico'], equipment: 'Mancuerna', icon: svgs.biceps },
   { id: 'biceps-07', nameEs: 'Curl Cable', muscleGroup: 'biceps', primaryMuscles: ['Bíceps'], equipment: 'Cable', icon: svgs.biceps },
   { id: 'biceps-08', nameEs: 'Curl Inclinado', muscleGroup: 'biceps', primaryMuscles: ['Bíceps largo'], equipment: 'Mancuernas', icon: svgs.biceps },
-  // TRÍCEPS (8)
+  // TRICEPS (8)
   { id: 'triceps-01', nameEs: 'Extensión Cuerda', muscleGroup: 'triceps', primaryMuscles: ['Tríceps'], equipment: 'Cable', icon: svgs.triceps },
   { id: 'triceps-02', nameEs: 'Press Cerrado', muscleGroup: 'triceps', primaryMuscles: ['Tríceps'], equipment: 'Barra', icon: svgs.triceps },
   { id: 'triceps-03', nameEs: 'Press Francés', muscleGroup: 'triceps', primaryMuscles: ['Tríceps largo'], equipment: 'Barra EZ', icon: svgs.triceps },
@@ -163,12 +163,12 @@ export const exercises: Exercise[] = [
   { id: 'piernas-05', nameEs: 'Curl Isquiotibiales', muscleGroup: 'piernas', primaryMuscles: ['Isquiotibiales'], equipment: 'Máquina', icon: svgs.piernas },
   { id: 'piernas-06', nameEs: 'Peso Muerto Rumano', muscleGroup: 'piernas', primaryMuscles: ['Isquiotibiales', 'Glúteos'], equipment: 'Barra', icon: svgs.piernas },
   { id: 'piernas-07', nameEs: 'Zancadas', muscleGroup: 'piernas', primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Peso corporal', icon: svgs.piernas },
-  { id: 'piernas-08', nameEs: 'Sentadilla Búlgara', muscleGroup: 'piernas', primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas', icon: svgs.piernas },
+  { id: 'piernas-08', nameEs: 'Sentadilla Búlg ara', muscleGroup: 'piernas', primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas', icon: svgs.piernas },
   { id: 'piernas-09', nameEs: 'Hack Squat', muscleGroup: 'piernas', primaryMuscles: ['Cuádriceps'], equipment: 'Máquina', icon: svgs.piernas },
   { id: 'piernas-10', nameEs: 'Hip Thrust', muscleGroup: 'piernas', primaryMuscles: ['Glúteos', 'Isquiotibiales'], equipment: 'Barra', icon: svgs.piernas },
   { id: 'piernas-11', nameEs: 'Elevación Pantorrilla', muscleGroup: 'piernas', primaryMuscles: ['Gemelos'], equipment: 'Máquina', icon: svgs.piernas },
   { id: 'piernas-12', nameEs: 'Curl Sentado', muscleGroup: 'piernas', primaryMuscles: ['Isquiotibiales'], equipment: 'Máquina', icon: svgs.piernas },
-  // GLÚTEOS (6)
+  // GLUTEOS (6)
   { id: 'gluteos-01', nameEs: 'Hip Thrust Glúteo', muscleGroup: 'gluteos', primaryMuscles: ['Glúteo mayor'], equipment: 'Barra', icon: svgs.gluteos },
   { id: 'gluteos-02', nameEs: 'Glute Bridge', muscleGroup: 'gluteos', primaryMuscles: ['Glúteos'], equipment: 'Peso corporal', icon: svgs.gluteos },
   { id: 'gluteos-03', nameEs: 'Cable Kickback', muscleGroup: 'gluteos', primaryMuscles: ['Glúteo mayor'], equipment: 'Cable', icon: svgs.gluteos },
