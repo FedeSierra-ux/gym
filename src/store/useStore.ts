@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips, BodyWeightEntry, AppToast } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 
@@ -30,6 +30,9 @@ interface AppState {
   exerciseTips: ExerciseTips
   userName: string
   seeded: boolean
+  onboarded: boolean
+  bodyWeights: BodyWeightEntry[]
+  toasts: AppToast[]
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -52,12 +55,24 @@ interface AppState {
   addSetToExercise: (exerciseIdx: number) => void
   finishWorkout: () => void
   cancelWorkout: () => void
+  deleteWorkout: (id: string) => void
+  deletePr: (exerciseId: string) => void
   dismissRestTimer: () => void
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
 
   // Tips
   setExerciseTip: (exerciseId: string, tip: string) => void
+
+  // Profile
+  updateUserName: (name: string) => void
+  setOnboarded: () => void
+  addBodyWeight: (kg: number) => void
+  deleteBodyWeight: (date: number) => void
+
+  // Toasts
+  addToast: (message: string, type: AppToast['type']) => void
+  removeToast: (id: string) => void
 
   // Seed
   seedData: () => void
@@ -78,6 +93,9 @@ export const useStore = create<AppState>()(
       exerciseTips: {},
       userName: 'Atleta',
       seeded: false,
+      onboarded: false,
+      bodyWeights: [],
+      toasts: [],
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -148,8 +166,8 @@ export const useStore = create<AppState>()(
             startedAt: Date.now(),
             exercises: activeExercises,
             restTimerVisible: false,
-            restSecondsLeft: 120,
-            restTotalSeconds: 120,
+            restSecondsLeft: 75,
+            restTotalSeconds: 75,
           },
         })
       },
@@ -193,8 +211,8 @@ export const useStore = create<AppState>()(
               exercises,
               lastCompletedSet,
               restTimerVisible: completedSet.completed,
-              restSecondsLeft: 120,
-              restTotalSeconds: 120,
+              restSecondsLeft: 75,
+              restTotalSeconds: 75,
             },
           }
         }),
@@ -261,18 +279,51 @@ export const useStore = create<AppState>()(
           }
         }
 
+        const newPrCount = newPrs.filter((np) => {
+          const old = prs.find((p) => p.exerciseId === np.exerciseId)
+          return !old || np.kg * np.reps > old.kg * old.reps
+        }).length
+
+        const successToast: AppToast = {
+          id: `toast-${Date.now()}`,
+          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
+          type: 'success',
+        }
+        const prToast: AppToast | null = newPrCount > 0
+          ? { id: `toast-${Date.now() + 1}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
+          : null
+
         set((s) => ({
           workouts: [...s.workouts, newWorkout],
           prs: newPrs,
           activeWorkout: null,
           activeTab: 'home',
+          toasts: [...s.toasts, successToast, ...(prToast ? [prToast] : [])],
         }))
       },
 
       cancelWorkout: () => set({ activeWorkout: null }),
 
+      deleteWorkout: (id) => set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) })),
+
+      deletePr: (exerciseId) => set((s) => ({ prs: s.prs.filter((p) => p.exerciseId !== exerciseId) })),
+
       setExerciseTip: (exerciseId, tip) =>
         set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
+
+      updateUserName: (name) => set({ userName: name }),
+      setOnboarded: () => set({ onboarded: true }),
+      addBodyWeight: (kg) =>
+        set((s) => ({
+          bodyWeights: [...s.bodyWeights, { date: Date.now(), kg }].sort((a, b) => a.date - b.date),
+        })),
+      deleteBodyWeight: (date) =>
+        set((s) => ({ bodyWeights: s.bodyWeights.filter((bw) => bw.date !== date) })),
+      addToast: (message, type) =>
+        set((s) => ({
+          toasts: [...s.toasts, { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message, type }],
+        })),
+      removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
       dismissRestTimer: () =>
         set((s) => {
@@ -326,7 +377,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'gympro-storage',
+      name: 'gympro-storage-v2',
       partialize: (state) => ({
         routines: state.routines,
         workouts: state.workouts,
@@ -334,6 +385,8 @@ export const useStore = create<AppState>()(
         exerciseTips: state.exerciseTips,
         userName: state.userName,
         seeded: state.seeded,
+        onboarded: state.onboarded,
+        bodyWeights: state.bodyWeights,
       }),
     }
   )

@@ -62,8 +62,19 @@ export interface PR {
   date: number
 }
 
-export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso'
+export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso' | 'perfil'
 export type CalendarSubTab = 'calendario' | 'records'
+
+export interface BodyWeightEntry {
+  date: number
+  kg: number
+}
+
+export interface AppToast {
+  id: string
+  message: string
+  type: 'success' | 'pr' | 'info'
+}
 
 export interface ActiveWorkoutSet {
   kg: string

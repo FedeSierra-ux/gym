@@ -1,11 +1,12 @@
 import type { NavTab } from '../types'
 import { useStore } from '../store/useStore'
 
-const tabs: { id: NavTab; label: string; emoji: string }[] = [
-  { id: 'home', label: 'Home', emoji: '🏠' },
-  { id: 'rutinas', label: 'Rutinas', emoji: '📋' },
-  { id: 'calendario', label: 'Calendario', emoji: '📅' },
-  { id: 'progreso', label: 'Progreso', emoji: '📈' },
+const tabs: { id: NavTab; label: string; icon: string }[] = [
+  { id: 'home', label: 'Inicio', icon: '🏠' },
+  { id: 'rutinas', label: 'Rutinas', icon: '📋' },
+  { id: 'calendario', label: 'Registro', icon: '📅' },
+  { id: 'progreso', label: 'Progreso', icon: '📈' },
+  { id: 'perfil', label: 'Perfil', icon: '👤' },
 ]
 
 export function BottomNav() {
@@ -23,12 +24,12 @@ export function BottomNav() {
                 setActiveTab(tab.id)
                 if (tab.id !== 'rutinas') setActiveRoutineId(null)
               }}
-              className={`flex-1 flex flex-col items-center py-3 pb-5 gap-0.5 transition-colors ${
-                isActive ? 'text-primary' : 'text-gray-500'
+              className={`flex-1 flex flex-col items-center py-2.5 pb-5 gap-0.5 transition-colors ${
+                isActive ? 'text-primary' : 'text-gray-600'
               }`}
             >
-              <span className="text-xl leading-none">{tab.emoji}</span>
-              <span className={`text-[10px] font-medium ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className={`text-[9px] font-medium ${isActive ? 'text-primary' : 'text-gray-600'}`}>
                 {tab.label}
               </span>
             </button>
