@@ -47,7 +47,7 @@ jobs:
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --project-dir android
+        run: gradle assembleDebug --no-daemon --stacktrace --project-dir android
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
