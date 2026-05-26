@@ -15,37 +15,69 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Gradle
+      - name: Checkout
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip
-          unzip -q gradle-8.4-bin.zip -d /opt/gradle
+          git clone --depth=1 --branch "$GITHUB_REF_NAME" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Set Java 17
+        run: |
+          sudo apt-get install -y --no-install-recommends openjdk-17-jdk-headless 2>/dev/null || true
+          JH=$(find /usr/lib/jvm -maxdepth 1 -name "java-17-openjdk*" -type d | head -1)
+          if [ -z "$JH" ]; then JH=/usr/lib/jvm/java-17-openjdk-amd64; fi
+          echo "JAVA_HOME=$JH" >> $GITHUB_ENV
+          echo "$JH/bin" >> $GITHUB_PATH
+
+      - name: Accept SDK licenses + install platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
+      - name: Install Gradle 8.4
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /opt/gradle
           echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-
-      - name: Build debug APK
+      - name: Build APK
         run: gradle assembleDebug --no-daemon --project-dir android
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
-      - name: Create or update release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk-latest
-          name: GymPro Android APK
-          body: |
-            Instalador Android de GymPro.
-            Descargar e instalar en el celu (activar "Instalar desde fuentes desconocidas" si lo pide).
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-          make_latest: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          API="https://api.github.com/repos/$GITHUB_REPOSITORY"
+
+          # Delete old release + tag if they exist
+          OLD=$(curl -sf -H "Authorization: token $GH_TOKEN" \
+            "$API/releases/tags/apk-latest" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || echo "")
+          if [ -n "$OLD" ]; then
+            curl -sf -X DELETE -H "Authorization: token $GH_TOKEN" "$API/releases/$OLD" || true
+          fi
+          curl -sf -X DELETE -H "Authorization: token $GH_TOKEN" \
+            "$API/git/refs/tags/apk-latest" || true
+
+          # Create new release
+          REL=$(curl -sf -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$API/releases" \
+            -d '{"tag_name":"apk-latest","name":"GymPro Android APK","body":"Descargar GymPro.apk e instalar en el celu.\n(Activar Instalar desde fuentes desconocidas si lo pide)","draft":false,"prerelease":false}')
+
+          RID=$(echo "$REL" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+          # Upload APK
+          curl -sf -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RID/assets?name=GymPro.apk" \
+            --data-binary @"$APK"
+
+          echo "Release $RID publicado OK"
