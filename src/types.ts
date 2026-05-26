@@ -75,3 +75,5 @@ export interface ActiveWorkoutExercise {
   exerciseId: string
   sets: ActiveWorkoutSet[]
 }
+
+export type ExerciseTips = Record<string, string>

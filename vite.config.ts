@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/gym/',
   plugins: [
     react(),
     VitePWA({
@@ -17,7 +18,8 @@ export default defineConfig({
         background_color: '#07070d',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: '/gym/',
+        scope: '/gym/',
         icons: [
           {
             src: 'icons/icon-192.png',
