@@ -1,20 +1,16 @@
 name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'twa-manifest.json'
+      - 'android/**'
       - '.github/workflows/build-apk.yml'
-  workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    env:
-      CI: true
-      JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF8
-      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.welcome=never
     steps:
       - uses: actions/checkout@v4
 
@@ -23,42 +19,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Generate keystore
+      - name: Install Gradle
         run: |
-          keytool -genkey -v \
-            -keystore gympro.keystore \
-            -alias gympro \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname 'CN=GymPro, O=GymPro, C=AR' -noprompt
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip
+          unzip -q gradle-8.4-bin.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
 
-      - name: Init Bubblewrap project
-        run: |
-          mkdir -p apk-build
-          cp twa-manifest.json apk-build/
-          cd apk-build
-          bubblewrap update --skipPwaShellUpdate
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
-      - name: Build APK
-        working-directory: apk-build
-        run: |
-          printf 'android\nandroid\n' | bubblewrap build \
-            --signing-key-path ../gympro.keystore \
-            --signing-key-alias gympro
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --project-dir android
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GymPro-Android
-          path: apk-build/app-release-signed.apk
-          if-no-files-found: warn
+          path: android/app/build/outputs/apk/debug/app-debug.apk
