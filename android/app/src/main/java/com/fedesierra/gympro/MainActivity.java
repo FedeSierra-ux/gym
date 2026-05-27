@@ -18,6 +18,7 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         webView.setWebViewClient(new WebViewClient());
+        webView.clearCache(true);
         webView.loadUrl("https://fedesierra-ux.github.io/gym/");
     }
 
