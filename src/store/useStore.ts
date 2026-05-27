@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips, BodyWeightEntry, AppToast } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips, AppToast } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 
@@ -31,7 +31,7 @@ interface AppState {
   userName: string
   seeded: boolean
   onboarded: boolean
-  bodyWeights: BodyWeightEntry[]
+  anthropicApiKey: string
   toasts: AppToast[]
 
   // Actions
@@ -67,8 +67,7 @@ interface AppState {
   // Profile
   updateUserName: (name: string) => void
   setOnboarded: () => void
-  addBodyWeight: (kg: number) => void
-  deleteBodyWeight: (date: number) => void
+  setAnthropicApiKey: (key: string) => void
 
   // Toasts
   addToast: (message: string, type: AppToast['type']) => void
@@ -94,7 +93,7 @@ export const useStore = create<AppState>()(
       userName: 'Atleta',
       seeded: false,
       onboarded: false,
-      bodyWeights: [],
+      anthropicApiKey: '',
       toasts: [],
 
       setActiveTab: (tab) => set({ activeTab: tab }),
@@ -313,12 +312,7 @@ export const useStore = create<AppState>()(
 
       updateUserName: (name) => set({ userName: name }),
       setOnboarded: () => set({ onboarded: true }),
-      addBodyWeight: (kg) =>
-        set((s) => ({
-          bodyWeights: [...s.bodyWeights, { date: Date.now(), kg }].sort((a, b) => a.date - b.date),
-        })),
-      deleteBodyWeight: (date) =>
-        set((s) => ({ bodyWeights: s.bodyWeights.filter((bw) => bw.date !== date) })),
+      setAnthropicApiKey: (key) => set({ anthropicApiKey: key }),
       addToast: (message, type) =>
         set((s) => ({
           toasts: [...s.toasts, { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message, type }],
@@ -386,7 +380,7 @@ export const useStore = create<AppState>()(
         userName: state.userName,
         seeded: state.seeded,
         onboarded: state.onboarded,
-        bodyWeights: state.bodyWeights,
+        anthropicApiKey: state.anthropicApiKey,
       }),
     }
   )

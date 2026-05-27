@@ -1,21 +1,21 @@
 export type MuscleGroup =
-  | 'pecho'
-  | 'espalda'
-  | 'hombros'
-  | 'biceps'
-  | 'triceps'
-  | 'piernas'
-  | 'gluteos'
-  | 'core'
-  | 'cardio'
+  | 'pecho' | 'espalda' | 'hombros' | 'biceps'
+  | 'triceps' | 'piernas' | 'gluteos' | 'core' | 'cardio'
+
+export type ExerciseEquipment =
+  | 'barra' | 'mancuernas' | 'cable' | 'maquina'
+  | 'peso_corporal' | 'kettlebell' | 'banda' | 'cardio_maquina'
 
 export interface Exercise {
   id: string
   nameEs: string
+  nameArg?: string   // nombre vernacular argentino (ej: "Press de Banco")
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
+  equipmentType: ExerciseEquipment
   icon: string
+  wgerId?: number    // ID en wger.de API para imágenes
 }
 
 export interface RoutineExercise {
@@ -62,13 +62,8 @@ export interface PR {
   date: number
 }
 
-export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso' | 'perfil'
+export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso'
 export type CalendarSubTab = 'calendario' | 'records'
-
-export interface BodyWeightEntry {
-  date: number
-  kg: number
-}
 
 export interface AppToast {
   id: string
@@ -88,3 +83,9 @@ export interface ActiveWorkoutExercise {
 }
 
 export type ExerciseTips = Record<string, string>
+
+export interface AppSettings {
+  anthropicApiKey: string
+  openAiApiKey: string
+  aiProvider: 'anthropic' | 'openai' | 'none'
+}
