@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
+import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { SettingsScreen } from './SettingsScreen'
 
@@ -79,7 +80,8 @@ function GearIcon() {
 }
 
 export function HomeScreen() {
-  const { userName, workouts, routines, exercises, prs, startWorkout, setActiveTab } = useStore()
+  const { userName, workouts, routines, exercises, prs, setActiveTab } = useStore()
+  const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [showSettings, setShowSettings] = useState(false)
 
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
