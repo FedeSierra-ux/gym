@@ -50,7 +50,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
     : []
 
   return (
-    <div className="flex-1 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
+    <div className="flex-1 min-h-0 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       {/* Header */}
       <div
         className="flex-shrink-0 px-4 pt-12 pb-3 relative overflow-hidden"
@@ -155,7 +155,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 py-3">
+      <div className="flex-1 min-h-0 scroll-area px-4 py-3 pb-6">
         {mode === 'search' ? (
           <div className="flex flex-col gap-2">
             {searchFiltered.map(ex => (
