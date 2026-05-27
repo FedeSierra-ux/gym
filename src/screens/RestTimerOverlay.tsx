@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
+import { useWorkoutStore } from '../stores/workoutStore'
 import { vibrate, playBeep } from '../utils/haptics'
 
 const PRESETS = [
@@ -18,26 +19,26 @@ function formatTime(seconds: number) {
 }
 
 export function RestTimerOverlay() {
+  const { exercises } = useStore()
   const {
     activeWorkout,
-    exercises,
     dismissRestTimer,
     adjustRestTimer,
     setRestPreset,
-  } = useStore()
+  } = useWorkoutStore()
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      const state = useStore.getState()
+      const state = useWorkoutStore.getState()
       if (!state.activeWorkout?.restTimerVisible) return
       const left = state.activeWorkout.restSecondsLeft
       if (left <= 0) {
         vibrate([150, 80, 150, 80, 300])
         playBeep(660, 250)
         setTimeout(() => playBeep(880, 300), 300)
-        useStore.setState((s) => ({
+        useWorkoutStore.setState((s) => ({
           activeWorkout: s.activeWorkout
             ? { ...s.activeWorkout, restTimerVisible: false }
             : null,
@@ -48,7 +49,7 @@ export function RestTimerOverlay() {
         if (left === 3) playBeep(660, 100)
         if (left === 2) playBeep(660, 100)
         if (left === 1) playBeep(660, 100)
-        useStore.setState((s) => ({
+        useWorkoutStore.setState((s) => ({
           activeWorkout: s.activeWorkout
             ? { ...s.activeWorkout, restSecondsLeft: s.activeWorkout.restSecondsLeft - 1 }
             : null,

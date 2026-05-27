@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
+import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
 
@@ -54,7 +55,6 @@ export function RoutineDetailScreen() {
     exercises,
     workouts,
     setActiveRoutineId,
-    startWorkout,
     removeExerciseFromRoutine,
     updateRoutine,
     deleteRoutine,
@@ -62,6 +62,7 @@ export function RoutineDetailScreen() {
     showExercisePicker,
     setShowExercisePicker,
   } = useStore()
+  const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
   const [editMode, setEditMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)

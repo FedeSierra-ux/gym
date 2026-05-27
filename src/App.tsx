@@ -1,4 +1,5 @@
 import { useStore } from './store/useStore'
+import { useWorkoutStore } from './stores/workoutStore'
 import { BottomNav } from './components/BottomNav'
 import { ToastContainer } from './components/Toast'
 import { HomeScreen } from './screens/HomeScreen'
@@ -10,7 +11,8 @@ import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 
 function App() {
-  const { activeTab, activeRoutineId, activeWorkout, onboarded } = useStore()
+  const { activeTab, activeRoutineId, onboarded } = useStore()
+  const activeWorkout = useWorkoutStore((s) => s.activeWorkout)
 
   if (!onboarded) {
     return <OnboardingScreen />
