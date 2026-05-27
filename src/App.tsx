@@ -8,7 +8,6 @@ import { CalendarioScreen } from './screens/CalendarioScreen'
 import { ProgresoScreen } from './screens/ProgresoScreen'
 import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
-import { ProfileScreen } from './screens/ProfileScreen'
 
 function App() {
   const { activeTab, activeRoutineId, activeWorkout, onboarded } = useStore()
@@ -37,7 +36,6 @@ function App() {
         )}
         {activeTab === 'calendario' && <CalendarioScreen />}
         {activeTab === 'progreso' && <ProgresoScreen />}
-        {activeTab === 'perfil' && <ProfileScreen />}
       </div>
       <BottomNav />
       <ToastContainer />

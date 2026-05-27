@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { BodyWeightEntry } from '../types'
+
+interface BodyWeightEntry {
+  date: number
+  kg: number
+}
 
 function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
   if (entries.length < 2) return null
@@ -38,13 +42,14 @@ function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
 
 export function ProfileScreen() {
   const {
-    userName, updateUserName, bodyWeights, addBodyWeight, deleteBodyWeight,
+    userName, updateUserName,
     workouts, prs,
   } = useStore()
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(userName)
   const [weightInput, setWeightInput] = useState('')
+  const [bodyWeights] = useState<BodyWeightEntry[]>([])
   const [showAllWeights, setShowAllWeights] = useState(false)
 
   const totalWorkouts = workouts.filter((w) => w.finishedAt).length
@@ -63,7 +68,6 @@ export function ProfileScreen() {
   const handleAddWeight = () => {
     const kg = parseFloat(weightInput)
     if (!isNaN(kg) && kg > 0 && kg < 500) {
-      addBodyWeight(kg)
       setWeightInput('')
     }
   }
@@ -188,12 +192,6 @@ export function ProfileScreen() {
                   </span>
                   <div className="flex items-center gap-3">
                     <span className="text-white text-sm font-semibold">{bw.kg} kg</span>
-                    <button
-                      onClick={() => deleteBodyWeight(bw.date)}
-                      className="text-gray-700 hover:text-red-400 transition-colors text-xs"
-                    >
-                      ×
-                    </button>
                   </div>
                 </div>
               ))}
