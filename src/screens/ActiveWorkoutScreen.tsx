@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { vibrate } from '../utils/haptics'
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
@@ -167,11 +168,7 @@ export function ActiveWorkoutScreen() {
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
                 {/* Exercise header */}
                 <div className="p-3 border-b border-border flex items-center gap-3">
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="56" height="56" viewBox') }}
-                  />
+                  <ExerciseThumbnail exercise={ex} size={56} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
                     <span

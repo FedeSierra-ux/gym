@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 
 function BackIcon() {
   return (
@@ -262,11 +263,7 @@ export function RoutineDetailScreen() {
                   </div>
                 )}
 
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: config.color + '15', border: `1px solid ${config.color}20` }}
-                  dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="48" height="48" viewBox') }}
-                />
+                <ExerciseThumbnail exercise={ex} size={48} />
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white text-sm truncate mb-0.5">{ex.nameEs}</p>
