@@ -61,42 +61,63 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
           {/* Header */}
           <div className="px-5 pt-2 pb-4">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-white leading-tight">{displayName}</h2>
-                {detail?.nameArg && detail.nameArg !== exercise.nameEs && (
-                  <p className="text-xs text-gray-500 mt-0.5">{exercise.nameEs}</p>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ color: config.color, backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}
-                  >
-                    {config.emoji} {config.label}
-                  </span>
-                  <span className="text-xs px-2.5 py-1 rounded-full text-gray-400 bg-surface border border-border">
-                    {exercise.equipment}
-                  </span>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {/* Exercise SVG icon */}
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: config.color + '18', border: `1px solid ${config.color}25` }}
+                  dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="56" height="56" viewBox') }}
+                />
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold text-white leading-tight">{displayName}</h2>
+                  {detail?.nameArg && detail.nameArg !== exercise.nameEs && (
+                    <p className="text-xs text-gray-500 mt-0.5">{exercise.nameEs}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{ color: config.color, backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}
+                    >
+                      {config.emoji} {config.label}
+                    </span>
+                    <span className="text-xs px-2.5 py-1 rounded-full text-gray-400 bg-surface border border-border">
+                      {exercise.equipment}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none mt-1">×</button>
+              <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none mt-1 flex-shrink-0">×</button>
             </div>
           </div>
 
-          {/* Image */}
-          {wgerId && !imgError && (
-            <div className="mx-5 mb-4 bg-surface rounded-2xl overflow-hidden h-44 flex items-center justify-center border border-border">
-              {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt={displayName}
-                  className="h-full w-full object-contain p-2"
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <WgerImage wgerId={wgerId} name={displayName} onError={() => setImgError(true)} />
-              )}
-            </div>
-          )}
+          {/* Image or SVG fallback */}
+          <div className="mx-5 mb-4 rounded-2xl overflow-hidden h-44 flex items-center justify-center border border-border"
+            style={{ background: config.color + '08' }}
+          >
+            {wgerId && !imgError && imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={displayName}
+                className="h-full w-full object-contain p-2"
+                onError={() => setImgError(true)}
+              />
+            ) : wgerId && !imgError ? (
+              <WgerImage wgerId={wgerId} name={displayName} onError={() => setImgError(true)}
+                fallback={
+                  <div
+                    className="w-24 h-24"
+                    style={{ color: config.color }}
+                    dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="96" height="96" viewBox') }}
+                  />
+                }
+              />
+            ) : (
+              <div
+                className="w-24 h-24"
+                dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="96" height="96" viewBox') }}
+              />
+            )}
+          </div>
 
           {/* Muscles */}
           {detail && (
@@ -189,7 +210,7 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
   )
 }
 
-function WgerImage({ wgerId, name, onError }: { wgerId: number; name: string; onError: () => void }) {
+function WgerImage({ wgerId, name, onError, fallback }: { wgerId: number; name: string; onError: () => void; fallback?: React.ReactNode }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -214,11 +235,13 @@ function WgerImage({ wgerId, name, onError }: { wgerId: number; name: string; on
   }, [wgerId, onError])
 
   if (!imageUrl) return (
-    <div className="flex items-center justify-center w-full h-full text-gray-700">
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>
-        <path d="M24 14 L24 26 M24 30 L24 34" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-      </svg>
+    <div className="flex items-center justify-center w-full h-full">
+      {fallback ?? (
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="text-gray-700">
+          <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4"/>
+          <path d="M24 14 L24 26 M24 30 L24 34" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+        </svg>
+      )}
     </div>
   )
 
