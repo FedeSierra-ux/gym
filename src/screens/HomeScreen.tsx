@@ -33,6 +33,51 @@ function getThisWeekWorkouts(workouts: Array<{ startedAt: number; finishedAt?: n
   return workouts.filter(w => w.finishedAt && w.startedAt >= monday.getTime())
 }
 
+function WeekDots({ workouts }: { workouts: Array<{ startedAt: number; finishedAt?: number }> }) {
+  const today = new Date()
+  const todayDow = (today.getDay() + 6) % 7 // 0=Mon..6=Sun
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - todayDow)
+  monday.setHours(0, 0, 0, 0)
+  const days = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+
+  return (
+    <div className="flex items-end justify-between px-1">
+      {days.map((day, i) => {
+        const dayStart = monday.getTime() + i * 86400000
+        const dayEnd = dayStart + 86400000
+        const hasWorkout = workouts.some(w => w.finishedAt && w.startedAt >= dayStart && w.startedAt < dayEnd)
+        const isToday = i === todayDow
+        const isPast = dayStart < today.getTime()
+
+        let dotClass = 'day-dot-future'
+        if (hasWorkout) dotClass = 'day-dot-active'
+        else if (isToday) dotClass = 'day-dot-today'
+        else if (isPast) dotClass = 'day-dot-past'
+
+        return (
+          <div key={i} className="flex flex-col items-center gap-1.5">
+            <div
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${dotClass}`}
+            >
+              {day}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function GearIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  )
+}
+
 export function HomeScreen() {
   const { userName, workouts, routines, exercises, prs, startWorkout, setActiveTab } = useStore()
   const [showSettings, setShowSettings] = useState(false)
@@ -57,152 +102,208 @@ export function HomeScreen() {
 
   const totalDuration = suggestedRoutine?.exercises.reduce((acc, re) => acc + re.sets * 2.5, 0) ?? 0
 
+  const greeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Buenos días'
+    if (h < 19) return 'Buenas tardes'
+    return 'Buenas noches'
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden relative">
       <div className="flex-1 scroll-area">
-        {/* Header con gradiente */}
-        <div
-          className="px-5 pt-14 pb-6"
-          style={{
-            background: 'linear-gradient(180deg, rgba(0,255,136,0.06) 0%, rgba(7,7,13,0) 100%)',
-          }}
-        >
-          <div className="flex items-start justify-between">
+        {/* Header */}
+        <div className="px-5 pt-14 pb-5 relative overflow-hidden">
+          {/* Ambient glow bg */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(0,255,136,0.07) 0%, transparent 70%)',
+            }}
+          />
+          <div className="flex items-start justify-between relative">
             <div>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
+              <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: 'rgba(255,255,255,0.25)' }}>
                 {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-              <h1 className="text-2xl font-bold">
-                <span className="text-white">Hola, </span>
+              <p className="text-sm font-medium mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{greeting()},</p>
+              <h1 className="text-3xl font-bold tracking-tight">
                 <span className="text-gradient-primary">{userName}</span>
               </h1>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-colors"
-                style={{ background: 'rgba(30,30,42,0.6)' }}
-              >
-                <span className="text-lg">⚙️</span>
-              </button>
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(0,255,136,0.2), rgba(0,212,255,0.1))',
-                  border: '1px solid rgba(0,255,136,0.3)',
-                  boxShadow: '0 0 20px rgba(0,255,136,0.15)',
-                }}
-              >
-                <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
-                  <rect x="13" y="21" width="22" height="6" rx="3" fill="#00ff88"/>
-                  <rect x="9" y="19" width="5" height="10" rx="2" fill="#00cc6a"/>
-                  <rect x="34" y="19" width="5" height="10" rx="2" fill="#00cc6a"/>
-                  <rect x="3" y="16" width="7" height="16" rx="2.5" fill="#00ff88"/>
-                  <rect x="38" y="16" width="7" height="16" rx="2.5" fill="#00ff88"/>
-                </svg>
-              </div>
-            </div>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-10 h-10 rounded-2xl flex items-center justify-center transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.4)',
+              }}
+            >
+              <GearIcon />
+            </button>
           </div>
         </div>
 
         <div className="px-4 pb-6 flex flex-col gap-4">
+
+          {/* Weekly activity */}
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.45)',
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="section-label">Semana actual</p>
+              {weekVolumeMin > 0 && (
+                <p className="text-[11px] font-semibold" style={{ color: 'rgba(0,255,136,0.7)' }}>
+                  {formatDuration(weekVolumeMin)} entrenados
+                </p>
+              )}
+            </div>
+            <WeekDots workouts={finishedWorkouts} />
+          </div>
+
           {/* Stats rápidos */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="stat-card rounded-2xl p-3 text-center">
-              <p className="text-[22px] font-bold text-primary" style={{ textShadow: '0 0 16px rgba(0,255,136,0.4)' }}>
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="stat-card rounded-2xl p-3.5 text-center">
+              <p
+                className="text-2xl font-bold leading-none mb-1"
+                style={{ color: 'var(--primary)', textShadow: '0 0 20px rgba(0,255,136,0.5)' }}
+              >
                 {weekWorkouts.length}
               </p>
-              <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Esta semana</p>
-            </div>
-            <div className="stat-card rounded-2xl p-3 text-center">
-              <p className="text-[22px] font-bold" style={{ color: '#00d4ff', textShadow: '0 0 16px rgba(0,212,255,0.4)' }}>
-                {streak > 0 ? `${streak}🔥` : '—'}
+              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Esta semana
               </p>
-              <p className="text-[10px] text-gray-500 mt-0.5 font-medium">Racha</p>
             </div>
-            <div className="stat-card rounded-2xl p-3 text-center">
-              <p className="text-[22px] font-bold" style={{ color: '#ffd700', textShadow: '0 0 16px rgba(255,215,0,0.3)' }}>
+            <div className="stat-card rounded-2xl p-3.5 text-center">
+              <p
+                className="text-2xl font-bold leading-none mb-1"
+                style={{ color: 'var(--info)', textShadow: '0 0 20px rgba(0,212,255,0.5)' }}
+              >
+                {streak > 0 ? streak : '—'}
+              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {streak > 0 ? 'Días seguidos' : 'Sin racha'}
+              </p>
+            </div>
+            <div className="stat-card rounded-2xl p-3.5 text-center">
+              <p
+                className="text-2xl font-bold leading-none mb-1"
+                style={{ color: 'var(--gold)', textShadow: '0 0 20px rgba(255,215,0,0.4)' }}
+              >
                 {totalPrs}
               </p>
-              <p className="text-[10px] text-gray-500 mt-0.5 font-medium">PRs totales</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                PRs totales
+              </p>
             </div>
           </div>
 
           {/* Último entreno */}
           {lastWorkout && lastRoutine ? (
-            <div className="card-glow rounded-2xl p-4">
-              <p className="section-label mb-2">Último entreno</p>
+            <div
+              className="rounded-2xl p-4 relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.45)',
+              }}
+            >
+              <p className="section-label mb-3">Último entreno</p>
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-white">
-                    {lastRoutine.emoji} {lastRoutine.name}
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {new Date(lastWorkout.startedAt).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
+                    {lastRoutine.emoji}
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-white">{lastRoutine.name}</h2>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      {new Date(lastWorkout.startedAt).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-white">{formatDuration(lastWorkout.durationMin ?? 0)}</p>
-                    <p className="text-[10px] text-gray-500">Duración</p>
+                    <p className="text-sm font-bold text-white">{formatDuration(lastWorkout.durationMin ?? 0)}</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>Duración</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-white">{lastWorkout.exercises.reduce((a, e) => a + e.sets.length, 0)}</p>
-                    <p className="text-[10px] text-gray-500">Series</p>
+                    <p className="text-sm font-bold text-white">{lastWorkout.exercises.reduce((a, e) => a + e.sets.length, 0)}</p>
+                    <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>Series</p>
                   </div>
                 </div>
               </div>
-              {weekVolumeMin > 0 && (
-                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                  <p className="text-xs text-gray-500">Tiempo esta semana</p>
-                  <p className="text-xs font-semibold text-white">{formatDuration(weekVolumeMin)}</p>
-                </div>
-              )}
             </div>
           ) : (
             <div
-              className="rounded-2xl p-5 text-center border border-dashed"
-              style={{ borderColor: 'rgba(0,255,136,0.2)', background: 'rgba(0,255,136,0.04)' }}
+              className="rounded-2xl p-5 text-center"
+              style={{
+                border: '1px dashed rgba(0,255,136,0.2)',
+                background: 'rgba(0,255,136,0.03)',
+              }}
             >
               <div className="text-3xl mb-2">🏋️</div>
               <p className="text-white font-semibold text-sm">¡Tu primera sesión te espera!</p>
-              <p className="text-gray-500 text-xs mt-1">Creá una rutina y comenzá a entrenar</p>
+              <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>Creá una rutina y comenzá a entrenar</p>
             </div>
           )}
 
           {/* Rutina sugerida */}
           {suggestedRoutine ? (
-            <div className="card-glow rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-3">
+            <div
+              className="rounded-2xl p-4 relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(160deg, #0f1520 0%, #0d0d1c 100%)',
+                border: '1px solid rgba(0,255,136,0.14)',
+                boxShadow: '0 1px 0 rgba(0,255,136,0.08) inset, 0 8px 32px rgba(0,0,0,0.45)',
+              }}
+            >
+              {/* Subtle corner glow */}
+              <div
+                className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
+                style={{ background: 'radial-gradient(circle at top right, rgba(0,255,136,0.08), transparent 70%)' }}
+              />
+              <div className="flex items-start justify-between mb-3 relative">
                 <div>
-                  <p className="section-label mb-1">Siguiente rutina</p>
-                  <h2 className="text-lg font-bold text-white">
+                  <p className="section-label mb-1.5">Siguiente rutina</p>
+                  <h2 className="text-lg font-bold text-white leading-tight">
                     {suggestedRoutine.emoji} {suggestedRoutine.name}
                   </h2>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-white">{suggestedRoutine.exercises.length}</p>
-                  <p className="text-[10px] text-gray-500">ejercicios</p>
-                  <p className="text-xs text-gray-600 mt-0.5">~{Math.round(totalDuration)}min</p>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-lg font-bold text-white">{suggestedRoutine.exercises.length}</p>
+                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>ejercicios</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.2)' }}>~{Math.round(totalDuration)}min</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 mb-4">
+              <div className="flex flex-wrap gap-1.5 mb-4 relative">
                 {suggestedExercises.map(ex => {
                   if (!ex) return null
                   const cfg = muscleGroupConfig[ex.muscleGroup]
                   return (
                     <span
                       key={ex.id}
-                      className="text-[11px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ color: cfg.color, backgroundColor: cfg.color + '18', border: `1px solid ${cfg.color}30` }}
+                      className="text-[11px] px-2.5 py-1 rounded-full font-medium"
+                      style={{ color: cfg.color, backgroundColor: cfg.color + '15', border: `1px solid ${cfg.color}25` }}
                     >
                       {ex.nameEs}
                     </span>
                   )
                 })}
                 {suggestedRoutine.exercises.length > 4 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full text-gray-500 bg-surface border border-border">
+                  <span
+                    className="text-[11px] px-2.5 py-1 rounded-full font-medium"
+                    style={{ color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  >
                     +{suggestedRoutine.exercises.length - 4} más
                   </span>
                 )}
@@ -210,17 +311,24 @@ export function HomeScreen() {
 
               <button
                 onClick={() => startWorkout(suggestedRoutine.id)}
-                className="w-full btn-primary-glow py-3.5 rounded-xl text-sm"
+                className="w-full btn-primary-glow py-3.5 rounded-xl text-sm relative"
               >
                 ▶ Iniciar Rutina
               </button>
             </div>
           ) : (
-            <div className="card-glow rounded-2xl p-5 text-center">
-              <p className="text-gray-400 text-sm mb-3">No tenés rutinas aún</p>
+            <div
+              className="rounded-2xl p-5 text-center"
+              style={{
+                background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              <p className="text-sm mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>No tenés rutinas aún</p>
               <button
                 onClick={() => setActiveTab('rutinas')}
-                className="text-primary text-sm font-semibold underline"
+                className="text-sm font-semibold underline"
+                style={{ color: 'var(--primary)' }}
               >
                 Crear primera rutina →
               </button>
@@ -229,7 +337,6 @@ export function HomeScreen() {
         </div>
       </div>
 
-      {/* Settings overlay */}
       {showSettings && (
         <SettingsScreen onClose={() => setShowSettings(false)} />
       )}

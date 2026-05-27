@@ -3,1027 +3,438 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GymPro — Visual Preview v3</title>
+<title>Gym App — Preview Premium</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#07070d;font-family:'Inter',sans-serif;color:#fff;padding:40px 20px 80px}
-  h1.pg{font-size:36px;font-weight:900;letter-spacing:-1.5px;text-align:center;margin-bottom:6px;
-    background:linear-gradient(135deg,#00ff88,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-  p.pg{text-align:center;color:#444;font-size:13px;margin-bottom:44px}
-
-  /* flow arrows between screens */
-  .flow{display:flex;align-items:flex-start;gap:0;flex-wrap:wrap;justify-content:center;max-width:1900px;margin:0 auto}
-  .flow-group{display:flex;align-items:center;gap:0}
-  .arrow{font-size:22px;color:#333;padding:0 6px;margin-top:200px;flex-shrink:0}
-
-  .sw{display:flex;flex-direction:column;align-items:center;gap:12px}
-  .sl{font-size:10px;font-weight:700;color:#00ff88;text-transform:uppercase;letter-spacing:2px;text-align:center;max-width:200px}
-  .sl.sub{color:#00d4ff}
-  .sl.dim{color:#444}
-
-  /* PHONE */
-  .ph{width:320px;height:690px;background:#111118;border-radius:44px;border:2px solid #1e1e2a;
-    box-shadow:0 0 0 1px #2a2a3a,0 40px 80px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.04);
-    overflow:hidden;position:relative;display:flex;flex-direction:column}
-  .ph.sm{width:280px;height:620px;border-radius:38px}
-
-  .sb{display:flex;justify-content:space-between;align-items:center;padding:12px 24px 6px;flex-shrink:0}
-  .sb-t{font-size:14px;font-weight:700}
-  .sb-i{font-size:11px;color:#aaa}
-
-  .sc{flex:1;overflow:hidden;position:relative}
-  .sa{height:100%;overflow-y:auto;padding-bottom:80px;scrollbar-width:none}
-  .sa::-webkit-scrollbar{display:none}
-
-  /* NAV */
-  .nav{display:flex;background:#0e0e16;border-top:1px solid #1a1a24;
-    padding:9px 0 20px;position:absolute;bottom:0;left:0;right:0;z-index:100}
-  .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
-  .ni-ic{font-size:19px;line-height:1}
-  .ni-lb{font-size:9px;color:#444;font-weight:500}
-  .ni.on .ni-lb{color:#00ff88}
-  .nd{width:4px;height:4px;background:#00ff88;border-radius:50%}
-
-  /* COMMON */
-  .hd{padding:16px 20px 10px}
-  .hd-t{font-size:22px;font-weight:900;letter-spacing:-.5px}
-  .hd-s{font-size:12px;color:#444;margin-top:3px}
-  .sec{padding:0 20px;font-size:10px;font-weight:700;color:#3a3a4a;
-    text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-  .card{margin:0 16px 12px;background:#13131c;border:1px solid #1e1e2a;border-radius:18px;overflow:hidden}
-  .row{padding:12px 16px;border-bottom:1px solid #191925}
-  .row:last-child{border-bottom:none}
-
-  /* HOME */
-  .ls-bar{margin:0 16px 16px;background:#13131c;border:1px solid #1e1e2a;border-radius:16px;
-    padding:13px 16px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
-  .ls-bar::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;
-    background:linear-gradient(180deg,#00d4ff,#0088cc);border-radius:3px 0 0 3px}
-  .ls-ic{width:38px;height:38px;background:#00d4ff12;border:1px solid #00d4ff28;
-    border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-  .ls-nm{font-size:14px;font-weight:700}
-  .ls-mt{display:flex;gap:10px;margin-top:4px}
-  .ls-mi{font-size:10px;color:#555}
-  .ls-mi span{color:#00d4ff;font-weight:600}
-  .ls-ring{width:42px;height:42px;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-  .ls-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
-  .ls-rv{font-size:11px;font-weight:800;color:#00d4ff}
-
-  .stat-row{display:flex;gap:8px;padding:0 16px;margin-bottom:16px}
-  .stat{flex:1;background:#13131c;border:1px solid #1e1e2a;border-radius:14px;padding:12px;text-align:center}
-  .sv{font-size:20px;font-weight:900}
-  .sl2{font-size:9px;color:#444;margin-top:2px}
-  .ss{font-size:9px;margin-top:3px;font-weight:600}
-
-  .big-btn{margin:0 16px 12px;background:linear-gradient(135deg,#00ff88,#00cc70);
-    color:#000;font-size:14px;font-weight:800;padding:14px;border-radius:14px;text-align:center;
-    box-shadow:0 8px 24px rgba(0,255,136,.22)}
-
-  /* RUTINAS LIST */
-  .rut-card{margin:0 16px 10px;background:#13131c;border:1px solid #1e1e2a;border-radius:18px;
-    padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer}
-  .rut-card:hover{border-color:#00ff8840}
-  .rut-badge{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;
-    justify-content:center;font-size:22px;flex-shrink:0}
-  .rut-nm{font-size:14px;font-weight:800}
-  .rut-mt{font-size:11px;color:#555;margin-top:3px}
-  .rut-tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
-  .rut-tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;background:#1e1e2a;color:#555}
-  .rut-arr{font-size:18px;color:#333;flex-shrink:0}
-  .last-tag{font-size:9px;color:#00ff88;font-weight:600;background:#00ff8812;
-    border:1px solid #00ff8828;padding:2px 7px;border-radius:20px;flex-shrink:0}
-
-  /* ROUTINE DETAIL */
-  .rd-header{background:#13131c;border-bottom:1px solid #1a1a24;padding:14px 18px 12px}
-  .rd-back{font-size:11px;color:#00ff88;font-weight:700;margin-bottom:6px}
-  .rd-name{font-size:20px;font-weight:900}
-  .rd-meta{display:flex;gap:12px;margin-top:6px}
-  .rd-mi{font-size:11px;color:#555}
-  .rd-mi span{color:#aaa;font-weight:600}
-  .rd-actions{display:flex;gap:8px;margin-top:12px}
-  .rd-btn{flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:700;text-align:center}
-  .rd-start{background:linear-gradient(135deg,#00ff88,#00cc70);color:#000}
-  .rd-edit{background:#1e1e2a;color:#666;border:1px solid #2a2a3a}
-
-  .ex-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #191925}
-  .ex-row:last-child{border-bottom:none}
-  .ex-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ex-nm{font-size:13px;font-weight:700}
-  .ex-cfg{font-size:11px;color:#555;margin-top:2px}
-  .ex-grp{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px}
-  .ex-drag{font-size:18px;color:#2a2a3a;flex-shrink:0}
-
-  /* ADD EXERCISE (submenu) */
-  .back-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;
-    background:#13131c;border-bottom:1px solid #1a1a24;flex-shrink:0}
-  .back-ic{width:30px;height:30px;border-radius:8px;background:#1e1e2a;
-    display:flex;align-items:center;justify-content:center;font-size:14px;color:#666}
-  .back-tx{font-size:14px;font-weight:700}
-  .back-tx span{font-size:12px;color:#444;font-weight:500}
-
-  .search{margin:10px 16px 12px;background:#1a1a26;border:1px solid #1e1e2a;
-    border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;color:#444;font-size:13px}
-
-  .mg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px 14px}
-  .mg-btn{background:#13131c;border:1px solid #1e1e2a;border-radius:14px;padding:12px 8px;
-    display:flex;flex-direction:column;align-items:center;gap:6px}
-  .mg-btn.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 8%,#13131c)}
-  .mg-em{font-size:22px;line-height:1}
-  .mg-nm{font-size:10px;font-weight:600;color:#555;text-align:center;line-height:1.2}
-  .mg-btn.on .mg-nm{color:var(--c)}
-  .mg-ct{font-size:9px;color:#2a2a2a;margin-top:-2px}
-  .mg-btn.on .mg-ct{color:color-mix(in srgb,var(--c) 50%,#444)}
-
-  .ex-pick{display:flex;align-items:center;gap:10px;padding:10px 14px;
-    margin:0 16px 6px;background:#13131c;border:1px solid #1e1e2a;border-radius:14px}
-  .ep-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ep-nm{font-size:13px;font-weight:700}
-  .ep-ms{font-size:10px;color:#555;margin-top:2px}
-  .ep-eq{font-size:9px;padding:2px 7px;border-radius:20px;background:#1e1e2a;color:#555;margin-top:4px;display:inline-block}
-  .ep-add{width:28px;height:28px;border-radius:8px;background:#00ff8818;border:1px solid #00ff8830;
-    color:#00ff88;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-
-  /* ACTIVE WORKOUT */
-  .wt-bar{display:flex;justify-content:space-between;align-items:center;
-    padding:12px 18px;background:#111118;border-bottom:1px solid #1a1a24;position:sticky;top:0;z-index:10}
-  .wt-nm{font-size:12px;font-weight:700}
-  .wt-ti{font-size:14px;font-weight:800;color:#00ff88;font-variant-numeric:tabular-nums}
-  .wt-fin{background:linear-gradient(135deg,#00ff88,#00cc70);color:#000;
-    font-size:11px;font-weight:800;padding:7px 14px;border-radius:20px}
-
-  .ex-card{margin:12px 14px;background:#13131c;border:1px solid #1e1e2a;border-radius:20px;overflow:hidden}
-  .ec-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #191925}
-  .ec-vis{width:62px;height:62px;border-radius:14px;border:1px solid #00ff8822;
-    background:linear-gradient(135deg,#162216,#0e1a0e);
-    display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ec-nm{font-size:15px;font-weight:800}
-  .ec-tg{display:inline-block;margin-top:4px;font-size:9px;font-weight:700;padding:2px 8px;
-    border-radius:20px;background:#00ff8815;border:1px solid #00ff8830;color:#00ff88}
-  .ec-pr{font-size:10px;color:#ffd700;margin-top:3px}
-  .sets-hd{display:grid;grid-template-columns:28px 52px 1fr 1fr 28px;gap:5px;
-    padding:8px 16px;border-bottom:1px solid #191925}
-  .sets-hd span{font-size:9px;color:#2a2a3a;font-weight:700;text-align:center;text-transform:uppercase}
-  .sr{display:grid;grid-template-columns:28px 52px 1fr 1fr 28px;gap:5px;
-    padding:7px 16px;align-items:center;border-bottom:1px solid #111120}
-  .sr.dn{background:#00ff8806}
-  .sn{width:24px;height:24px;border-radius:6px;background:#1a1a26;
-    display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#333}
-  .sr.dn .sn{background:#00ff8818;color:#00ff88}
-  .sp{font-size:10px;color:#2a2a3a;text-align:center}
-  .si{background:#1a1a26;border:1px solid #222238;border-radius:8px;
-    padding:6px 3px;text-align:center;font-size:13px;font-weight:700}
-  .sr.dn .si{background:#00ff8810;border-color:#00ff8825;color:#00ff88}
-  .si.fc{border-color:#00ff88;box-shadow:0 0 0 2px #00ff8818}
-  .ck{width:24px;height:24px;border-radius:6px;background:#1a1a26;border:1px solid #222238;
-    display:flex;align-items:center;justify-content:center;font-size:12px}
-  .ck.dn{background:#00ff88;border-color:#00ff88;color:#000}
-  .add-set{margin:8px 16px 14px;border:1px dashed #222238;border-radius:10px;
-    padding:9px;text-align:center;font-size:12px;color:#2a2a3a}
-  .hint{margin:0 16px 12px;background:#1a1a0a;border:1px solid #2a2a10;
-    border-radius:9px;padding:7px 11px;font-size:10px;color:#666}
-
-  /* REST */
-  .rest-sc{background:#08080f;height:100%;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:18px}
-  .rest-lb{font-size:10px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:2px}
-  .rest-ring{position:relative;width:180px;height:180px}
-  .rest-in{position:absolute;top:14px;left:14px;width:152px;height:152px;border-radius:50%;
-    background:#0d0d14;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .rest-t{font-size:46px;font-weight:900;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1}
-  .rest-of{font-size:11px;color:#2a2a3a;margin-top:3px}
-  .rest-inf{font-size:12px;color:#444}
-  .rest-nx{background:#13131c;border:1px solid #1e1e2a;border-radius:16px;
-    padding:13px 20px;text-align:center;width:260px}
-  .rnx-lb{font-size:9px;color:#333;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-  .rnx-nm{font-size:14px;font-weight:800}
-  .rnx-tg{font-size:11px;color:#00ff88;margin-top:3px;font-weight:600}
-  .rest-ctrls{display:flex;gap:10px}
-  .rc{padding:10px 16px;border-radius:18px;font-size:13px;font-weight:700;
-    background:#13131c;border:1px solid #1e1e2a;color:#555}
-  .rc.main{background:linear-gradient(135deg,#00ff88,#00cc70);color:#000;border:none;padding:10px 26px}
-  .rest-pre{display:flex;gap:6px}
-  .rp{padding:6px 13px;border-radius:18px;font-size:11px;font-weight:600;
-    background:#13131c;border:1px solid #1e1e2a;color:#333}
-  .rp.on{background:#00ff8818;border-color:#00ff8845;color:#00ff88}
-
-  /* PROGRESS */
-  .ch-card{margin:0 16px 14px;background:#13131c;border:1px solid #1e1e2a;border-radius:18px;padding:16px}
-  .ch-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-  .ch-ex{font-size:13px;font-weight:800}
-  .ch-sb{font-size:10px;color:#444;margin-top:2px}
-  .ch-v{font-size:22px;font-weight:900}
-  .ch-d{font-size:11px;margin-top:2px;font-weight:600}
-  .bars{display:flex;align-items:flex-end;gap:5px;height:76px;padding:0 2px}
-  .bc{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
-  .b{width:100%;border-radius:4px 4px 0 0;min-height:5px}
-  .b.old{background:#1e1e2e}
-  .b.ng{background:linear-gradient(180deg,#00ff88,#00aa55)}
-  .b.nb{background:linear-gradient(180deg,#00d4ff,#0088cc)}
-  .b.ny{background:linear-gradient(180deg,#ffd700,#cc9900)}
-  .bl{font-size:8px;color:#2a2a3a}
-  .bl.a{color:#00ff88;font-weight:700}
-  .bl.ab{color:#00d4ff;font-weight:700}
-  .bl.ay{color:#ffd700;font-weight:700}
-  .cp{margin-top:12px;background:#00ff8810;border:1px solid #00ff8825;border-radius:10px;
-    padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:#777}
-  .cp strong{color:#00ff88}
-  .cp.b{background:#00d4ff10;border-color:#00d4ff25}
-  .cp.b strong{color:#00d4ff}
-  .cp.y{background:#ffd70010;border-color:#ffd70025}
-  .cp.y strong{color:#ffd700}
-  .per-tabs{display:flex;gap:6px;padding:0 16px 14px}
-  .pt{padding:7px 14px;border-radius:18px;font-size:12px;font-weight:600;
-    background:#13131c;border:1px solid #1e1e2a;color:#444}
-  .pt.on{background:#00ff8818;border-color:#00ff8845;color:#00ff88}
-
-  /* RECORDS */
-  .tr-card{margin:0 16px 16px;background:linear-gradient(135deg,#1a1200,#110d00);
-    border:1px solid #ffd70022;border-radius:18px;padding:16px 18px;
-    display:flex;align-items:center;gap:14px}
-  .tr-ic{font-size:38px}
-  .tr-h{font-size:17px;font-weight:900;color:#ffd700}
-  .tr-p{font-size:11px;color:#666;margin-top:2px}
-  .pr-it{display:flex;align-items:center;gap:12px;padding:11px 14px;margin:0 16px 6px;
-    background:#13131c;border:1px solid #1e1e2a;border-radius:14px}
-  .pr-it.np{background:#00ff8806;border-color:#00ff8820;animation:pg 2.5s infinite}
-  @keyframes pg{0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,.2)}50%{box-shadow:0 0 0 5px rgba(0,255,136,0)}}
-  .pr-rk{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-  .pr-rk.g{background:#ffd70014}
-  .pr-rk.s{background:#c0c0c014}
-  .pr-rk.b{background:#cd7f3214}
-  .pr-rk.n{background:#1e1e2a;font-size:11px;font-weight:700;color:#444}
-  .pr-ex{font-size:12px;font-weight:700}
-  .pr-dt{font-size:10px;color:#444;margin-top:1px}
-  .nb{font-size:8px;font-weight:800;background:#00ff88;color:#000;padding:1px 5px;border-radius:3px;margin-left:5px}
-  .pr-wt{font-size:17px;font-weight:900}
-  .pr-rp{font-size:10px;color:#444;margin-top:1px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#030309;color:white;font-family:-apple-system,'SF Pro Display','Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:32px 24px 60px;min-height:100vh}
+.page-title{text-align:center;font-size:26px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,#00ff88,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-sub{text-align:center;font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:40px;letter-spacing:.1em;text-transform:uppercase}
+.screens{display:flex;gap:28px;overflow-x:auto;padding-bottom:12px;scrollbar-width:thin;align-items:flex-start}
+.screens::-webkit-scrollbar{height:4px}
+.screens::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.pw{flex-shrink:0;width:300px}
+.plbl{text-align:center;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.ph{width:300px;height:620px;background:#06060f;border-radius:38px;border:1.5px solid rgba(255,255,255,.09);box-shadow:0 0 0 5px rgba(255,255,255,.025),0 40px 100px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.07);overflow:hidden;display:flex;flex-direction:column;position:relative}
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:11px 18px 2px;font-size:10px;font-weight:600;color:rgba(255,255,255,.65);flex-shrink:0}
+.cnt{flex:1;overflow:hidden;position:relative}
+.bnav{background:rgba(6,6,16,.96);backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.06);display:flex;padding:8px 0 18px;flex-shrink:0}
+.nt{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.nt.on::before{content:'';position:absolute;top:-8px;width:26px;height:2px;background:#00ff88;border-radius:2px;box-shadow:0 0 12px #00ff88,0 0 24px rgba(0,255,136,.5)}
+.nt svg{width:20px;height:20px}
+.nt.on svg{color:#00ff88;filter:drop-shadow(0 0 5px rgba(0,255,136,.7))}
+.nt:not(.on) svg{color:rgba(255,255,255,.22)}
+.nl{font-size:7.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.nt.on .nl{color:#00ff88}
+.nt:not(.on) .nl{color:rgba(255,255,255,.2)}
+.card{background:linear-gradient(160deg,#111124 0%,#0d0d1c 100%);border:1px solid rgba(255,255,255,.06);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 6px 24px rgba(0,0,0,.5);border-radius:14px}
+.cg{background:linear-gradient(160deg,#0f1520 0%,#0d0d1c 100%);border:1px solid rgba(0,255,136,.14);box-shadow:0 1px 0 rgba(0,255,136,.07) inset,0 6px 24px rgba(0,0,0,.5);border-radius:14px;position:relative;overflow:hidden}
+.cg::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle at top right,rgba(0,255,136,.09),transparent 70%);pointer-events:none}
+.sl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.sc{background:linear-gradient(160deg,#111124 0%,#0d0d1c 100%);border:1px solid rgba(255,255,255,.06);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 4px 16px rgba(0,0,0,.4);border-radius:12px;padding:10px 6px;text-align:center;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent)}
+.dd{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.dd.done{background:#00ff88;color:#000;box-shadow:0 0 14px rgba(0,255,136,.65)}
+.dd.today{border:1.5px solid rgba(0,255,136,.5);color:#00ff88}
+.dd.past{background:rgba(255,255,255,.05);color:rgba(255,255,255,.2)}
+.dd.future{color:rgba(255,255,255,.1)}
+.tg{background:linear-gradient(135deg,#00ff88,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.bp{background:linear-gradient(135deg,#00ff88,#00e87a);color:#000;font-weight:800;border:none;box-shadow:0 4px 22px rgba(0,255,136,.42),0 1px 0 rgba(255,255,255,.3) inset;border-radius:12px;font-size:12px;padding:10px;width:100%}
+.tag{font-size:9px;font-weight:600;padding:3px 7px;border-radius:20px;display:inline-block}
+.amb{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,255,136,.07) 0%,transparent 70%)}
+.sr{display:grid;grid-template-columns:24px 1fr 56px 56px 30px;gap:5px;padding:6px 10px;align-items:center;font-size:10px}
+.sr.dn{background:rgba(0,255,136,.04)}
+.if{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:5px;text-align:center;font-weight:700;font-size:11px;color:white}
+.if.dn{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.25);color:#00ff88}
+.ck{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin:0 auto}
+.ck.dn{background:#00ff88;color:#000}
+.ck.td{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3)}
+.cd{display:flex;align-items:center;justify-content:center;aspect-ratio:1;border-radius:50%;font-size:9px;font-weight:500;position:relative}
+.cd.gd{color:#00ff88}
+.cd.gd::after{content:'';position:absolute;bottom:1px;width:4px;height:4px;background:#00ff88;border-radius:50%}
+.cd.tc{background:#00ff88;color:#000;font-weight:800}
+.cd.fc{color:rgba(255,255,255,.12)}
+.cd.pc{color:rgba(255,255,255,.4)}
+.bi{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bf{width:100%;border-radius:4px 4px 0 0;min-height:3px}
+.bl{font-size:7px;color:rgba(255,255,255,.3)}
+.ew{border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#0c0c1e,#080816);border:1px solid rgba(255,255,255,.06)}
+.ew img{width:100%;height:100%;object-fit:contain}
+.ep{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px}
 </style>
 </head>
 <body>
+<div class="page-title">Gym App — Preview Premium</div>
+<div class="page-sub">Diseño premium dark · 6 pantallas · Deslizá →</div>
+<div class="screens">
 
-<h1 class="pg">GymPro — Visual Preview v3</h1>
-<p class="pg">Flujo completo: Rutinas como concepto central · Ejercicios como submenú</p>
+<!-- NAV HELPER MACRO -->
+<!-- HOME icon: path house -->
+<!-- GRID icon: 4 squares -->
+<!-- CAL icon: calendar -->
+<!-- CHART icon: bars -->
 
-<div class="flow">
+<!-- ==================== 1. HOME ==================== -->
+<div class="pw">
+<div class="plbl">01 · Inicio</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt">
+  <div style="padding:10px 14px 8px;position:relative;overflow:hidden">
+    <div class="amb"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:3px">martes, 27 de mayo</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:1px">Buenas noches,</div>
+        <div class="tg" style="font-size:24px;font-weight:800;line-height:1">Fede</div>
+      </div>
+      <div style="width:34px;height:34px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </div>
+    </div>
+  </div>
+  <div style="padding:0 14px;margin-bottom:10px">
+    <div class="card" style="padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="sl">Semana actual</div>
+        <div style="font-size:9px;color:rgba(0,255,136,.7);font-weight:600">2h 15min</div>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <div class="dd done">L</div><div class="dd done">M</div><div class="dd past">M</div><div class="dd done">J</div><div class="dd today">V</div><div class="dd future">S</div><div class="dd future">D</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 14px;margin-bottom:10px">
+    <div class="sc"><div style="font-size:22px;font-weight:800;line-height:1;color:#00ff88;text-shadow:0 0 18px rgba(0,255,136,.55)">3</div><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:4px">Semana</div></div>
+    <div class="sc"><div style="font-size:22px;font-weight:800;line-height:1;color:#00d4ff;text-shadow:0 0 18px rgba(0,212,255,.55)">4</div><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:4px">Racha</div></div>
+    <div class="sc"><div style="font-size:22px;font-weight:800;line-height:1;color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,.45)">8</div><div style="font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.28);margin-top:4px">PRs</div></div>
+  </div>
+  <div style="padding:0 14px">
+    <div class="cg" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;position:relative;z-index:1">
+        <div><div class="sl" style="margin-bottom:4px">Siguiente rutina</div><div style="font-size:16px;font-weight:800;color:white">🏋️ Espalda &amp; Bíceps</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:800;color:white">6</div><div style="font-size:9px;color:rgba(255,255,255,.3)">ejercicios</div><div style="font-size:9px;color:rgba(255,255,255,.2)">~45min</div></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;position:relative;z-index:1">
+        <span class="tag" style="color:#00d4ff;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.2)">Peso Muerto</span>
+        <span class="tag" style="color:#a855f7;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.2)">Dominadas</span>
+        <span class="tag" style="color:#f97316;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.2)">Curl Bíceps</span>
+        <span class="tag" style="color:rgba(255,255,255,.3);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">+3 más</span>
+      </div>
+      <button class="bp" style="position:relative;z-index:1">▶ Iniciar Rutina</button>
+    </div>
+  </div>
+</div>
+<div class="bnav">
+  <div class="nt on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
+</div>
 
-<!-- ========== 1. HOME ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl">1 · Home</div>
-  <div class="ph">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <!-- header -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 12px">
-          <div>
-            <div style="font-size:12px;color:#555">Buenas tardes,</div>
-            <div style="font-size:24px;font-weight:900;letter-spacing:-.5px">Fede 💪</div>
-          </div>
-          <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#00ff88,#00d4ff);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#000">FS</div>
+<!-- ==================== 2. RUTINAS ==================== -->
+<div class="pw">
+<div class="plbl">02 · Rutinas</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt">
+  <div style="padding:12px 14px 10px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,212,255,.06) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="font-size:22px;font-weight:800;color:white;position:relative">Mis Rutinas</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:2px;position:relative">4 rutinas guardadas</div>
+  </div>
+  <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+    <div style="border-radius:14px;padding:12px;background:linear-gradient(160deg,#111124,#0d0d1c);border:1px solid rgba(0,255,136,.15);box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 6px 24px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💪</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px"><div style="font-weight:800;font-size:13px;color:white">Pecho &amp; Tríceps</div><span style="font-size:8px;padding:2px 6px;border-radius:20px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.2);font-weight:700">ÚLTIMO</span></div>
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">6 ejercicios · ~45 min</div>
         </div>
+        <span style="color:rgba(255,255,255,.2);font-size:18px">›</span>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <span class="tag" style="color:#00ff88;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.18)">💪 Pecho</span>
+        <span class="tag" style="color:#60a5fa;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.18)">🔵 Tríceps</span>
+      </div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏋️</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:13px;color:white">Espalda &amp; Bíceps</div><div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">7 ejercicios · ~50 min</div></div>
+        <span style="color:rgba(255,255,255,.2);font-size:18px">›</span>
+      </div>
+      <div style="display:flex;gap:5px">
+        <span class="tag" style="color:#00d4ff;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.18)">🔷 Espalda</span>
+        <span class="tag" style="color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.18)">💪 Bíceps</span>
+      </div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🦵</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:13px;color:white">Piernas &amp; Glúteos</div><div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">8 ejercicios · ~55 min</div></div>
+        <span style="color:rgba(255,255,255,.2);font-size:18px">›</span>
+      </div>
+      <span class="tag" style="color:#a855f7;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.18)">🦵 Piernas</span>
+    </div>
+    <div style="border-radius:14px;border:1.5px dashed rgba(255,255,255,.09);padding:14px;display:flex;align-items:center;justify-content:center;gap:7px;color:rgba(255,255,255,.25);font-size:12px;font-weight:600">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Crear nueva rutina
+    </div>
+  </div>
+</div>
+<div class="bnav">
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
+</div>
 
-        <!-- ÚLTIMO ENTRENO -->
-        <div class="ls-bar">
-          <div class="ls-ic">🫁</div>
+<!-- ==================== 3. WORKOUT + IMAGE ==================== -->
+<div class="pw">
+<div class="plbl">03 · Entreno Activo</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt" style="overflow:hidden">
+  <div style="padding:8px 12px;background:linear-gradient(160deg,#111124,#0d0d1c);border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-size:14px;font-weight:800;color:white">💪 Pecho &amp; Tríceps</div><div style="font-size:11px;font-weight:700;color:#00d4ff;font-family:monospace">00:23:45</div></div>
+    <div style="display:flex;gap:6px">
+      <div style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);font-size:10px;font-weight:600">Cancelar</div>
+      <div style="padding:5px 10px;border-radius:8px;background:linear-gradient(135deg,#00ff88,#00e87a);color:#000;font-size:10px;font-weight:800;box-shadow:0 3px 14px rgba(0,255,136,.4)">Terminar</div>
+    </div>
+  </div>
+  <div style="padding:8px 10px;overflow-y:hidden">
+    <div style="border-radius:14px;overflow:hidden;background:linear-gradient(160deg,#111124,#0d0d1c);border:1px solid rgba(255,255,255,.06)">
+      <div style="padding:10px 10px 0">
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+          <div class="ew" style="width:80px;height:80px;flex-shrink:0">
+            <img src="https://wger.de/media/exercise-images/192/Bench-press_1.png" alt="Press de Banco" style="width:80px;height:80px;object-fit:contain" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="ep" style="display:none">🏋️</div>
+          </div>
           <div style="flex:1">
-            <div style="font-size:9px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Último entreno</div>
-            <div class="ls-nm">Chest &amp; Tríceps</div>
-            <div class="ls-mt">
-              <div class="ls-mi">⏱ <span>62 min</span></div>
-              <div class="ls-mi">🔥 <span>480 kcal</span></div>
-              <div class="ls-mi">📅 <span>ayer</span></div>
-            </div>
+            <div style="font-size:14px;font-weight:800;color:white;line-height:1.2">Press de Banco</div>
+            <span style="font-size:9px;padding:2px 7px;border-radius:20px;background:rgba(0,255,136,.1);color:#00ff88;border:1px solid rgba(0,255,136,.2);font-weight:700;display:inline-block;margin:4px 0">💪 Pecho</span>
+            <div style="font-size:10px;color:#ffd700">🏆 PR: 100kg × 5 reps</div>
           </div>
-          <div class="ls-ring">
-            <svg width="42" height="42" viewBox="0 0 42 42">
-              <circle cx="21" cy="21" r="17" fill="none" stroke="#1e1e2a" stroke-width="3"/>
-              <circle cx="21" cy="21" r="17" fill="none" stroke="#00d4ff" stroke-width="3"
-                stroke-dasharray="106.8" stroke-dashoffset="25.6" stroke-linecap="round"/>
-            </svg>
-            <div class="ls-rv">82%</div>
-          </div>
-        </div>
-
-        <!-- STATS -->
-        <div class="sec" style="margin-top:4px">Este mes · Mayo</div>
-        <div class="stat-row">
-          <div class="stat"><div class="sv" style="color:#00ff88">18</div><div class="sl2">Entrenos</div><div class="ss" style="color:#00ff88">↑ +3</div></div>
-          <div class="stat"><div class="sv" style="color:#00d4ff">47h</div><div class="sl2">Tiempo</div><div class="ss" style="color:#00d4ff">↑ +5h</div></div>
-          <div class="stat"><div class="sv" style="color:#ffd700">5</div><div class="sl2">Nuevos PRs</div><div class="ss" style="color:#ffd700">🏆</div></div>
-        </div>
-
-        <!-- PRÓXIMA RUTINA -->
-        <div class="sec">Próxima rutina sugerida</div>
-        <div style="margin:0 16px 12px;background:linear-gradient(135deg,#141428,#1a1a30);border:1px solid #2a2a40;border-radius:18px;overflow:hidden">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px">
-            <div style="font-size:15px;font-weight:800">Push Day</div>
-            <div style="background:#00ff8820;color:#00ff88;font-size:9px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid #00ff8840">SUGERIDO</div>
-          </div>
-          <div style="padding:0 10px">
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;background:rgba(255,255,255,.03);border-radius:10px;margin-bottom:4px">
-              <div style="width:32px;height:32px;border-radius:9px;background:#162216;border:1px solid #00ff8822;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="1" y="9" width="20" height="4" rx="2" fill="#00ff8830"/><rect x="0" y="7.5" width="2.5" height="7" rx="1.25" fill="#00ff88"/><rect x="19.5" y="7.5" width="2.5" height="7" rx="1.25" fill="#00ff88"/><circle cx="11" cy="5" r="2.5" fill="#ccc"/><path d="M11 7.5 L11 14" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M8 11 L11 10 L14 11" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/></svg>
-              </div>
-              <div style="font-size:12px;font-weight:600;flex:1">Press de Banca</div>
-              <div style="font-size:10px;color:#555">4×8-10</div>
-              <div style="font-size:10px;color:#ffd700;margin-left:4px">PR 100kg</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;background:rgba(255,255,255,.03);border-radius:10px;margin-bottom:4px">
-              <div style="width:32px;height:32px;border-radius:9px;background:#1a1a28;border:1px solid #00d4ff22;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="4" r="2.5" fill="#ccc"/><path d="M11 6.5 L11 14" stroke="#ccc" stroke-width="2"/><path d="M11 9 L4 6 L2 5" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/><path d="M11 9 L18 6 L20 5" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/><rect x="0.5" y="4" width="3" height="2.5" rx="1" fill="#00d4ff50"/><rect x="18.5" y="4" width="3" height="2.5" rx="1" fill="#00d4ff50"/></svg>
-              </div>
-              <div style="font-size:12px;font-weight:600;flex:1">Press Militar</div>
-              <div style="font-size:10px;color:#555">4×6-8</div>
-              <div style="font-size:10px;color:#ffd700;margin-left:4px">PR 75kg</div>
-            </div>
-            <div style="text-align:center;font-size:10px;color:#333;padding:6px 0 4px">+5 ejercicios más</div>
-          </div>
-          <div style="padding:10px 12px 14px">
-            <div class="big-btn" style="margin:0;padding:12px;font-size:13px">▶  Iniciar Push Day</div>
-          </div>
+          <div style="text-align:right"><div style="font-size:13px;font-weight:800;color:white">3/4</div><div style="font-size:9px;color:rgba(255,255,255,.3)">series</div></div>
         </div>
       </div>
+      <div class="sr" style="padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,.05)">
+        <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25)">SET</span>
+        <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25)">ANT.</span>
+        <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25);text-align:center">KG</span>
+        <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25);text-align:center">REPS</span>
+        <span style="font-size:8px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,.25);text-align:center">✓</span>
+      </div>
+      <div class="sr dn"><span style="font-size:11px;font-weight:800;color:#00ff88">1</span><span style="color:rgba(255,255,255,.3);font-size:10px">90×6</span><div class="if dn">90</div><div class="if dn">6</div><div class="ck dn">✓</div></div>
+      <div class="sr dn"><span style="font-size:11px;font-weight:800;color:#00ff88">2</span><span style="color:rgba(255,255,255,.3);font-size:10px">92.5×5</span><div class="if dn">92.5</div><div class="if dn">5</div><div class="ck dn">✓</div></div>
+      <div class="sr dn"><span style="font-size:11px;font-weight:800;color:#00ff88">3</span><span style="color:rgba(255,255,255,.3);font-size:10px">95×4</span><div class="if dn">95</div><div class="if dn">4</div><div class="ck dn">✓</div></div>
+      <div class="sr"><span style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3)">4</span><span style="color:rgba(255,255,255,.3);font-size:10px">95×4</span><div class="if">95</div><div class="if">—</div><div class="ck td">✓</div></div>
+      <div style="padding:6px 10px;background:rgba(0,212,255,.04);border-top:1px solid rgba(0,212,255,.08)"><div style="font-size:9px;color:rgba(0,212,255,.6)">💡 Última vez: 95kg × 4 reps</div></div>
+      <div style="padding:7px 10px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:4px;color:rgba(255,255,255,.25);font-size:10px;font-weight:600"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Agregar serie</div>
+    </div>
+  </div>
+</div>
+<div class="bnav">
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
+</div>
 
-      <div class="nav">
-        <div class="ni on"><div class="ni-ic">🏠</div><div class="ni-lb">Home</div><div class="nd"></div></div>
-        <div class="ni"><div class="ni-ic">📋</div><div class="ni-lb">Rutinas</div></div>
-        <div class="ni"><div class="ni-ic">📅</div><div class="ni-lb">Calendario</div></div>
-        <div class="ni"><div class="ni-ic">📈</div><div class="ni-lb">Progreso</div></div>
+<!-- ==================== 4. REGISTRO ==================== -->
+<div class="pw">
+<div class="plbl">04 · Registro</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt">
+  <div style="padding:12px 14px 8px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,212,255,.05) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="font-size:22px;font-weight:800;color:white;position:relative">Seguimiento</div>
+    <div style="display:flex;gap:4px;margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:3px;position:relative">
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;background:linear-gradient(160deg,#111124,#0d0d1c);font-size:11px;font-weight:700;color:white;border:1px solid rgba(255,255,255,.06)">📅 Calendario</div>
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;font-size:11px;font-weight:700;color:rgba(255,255,255,.3)">🏆 Récords</div>
+    </div>
+  </div>
+  <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px">‹</div>
+      <div style="font-size:14px;font-weight:800;color:white">Mayo 2026</div>
+      <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px">›</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div class="sc" style="padding:8px 4px"><div style="font-size:18px;font-weight:800;color:#00ff88;text-shadow:0 0 14px rgba(0,255,136,.5)">14</div><div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.28);margin-top:3px">Días gym</div></div>
+      <div class="sc" style="padding:8px 4px"><div style="font-size:18px;font-weight:800;color:#00d4ff;text-shadow:0 0 14px rgba(0,212,255,.5)">13</div><div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.28);margin-top:3px">Descanso</div></div>
+      <div class="sc" style="padding:8px 4px"><div style="font-size:18px;font-weight:800;color:#ffd700;text-shadow:0 0 14px rgba(255,215,0,.4)">52%</div><div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.28);margin-top:3px">Asistencia</div></div>
+    </div>
+    <div class="card" style="padding:10px">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px">
+        <div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">L</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">M</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">X</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">J</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">V</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">S</div><div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);padding:2px 0">D</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">
+        <div></div><div></div><div></div><div></div>
+        <div class="cd pc" style="font-size:9px">1</div><div class="cd pc" style="font-size:9px">2</div><div class="cd pc" style="font-size:9px">3</div>
+        <div class="cd gd" style="font-size:9px">4</div><div class="cd gd" style="font-size:9px">5</div><div class="cd pc" style="font-size:9px">6</div><div class="cd gd" style="font-size:9px">7</div><div class="cd gd" style="font-size:9px">8</div><div class="cd pc" style="font-size:9px">9</div><div class="cd pc" style="font-size:9px">10</div>
+        <div class="cd gd" style="font-size:9px">11</div><div class="cd gd" style="font-size:9px">12</div><div class="cd pc" style="font-size:9px">13</div><div class="cd gd" style="font-size:9px">14</div><div class="cd gd" style="font-size:9px">15</div><div class="cd pc" style="font-size:9px">16</div><div class="cd pc" style="font-size:9px">17</div>
+        <div class="cd gd" style="font-size:9px">18</div><div class="cd gd" style="font-size:9px">19</div><div class="cd pc" style="font-size:9px">20</div><div class="cd gd" style="font-size:9px">21</div><div class="cd gd" style="font-size:9px">22</div><div class="cd pc" style="font-size:9px">23</div><div class="cd gd" style="font-size:9px">24</div>
+        <div class="cd gd" style="font-size:9px">25</div><div class="cd pc" style="font-size:9px">26</div><div class="cd tc" style="font-size:9px">27</div><div class="cd fc" style="font-size:9px">28</div><div class="cd fc" style="font-size:9px">29</div><div class="cd fc" style="font-size:9px">30</div><div class="cd fc" style="font-size:9px">31</div>
+      </div>
+    </div>
+    <div class="card" style="padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:10px;color:rgba(255,255,255,.35)">Consistencia del mes</span><span style="font-size:10px;font-weight:700;color:#00ff88">52%</span></div>
+      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden"><div style="height:100%;width:52%;background:linear-gradient(90deg,#00ff88,#00cc6a);border-radius:4px;box-shadow:0 0 8px rgba(0,255,136,.4)"></div></div>
+    </div>
+  </div>
+</div>
+<div class="bnav">
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
+</div>
+
+<!-- ==================== 5. PROGRESO ==================== -->
+<div class="pw">
+<div class="plbl">05 · Progreso</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt">
+  <div style="padding:12px 14px 8px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(255,215,0,.05) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="font-size:22px;font-weight:800;color:white;position:relative">Progreso</div>
+    <div style="display:flex;gap:4px;margin-top:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:3px;position:relative">
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;font-size:10px;font-weight:700;color:rgba(255,255,255,.3)">3m</div>
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;background:linear-gradient(160deg,#111124,#0d0d1c);font-size:10px;font-weight:700;color:white;border:1px solid rgba(255,255,255,.06)">6m</div>
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;font-size:10px;font-weight:700;color:rgba(255,255,255,.3)">1a</div>
+      <div style="flex:1;text-align:center;padding:7px;border-radius:9px;font-size:10px;font-weight:700;color:rgba(255,255,255,.3)">todo</div>
+    </div>
+  </div>
+  <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden">
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div style="font-size:12px;font-weight:700;color:white">Press de Banco</div><div style="font-size:20px;font-weight:900;color:white;line-height:1.2;margin-top:2px">100<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.4)">kg</span></div></div>
+        <div style="background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:6px 8px;text-align:right"><div style="font-size:10px;font-weight:800;color:#00ff88">↑ +15kg</div><div style="font-size:8px;color:rgba(0,255,136,.5)">+17.6%</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;height:46px;gap:4px">
+        <div class="bi"><div class="bf" style="height:40%;background:rgba(0,255,136,.2)"></div><div class="bl">Dic</div></div>
+        <div class="bi"><div class="bf" style="height:52%;background:rgba(0,255,136,.2)"></div><div class="bl">Ene</div></div>
+        <div class="bi"><div class="bf" style="height:64%;background:rgba(0,255,136,.2)"></div><div class="bl">Feb</div></div>
+        <div class="bi"><div class="bf" style="height:74%;background:rgba(0,255,136,.2)"></div><div class="bl">Mar</div></div>
+        <div class="bi"><div class="bf" style="height:86%;background:rgba(0,255,136,.2)"></div><div class="bl">Abr</div></div>
+        <div class="bi"><div class="bf" style="height:100%;background:#00ff88;box-shadow:0 0 8px rgba(0,255,136,.5)"></div><div class="bl" style="color:#00ff88">May</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div style="font-size:12px;font-weight:700;color:white">Sentadilla</div><div style="font-size:20px;font-weight:900;color:white;line-height:1.2;margin-top:2px">120<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.4)">kg</span></div></div>
+        <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:6px 8px;text-align:right"><div style="font-size:10px;font-weight:800;color:#a855f7">↑ +20kg</div><div style="font-size:8px;color:rgba(168,85,247,.5)">+20%</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;height:46px;gap:4px">
+        <div class="bi"><div class="bf" style="height:42%;background:rgba(168,85,247,.25)"></div><div class="bl">Dic</div></div>
+        <div class="bi"><div class="bf" style="height:54%;background:rgba(168,85,247,.25)"></div><div class="bl">Ene</div></div>
+        <div class="bi"><div class="bf" style="height:66%;background:rgba(168,85,247,.25)"></div><div class="bl">Feb</div></div>
+        <div class="bi"><div class="bf" style="height:76%;background:rgba(168,85,247,.25)"></div><div class="bl">Mar</div></div>
+        <div class="bi"><div class="bf" style="height:87%;background:rgba(168,85,247,.25)"></div><div class="bl">Abr</div></div>
+        <div class="bi"><div class="bf" style="height:100%;background:#a855f7;box-shadow:0 0 8px rgba(168,85,247,.5)"></div><div class="bl" style="color:#a855f7">May</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div><div style="font-size:12px;font-weight:700;color:white">Peso Muerto</div><div style="font-size:20px;font-weight:900;color:white;line-height:1.2;margin-top:2px">140<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.4)">kg</span></div></div>
+        <div style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:6px 8px;text-align:right"><div style="font-size:10px;font-weight:800;color:#00d4ff">↑ +25kg</div><div style="font-size:8px;color:rgba(0,212,255,.5)">+21.7%</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;height:46px;gap:4px">
+        <div class="bi"><div class="bf" style="height:40%;background:rgba(0,212,255,.22)"></div><div class="bl">Dic</div></div>
+        <div class="bi"><div class="bf" style="height:55%;background:rgba(0,212,255,.22)"></div><div class="bl">Ene</div></div>
+        <div class="bi"><div class="bf" style="height:67%;background:rgba(0,212,255,.22)"></div><div class="bl">Feb</div></div>
+        <div class="bi"><div class="bf" style="height:78%;background:rgba(0,212,255,.22)"></div><div class="bl">Mar</div></div>
+        <div class="bi"><div class="bf" style="height:88%;background:rgba(0,212,255,.22)"></div><div class="bl">Abr</div></div>
+        <div class="bi"><div class="bf" style="height:100%;background:#00d4ff;box-shadow:0 0 8px rgba(0,212,255,.5)"></div><div class="bl" style="color:#00d4ff">May</div></div>
       </div>
     </div>
   </div>
 </div>
-<div class="arrow">→</div>
+<div class="bnav">
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
 </div>
 
-<!-- ========== 2. RUTINAS LIST ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl">2 · Mis Rutinas</div>
-  <div class="ph">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <div class="hd">
-          <div class="hd-t">Mis Rutinas</div>
-          <div class="hd-s">Seleccioná y arrancá</div>
-        </div>
-
-        <div class="sec">Guardadas</div>
-
-        <!-- Push -->
-        <div class="rut-card">
-          <div class="rut-badge" style="background:linear-gradient(135deg,#162216,#0a1a0a);border:1px solid #00ff8825">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect x="2" y="14" width="28" height="5" rx="2.5" fill="#00ff8830"/>
-              <rect x="0" y="11" width="4" height="11" rx="2" fill="#00ff88"/>
-              <rect x="28" y="11" width="4" height="11" rx="2" fill="#00ff88"/>
-              <circle cx="16" cy="8" r="3.5" fill="#ddd"/>
-              <path d="M16 11.5 L16 20" stroke="#ddd" stroke-width="2.5" stroke-linecap="round"/>
-              <path d="M10 17 L16 15 L22 17" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div style="flex:1">
-            <div class="rut-nm">Push Day 💪</div>
-            <div class="rut-mt">7 ejercicios · ~60 min</div>
-            <div class="rut-tags">
-              <span class="rut-tag">Pecho</span>
-              <span class="rut-tag">Hombros</span>
-              <span class="rut-tag">Tríceps</span>
-            </div>
-          </div>
-          <div class="last-tag">ÚLTIMO</div>
-          <div class="rut-arr">›</div>
-        </div>
-
-        <!-- Pull -->
-        <div class="rut-card">
-          <div class="rut-badge" style="background:linear-gradient(135deg,#161a26,#0a0e1a);border:1px solid #00d4ff25">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="7" r="3.5" fill="#ddd"/>
-              <path d="M16 10.5 L16 20" stroke="#ddd" stroke-width="2.5"/>
-              <path d="M16 14 L5 8 L3 6" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-              <path d="M16 14 L27 8 L29 6" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-              <rect x="1" y="5" width="4" height="3" rx="1.5" fill="#00d4ff60"/>
-              <rect x="27" y="5" width="4" height="3" rx="1.5" fill="#00d4ff60"/>
-              <path d="M13 20 L11 28 M19 20 L21 28" stroke="#ddd" stroke-width="2"/>
-            </svg>
-          </div>
-          <div style="flex:1">
-            <div class="rut-nm">Pull Day 🦅</div>
-            <div class="rut-mt">6 ejercicios · ~55 min</div>
-            <div class="rut-tags">
-              <span class="rut-tag">Espalda</span>
-              <span class="rut-tag">Bíceps</span>
-            </div>
-          </div>
-          <div class="rut-arr">›</div>
-        </div>
-
-        <!-- Legs -->
-        <div class="rut-card">
-          <div class="rut-badge" style="background:linear-gradient(135deg,#26201a,#1a1610);border:1px solid #ffdd0025">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="6" r="3.5" fill="#ddd"/>
-              <path d="M16 9.5 L14 16 L12 24 L10 30" stroke="#ddd" stroke-width="2.5" stroke-linecap="round"/>
-              <path d="M16 9.5 L18 16 L20 24 L22 30" stroke="#ddd" stroke-width="2.5" stroke-linecap="round"/>
-              <path d="M16 13 L10 11 M16 13 L22 11" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div style="flex:1">
-            <div class="rut-nm">Leg Day 🦵</div>
-            <div class="rut-mt">6 ejercicios · ~70 min</div>
-            <div class="rut-tags">
-              <span class="rut-tag">Cuáds</span>
-              <span class="rut-tag">Glúteos</span>
-              <span class="rut-tag">Isquios</span>
-            </div>
-          </div>
-          <div class="rut-arr">›</div>
-        </div>
-
-        <!-- Upper -->
-        <div class="rut-card">
-          <div class="rut-badge" style="background:linear-gradient(135deg,#20181e,#180f16);border:1px solid #aa44ff25">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="6" r="3.5" fill="#ddd"/>
-              <path d="M16 9.5 L16 20" stroke="#ddd" stroke-width="2.5"/>
-              <path d="M5 13 L10 16 L16 14 L22 16 L27 13" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-              <path d="M5 13 L3 9" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-              <path d="M27 13 L29 9" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
-              <path d="M13 20 L12 28 M19 20 L20 28" stroke="#ddd" stroke-width="2"/>
-            </svg>
-          </div>
-          <div style="flex:1">
-            <div class="rut-nm">Upper Body</div>
-            <div class="rut-mt">8 ejercicios · ~65 min</div>
-            <div class="rut-tags">
-              <span class="rut-tag">Full upper</span>
-            </div>
-          </div>
-          <div class="rut-arr">›</div>
-        </div>
-
-        <!-- New routine btn -->
-        <div style="margin:8px 16px 0;border:1.5px dashed #1e1e2a;border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#333;font-weight:600">
-          ＋ &nbsp;Crear nueva rutina
-        </div>
-      </div>
-
-      <div class="nav">
-        <div class="ni"><div class="ni-ic">🏠</div><div class="ni-lb">Home</div></div>
-        <div class="ni on"><div class="ni-ic">📋</div><div class="ni-lb">Rutinas</div><div class="nd"></div></div>
-        <div class="ni"><div class="ni-ic">📅</div><div class="ni-lb">Calendario</div></div>
-        <div class="ni"><div class="ni-ic">📈</div><div class="ni-lb">Progreso</div></div>
+<!-- ==================== 6. EXERCISE DETAIL ==================== -->
+<div class="pw">
+<div class="plbl">06 · Detalle Ejercicio</div>
+<div class="ph">
+<div class="sbar"><span>9:41</span><span style="opacity:.7">● ● ▐▐</span></div>
+<div class="cnt" style="overflow:hidden">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);z-index:1"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,#111124 0%,#0d0d1a 100%);border-radius:20px 20px 0 0;border-top:1px solid rgba(255,255,255,.08);z-index:2;padding:0 0 16px">
+    <div style="display:flex;justify-content:center;padding:10px 0 4px"><div style="width:32px;height:3px;border-radius:2px;background:rgba(255,255,255,.15)"></div></div>
+    <div style="padding:4px 14px 10px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:18px;font-weight:900;color:white">Press de Banco</div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Bench Press · Barra</div></div>
+      <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px">×</div>
+    </div>
+    <div style="padding:0 14px;display:flex;gap:5px;margin-bottom:10px">
+      <span class="tag" style="color:#00ff88;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2)">💪 Pecho</span>
+      <span class="tag" style="color:#00d4ff;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2)">Barra</span>
+      <span class="tag" style="color:rgba(255,255,255,.4);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)">Tríceps · Hombros</span>
+    </div>
+    <div style="padding:0 14px;margin-bottom:10px">
+      <div class="ew" style="height:130px">
+        <img src="https://wger.de/media/exercise-images/192/Bench-press_1.png" alt="Press de Banco" style="width:100%;height:130px;object-fit:contain" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="ep" style="display:none;height:130px">🏋️</div>
       </div>
     </div>
-  </div>
-</div>
-<div class="arrow">→</div>
-</div>
-
-<!-- ========== 3. ROUTINE DETAIL ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl">3 · Detalle de Rutina</div>
-  <div class="ph">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <!-- sticky header -->
-        <div class="rd-header">
-          <div class="rd-back">‹ Rutinas</div>
-          <div class="rd-name">Push Day 💪</div>
-          <div class="rd-meta">
-            <div class="rd-mi">🏋️ <span>7 ejercicios</span></div>
-            <div class="rd-mi">⏱ <span>~60 min</span></div>
-            <div class="rd-mi">📅 <span>ayer</span></div>
-          </div>
-          <div class="rd-actions">
-            <div class="rd-btn rd-start">▶ Iniciar</div>
-            <div class="rd-btn rd-edit">✏️ Editar</div>
-          </div>
+    <div style="padding:0 14px">
+      <div class="sl" style="margin-bottom:6px">Instrucciones</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.25);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#00ff88;flex-shrink:0;margin-top:1px">1</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.4">Acostado en el banco, agarra la barra a la altura de los hombros.</div>
         </div>
-
-        <!-- Exercise list -->
-        <div style="padding:12px 0 0">
-          <div class="sec">Ejercicios · 7</div>
-
-          <div class="card" style="margin:0 16px 12px">
-            <!-- Bench -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#162216;border:1px solid #00ff8822">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><rect x="2" y="15" width="30" height="5" rx="2.5" fill="#00ff8830"/><rect x="0" y="12" width="4" height="11" rx="2" fill="#00ff88"/><rect x="30" y="12" width="4" height="11" rx="2" fill="#00ff88"/><circle cx="17" cy="8" r="3.5" fill="#ccc"/><path d="M17 11.5 L17 21" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M11 18 L17 16 L23 18" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M14 21 L12 29 M20 21 L22 29" stroke="#ccc" stroke-width="2"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Press de Banca</div>
-                <div class="ex-cfg">4 series · 8-10 reps</div>
-                <span class="ex-grp" style="background:#00ff8812;border:1px solid #00ff8825;color:#00ff88">Pecho</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Incline DB -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#16162a;border:1px solid #00d4ff22">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="27" cy="9" r="3" fill="#ccc"/><path d="M27 12 L22 18 L16 20" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M22 15 L27 14 L32 15" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><rect x="24" y="12" width="4.5" height="3" rx="1.5" fill="#00d4ff50"/><rect x="30" y="12" width="4.5" height="3" rx="1.5" fill="#00d4ff50"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Press Inclinado DB</div>
-                <div class="ex-cfg">3 series · 10-12 reps</div>
-                <span class="ex-grp" style="background:#00ff8812;border:1px solid #00ff8825;color:#00ff88">Pecho</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Dips -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#281020;border:1px solid #ff448822">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><rect x="4" y="13" width="3" height="16" rx="1.5" fill="#ff448840"/><rect x="27" y="13" width="3" height="16" rx="1.5" fill="#ff448840"/><rect x="2" y="11" width="8" height="3" rx="1.5" fill="#ff4488"/><rect x="24" y="11" width="8" height="3" rx="1.5" fill="#ff4488"/><circle cx="17" cy="7" r="3" fill="#ccc"/><path d="M17 10 L17 18" stroke="#ccc" stroke-width="2.5"/><path d="M6 13 L12 16 L17 15 L22 16 L28 13" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M14 18 L13 26 M20 18 L21 26" stroke="#ccc" stroke-width="2"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Fondos en Paralelas</div>
-                <div class="ex-cfg">3 series · 12 reps</div>
-                <span class="ex-grp" style="background:#ff44881a;border:1px solid #ff448828;color:#ff4488">Pecho / Tríceps</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Military -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#1a1a28;border:1px solid #ff950022">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="7" r="3" fill="#ccc"/><path d="M17 10 L17 20" stroke="#ccc" stroke-width="2.5"/><path d="M17 14 L5 9 L3 7" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M17 14 L29 9 L31 7" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><rect x="1" y="6" width="4" height="3" rx="1.5" fill="#ff950060"/><rect x="29" y="6" width="4" height="3" rx="1.5" fill="#ff950060"/><path d="M14 20 L13 28 M20 20 L21 28" stroke="#ccc" stroke-width="2"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Press Militar</div>
-                <div class="ex-cfg">4 series · 6-8 reps</div>
-                <span class="ex-grp" style="background:#ff95001a;border:1px solid #ff950028;color:#ff9500">Hombros</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Lateral Raise -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#1a1a28;border:1px solid #ff950022">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="7" r="3" fill="#ccc"/><path d="M17 10 L17 20" stroke="#ccc" stroke-width="2.5"/><path d="M5 16 L11 15 L17 13" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M29 16 L23 15 L17 13" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><rect x="2" y="14" width="5" height="4" rx="2" fill="#ff950050"/><rect x="27" y="14" width="5" height="4" rx="2" fill="#ff950050"/><path d="M14 20 L13 28 M20 20 L21 28" stroke="#ccc" stroke-width="2"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Elevación Lateral</div>
-                <div class="ex-cfg">4 series · 12-15 reps</div>
-                <span class="ex-grp" style="background:#ff95001a;border:1px solid #ff950028;color:#ff9500">Hombros</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Tricep ext -->
-            <div class="ex-row">
-              <div class="ex-ico" style="background:#201028;border:1px solid #aa44ff22">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="6" r="3" fill="#ccc"/><path d="M17 9 L17 16 L15 22 L15 28" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M17 16 L19 22 L19 28" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M17 12 L11 10" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><path d="M17 12 L23 10" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><rect x="6" y="8" width="7" height="3" rx="1.5" fill="#aa44ff50"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Extensión Tríceps</div>
-                <div class="ex-cfg">3 series · 12-15 reps</div>
-                <span class="ex-grp" style="background:#aa44ff18;border:1px solid #aa44ff28;color:#aa44ff">Tríceps</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-            <!-- Close grip -->
-            <div class="ex-row" style="border-bottom:none">
-              <div class="ex-ico" style="background:#201028;border:1px solid #aa44ff22">
-                <svg width="34" height="34" viewBox="0 0 34 34" fill="none"><rect x="4" y="15" width="26" height="5" rx="2.5" fill="#aa44ff30"/><rect x="1" y="12" width="5" height="11" rx="2.5" fill="#aa44ff"/><rect x="28" y="12" width="5" height="11" rx="2.5" fill="#aa44ff"/><circle cx="17" cy="8" r="3" fill="#ccc"/><path d="M17 11 L17 20" stroke="#ccc" stroke-width="2.5"/><path d="M14 18 L17 16 L20 18" stroke="#ccc" stroke-width="2" stroke-linecap="round"/></svg>
-              </div>
-              <div style="flex:1">
-                <div class="ex-nm">Press Cerrado</div>
-                <div class="ex-cfg">3 series · 8-10 reps</div>
-                <span class="ex-grp" style="background:#aa44ff18;border:1px solid #aa44ff28;color:#aa44ff">Tríceps</span>
-              </div>
-              <div class="ex-drag">⠿</div>
-            </div>
-          </div>
-
-          <!-- Add exercise -->
-          <div style="margin:0 16px 8px;border:1.5px dashed #1e1e2a;border-radius:14px;
-            padding:12px;display:flex;align-items:center;justify-content:center;gap:8px;
-            font-size:12px;color:#00ff88;font-weight:700;background:#00ff8806">
-            ＋ &nbsp;Agregar ejercicio
-          </div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.25);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#00ff88;flex-shrink:0;margin-top:1px">2</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.4">Bajá la barra al pecho de forma controlada (2–3 seg).</div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="arrow">→</div>
-</div>
-
-<!-- ========== 4. EXERCISE PICKER (SUBMENU) ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl sub">4 · Agregar Ejercicio (submenú)</div>
-  <div class="ph">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <!-- back bar (no nav) -->
-      <div class="back-bar" style="flex-shrink:0">
-        <div class="back-ic">‹</div>
-        <div class="back-tx">Agregar a Push Day <span>· Pecho seleccionado</span></div>
-      </div>
-      <div class="sa" style="padding-bottom:20px">
-        <div class="search">🔍 &nbsp;Buscar ejercicio...</div>
-
-        <!-- muscle group filter -->
-        <div class="mg-grid">
-          <div class="mg-btn on" style="--c:#00ff88"><div class="mg-em">🫁</div><div class="mg-nm">Pecho</div><div class="mg-ct">12 ej.</div></div>
-          <div class="mg-btn" style="--c:#00d4ff"><div class="mg-em">🦅</div><div class="mg-nm">Espalda</div><div class="mg-ct">12 ej.</div></div>
-          <div class="mg-btn" style="--c:#ff9500"><div class="mg-em">🙌</div><div class="mg-nm">Hombros</div><div class="mg-ct">12 ej.</div></div>
-          <div class="mg-btn" style="--c:#ff4488"><div class="mg-em">💪</div><div class="mg-nm">Bíceps</div><div class="mg-ct">10 ej.</div></div>
-          <div class="mg-btn" style="--c:#aa44ff"><div class="mg-em">🔻</div><div class="mg-nm">Tríceps</div><div class="mg-ct">10 ej.</div></div>
-          <div class="mg-btn" style="--c:#ffdd00"><div class="mg-em">🦵</div><div class="mg-nm">Piernas</div><div class="mg-ct">26 ej.</div></div>
-          <div class="mg-btn" style="--c:#ff7744"><div class="mg-em">🍑</div><div class="mg-nm">Glúteos</div><div class="mg-ct">8 ej.</div></div>
-          <div class="mg-btn" style="--c:#44ffdd"><div class="mg-em">⬡</div><div class="mg-nm">Core/Abs</div><div class="mg-ct">12 ej.</div></div>
-          <div class="mg-btn" style="--c:#88aaff"><div class="mg-em">🫀</div><div class="mg-nm">Cardio</div><div class="mg-ct">5 ej.</div></div>
-        </div>
-
-        <div class="sec">Pecho · 12 ejercicios</div>
-
-        <!-- exercise picks -->
-        <div class="ex-pick">
-          <div class="ep-ico" style="background:#162216;border:1px solid #00ff8822">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="2" y="15" width="32" height="6" rx="3" fill="#00ff8828"/><rect x="0" y="12" width="5" height="12" rx="2.5" fill="#00ff88"/><rect x="31" y="12" width="5" height="12" rx="2.5" fill="#00ff88"/><circle cx="18" cy="8" r="4" fill="#ccc"/><path d="M18 12 L18 21" stroke="#ccc" stroke-width="3" stroke-linecap="round"/><path d="M12 18 L18 16 L24 18" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </div>
-          <div style="flex:1">
-            <div class="ep-nm">Press de Banca</div>
-            <div class="ep-ms">Pecho · Tríceps · Deltoides ant.</div>
-            <span class="ep-eq">Barra · Compuesto</span>
-          </div>
-          <div style="font-size:20px;color:#333;margin-right:4px">✓</div>
-        </div>
-
-        <div class="ex-pick">
-          <div class="ep-ico" style="background:#16162a;border:1px solid #00d4ff22">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="28" cy="9" r="3.5" fill="#ccc"/><path d="M28 12.5 L22 19 L15 21" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M22 16 L28 15 L34 16" stroke="#ccc" stroke-width="2" stroke-linecap="round"/><rect x="24" y="13" width="5" height="3.5" rx="1.5" fill="#00d4ff50"/><rect x="31" y="13" width="5" height="3.5" rx="1.5" fill="#00d4ff50"/></svg>
-          </div>
-          <div style="flex:1">
-            <div class="ep-nm">Press Inclinado DB</div>
-            <div class="ep-ms">Pecho superior · Deltoides</div>
-            <span class="ep-eq">Mancuernas</span>
-          </div>
-          <div style="font-size:20px;color:#333;margin-right:4px">✓</div>
-        </div>
-
-        <div class="ex-pick" style="border-color:#00ff8830;background:#00ff8806">
-          <div class="ep-ico" style="background:#281020;border:1px solid #ff448825">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="5" y="14" width="3.5" height="18" rx="1.75" fill="#ff448840"/><rect x="27.5" y="14" width="3.5" height="18" rx="1.75" fill="#ff448840"/><rect x="3" y="12" width="9" height="3.5" rx="1.75" fill="#ff4488"/><rect x="24" y="12" width="9" height="3.5" rx="1.75" fill="#ff4488"/><circle cx="18" cy="7" r="3.5" fill="#ccc"/><path d="M18 10.5 L18 19" stroke="#ccc" stroke-width="2.5"/><path d="M7 14 L13 17 L18 16 L23 17 L29 14" stroke="#ccc" stroke-width="2" stroke-linecap="round"/></svg>
-          </div>
-          <div style="flex:1">
-            <div class="ep-nm">Fondos en Paralelas</div>
-            <div class="ep-ms">Pecho inf. · Tríceps</div>
-            <span class="ep-eq">Peso corporal · Compuesto</span>
-          </div>
-          <div class="ep-add">＋</div>
-        </div>
-
-        <div class="ex-pick">
-          <div class="ep-ico" style="background:#162016;border:1px solid #00ff8820">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M4 10 L18 20" stroke="#00ff8840" stroke-width="2" stroke-dasharray="3 2"/><path d="M32 10 L18 20" stroke="#00ff8840" stroke-width="2" stroke-dasharray="3 2"/><circle cx="18" cy="10" r="3.5" fill="#ccc"/><path d="M18 13.5 L18 23" stroke="#ccc" stroke-width="2.5"/><path d="M4 10 L11 17 L18 16 L25 17 L32 10" stroke="#ccc" stroke-width="2" stroke-linecap="round"/></svg>
-          </div>
-          <div style="flex:1">
-            <div class="ep-nm">Aperturas en Cable</div>
-            <div class="ep-ms">Pecho · Aislamiento</div>
-            <span class="ep-eq">Cable</span>
-          </div>
-          <div class="ep-add">＋</div>
-        </div>
-
-        <div class="ex-pick">
-          <div class="ep-ico" style="background:#1a2012;border:1px solid #88cc0022">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect x="2" y="28" width="32" height="2" rx="1" fill="#333"/><circle cx="30" cy="17" r="3.5" fill="#ccc"/><path d="M30 20 L22 24 L8 27" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"/><path d="M22 24 L23 28" stroke="#ccc" stroke-width="2"/><path d="M8 27 L7 28" stroke="#ccc" stroke-width="2"/><path d="M18 25 L17 28" stroke="#ccc" stroke-width="2"/></svg>
-          </div>
-          <div style="flex:1">
-            <div class="ep-nm">Flexiones</div>
-            <div class="ep-ms">Pecho · Tríceps · Core</div>
-            <span class="ep-eq">Peso corporal</span>
-          </div>
-          <div class="ep-add">＋</div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.25);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#00ff88;flex-shrink:0;margin-top:1px">3</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.6);line-height:1.4">Empujá explosivo extendiendo los codos completamente.</div>
         </div>
       </div>
     </div>
   </div>
 </div>
-<div class="arrow">→</div>
+<div class="bnav">
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg><span class="nl">Inicio</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg><span class="nl">Rutinas</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="8" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="16" cy="15" r="1" fill="currentColor"/></svg><span class="nl">Registro</span></div>
+  <div class="nt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 20V12"/><path d="M9 20V8"/><path d="M13 20V14"/><path d="M17 20V4"/></svg><span class="nl">Progreso</span></div>
+</div>
+</div>
 </div>
 
-<!-- ========== 5. ACTIVE WORKOUT ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl">5 · Entreno Activo</div>
-  <div class="ph">
-    <div class="sb"><span class="sb-t">10:22</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <div class="wt-bar">
-          <div><div style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:1px">Push Day</div><div class="wt-nm">2 de 7 ejercicios</div></div>
-          <div class="wt-ti">⏱ 00:42:18</div>
-          <div class="wt-fin">Terminar</div>
-        </div>
+</div>
 
-        <div class="ex-card">
-          <div class="ec-head">
-            <div class="ec-vis">
-              <svg width="50" height="50" viewBox="0 0 50 50" fill="none"><rect x="4" y="21" width="42" height="8" rx="4" fill="#00ff8830"/><rect x="0" y="17" width="7" height="16" rx="3.5" fill="#00ff88"/><rect x="43" y="17" width="7" height="16" rx="3.5" fill="#00ff88"/><circle cx="25" cy="12" r="5" fill="#ddd"/><path d="M25 17 L25 29" stroke="#ddd" stroke-width="3.5" stroke-linecap="round"/><path d="M16 24 L25 22 L34 24" stroke="#ddd" stroke-width="3" stroke-linecap="round"/><path d="M21 29 L19 40 M29 29 L31 40" stroke="#ddd" stroke-width="3" stroke-linecap="round"/></svg>
-            </div>
-            <div style="flex:1">
-              <div class="ec-nm">Press de Banca</div>
-              <div class="ec-tg">Pecho · Tríceps · Deltoides</div>
-              <div class="ec-pr">🏆 PR: 100kg × 5</div>
-            </div>
-            <div style="font-size:20px;color:#2a2a3a">⋮</div>
-          </div>
-
-          <div class="sets-hd">
-            <span>Set</span><span>Anterior</span><span>KG</span><span>Reps</span><span>✓</span>
-          </div>
-          <div class="sr dn"><div class="sn">1</div><div class="sp">90×8</div><div class="si">90</div><div class="si">8</div><div class="ck dn">✓</div></div>
-          <div class="sr dn"><div class="sn">2</div><div class="sp">95×8</div><div class="si">95</div><div class="si">8</div><div class="ck dn">✓</div></div>
-          <div class="sr"><div class="sn" style="background:#00ff8818;color:#00ff88">3</div><div class="sp">100×6</div><div class="si fc">100</div><div class="si">8</div><div class="ck">○</div></div>
-          <div class="sr"><div class="sn">4</div><div class="sp">100×6</div><div class="si" style="color:#2a2a3a">—</div><div class="si" style="color:#2a2a3a">—</div><div class="ck">○</div></div>
-          <div class="hint">💡 Última vez: 4×8 con 95kg · Hoy subiste 5kg en set 3 🚀</div>
-          <div class="add-set">＋ Agregar serie</div>
-        </div>
-
-        <div class="ex-card" style="opacity:.4">
-          <div class="ec-head">
-            <div class="ec-vis" style="background:linear-gradient(135deg,#1a1a28,#0e0e1a);border-color:#00d4ff22">
-              <svg width="50" height="50" viewBox="0 0 50 50" fill="none"><circle cx="25" cy="11" r="4.5" fill="#aaa"/><path d="M25 15.5 L25 28" stroke="#aaa" stroke-width="3.5"/><path d="M25 21 L8 12 L5 10" stroke="#aaa" stroke-width="3" stroke-linecap="round"/><path d="M25 21 L42 12 L45 10" stroke="#aaa" stroke-width="3" stroke-linecap="round"/><rect x="3" y="8" width="5" height="4" rx="2" fill="#00d4ff50"/><rect x="42" y="8" width="5" height="4" rx="2" fill="#00d4ff50"/></svg>
-            </div>
-            <div><div class="ec-nm">Press Militar</div><div class="ec-tg" style="background:#00d4ff15;border-color:#00d4ff30;color:#00d4ff">Hombros · Tríceps</div></div>
-          </div>
-        </div>
-      </div>
+<div style="margin-top:40px;max-width:960px">
+  <div style="padding:18px 20px;background:linear-gradient(160deg,#0f1520,#0d0d1c);border:1px solid rgba(0,212,255,.15);border-radius:16px;margin-bottom:12px">
+    <div style="font-size:12px;font-weight:700;color:#00d4ff;margin-bottom:8px">📸 Imágenes de ejercicios — wger.de API</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.7">
+      Las imágenes son ilustraciones 3D de <strong style="color:rgba(255,255,255,.75)">wger.de</strong> — idéntico estilo a Strong app.
+      Se cargan por ejercicio: <code style="background:rgba(255,255,255,.06);padding:2px 5px;border-radius:4px;font-size:10px">wger.de/media/exercise-images/{id}/Name.png</code>
+      <br>Si no cargan en el preview es porque el HTML no tiene red, pero en la app real funcionan.
+      En <strong style="color:rgba(255,255,255,.75)">pantalla 3 (entreno activo)</strong> reemplaza el ícono SVG actual.
+      En <strong style="color:rgba(255,255,255,.75)">pantalla 6 (detalle)</strong> ya aparece con instrucciones.
     </div>
   </div>
 </div>
-<div class="arrow">→</div>
-</div>
-
-<!-- ========== 6. REST TIMER ========== -->
-<div class="flow-group">
-<div class="sw">
-  <div class="sl">6 · Cronómetro de Pausa</div>
-  <div class="ph">
-    <div class="sb" style="background:#08080f"><span class="sb-t">10:24</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc" style="background:#08080f">
-      <div class="rest-sc">
-        <div class="rest-lb">⏸ Descansando</div>
-        <div class="rest-ring">
-          <svg width="180" height="180" viewBox="0 0 180 180">
-            <circle cx="90" cy="90" r="76" fill="none" stroke="#1a1a26" stroke-width="7"/>
-            <circle cx="90" cy="90" r="76" fill="none" stroke="#00ff88" stroke-width="7"
-              stroke-dasharray="477" stroke-dashoffset="120" stroke-linecap="round"
-              transform="rotate(-90 90 90)"/>
-          </svg>
-          <div class="rest-in">
-            <div class="rest-t">1<span style="font-size:26px;color:#333;font-weight:400">:30</span></div>
-            <div class="rest-of">de 2:00</div>
-          </div>
-        </div>
-        <div class="rest-inf">Serie 3 de 4 · 100kg × 8 ✓</div>
-        <div class="rest-nx">
-          <div class="rnx-lb">Siguiente serie</div>
-          <div class="rnx-nm">Press de Banca · Serie 4</div>
-          <div class="rnx-tg">Objetivo: 100kg × 8</div>
-        </div>
-        <div class="rest-ctrls">
-          <div class="rc">−30s</div>
-          <div class="rc main">Saltar →</div>
-          <div class="rc">+30s</div>
-        </div>
-        <div class="rest-pre">
-          <div class="rp">0:45</div>
-          <div class="rp">1:00</div>
-          <div class="rp on">2:00</div>
-          <div class="rp">3:00</div>
-          <div class="rp">5:00</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- row 2: Calendar, Progress, Records -->
-</div><!-- end flow row 1 -->
-
-<div style="text-align:center;padding:40px 0 16px;font-size:10px;font-weight:700;color:#1e1e2a;text-transform:uppercase;letter-spacing:3px">
-  Pantallas de navegación principal
-</div>
-
-<div class="flow" style="margin-top:0">
-
-<!-- CALENDAR -->
-<div class="sw">
-  <div class="sl">7 · Calendario + Récords (sub-tab)</div>
-  <div class="ph sm">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <!-- SUB-TABS -->
-        <div style="display:flex;gap:0;padding:14px 16px 10px">
-          <div style="flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:700;color:#00ff88;border-bottom:2px solid #00ff88">📅 Calendario</div>
-          <div style="flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:600;color:#333;border-bottom:2px solid #1e1e2a">🏆 Récords</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 18px 10px">
-          <div style="font-size:20px;font-weight:900">Mayo 2026</div>
-          <div style="display:flex;gap:6px">
-            <div style="width:28px;height:28px;background:#13131c;border:1px solid #1e1e2a;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#555;font-size:13px">‹</div>
-            <div style="width:28px;height:28px;background:#13131c;border:1px solid #1e1e2a;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#555;font-size:13px">›</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;padding:0 14px 14px">
-          <div style="flex:1;background:#13131c;border:1px solid #1e1e2a;border-radius:12px;padding:10px;text-align:center">
-            <div style="font-size:20px;font-weight:900;color:#00ff88">18</div>
-            <div style="font-size:9px;color:#444;margin-top:2px">Días gym</div>
-          </div>
-          <div style="flex:1;background:#13131c;border:1px solid #1e1e2a;border-radius:12px;padding:10px;text-align:center">
-            <div style="font-size:20px;font-weight:900;color:#00d4ff">8</div>
-            <div style="font-size:9px;color:#444;margin-top:2px">Descanso</div>
-          </div>
-          <div style="flex:1;background:#13131c;border:1px solid #1e1e2a;border-radius:12px;padding:10px;text-align:center">
-            <div style="font-size:20px;font-weight:900;color:#ffd700">75%</div>
-            <div style="font-size:9px;color:#444;margin-top:2px">Asistencia</div>
-          </div>
-        </div>
-        <div style="margin:0 14px 14px;background:#13131c;border:1px solid #1e1e2a;border-radius:18px;overflow:hidden;padding:10px 8px">
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px">
-            <div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">L</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">M</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">X</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">J</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">V</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">S</div><div style="text-align:center;font-size:9px;color:#2a2a3a;font-weight:700">D</div>
-          </div>
-          <style>
-            .cd2{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:11px;color:#222;flex-direction:column;gap:2px}
-            .cd2.g{background:#00ff8815;color:#ddd;font-weight:600}
-            .cd2.g::after{content:'';width:3px;height:3px;background:#00ff88;border-radius:50%;display:block}
-            .cd2.t{background:linear-gradient(135deg,#00ff88,#00cc70);color:#000;font-weight:900}
-            .cd2.t::after{content:'';width:3px;height:3px;background:#000;border-radius:50%;display:block}
-          </style>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
-            <div class="cd2"></div><div class="cd2"></div><div class="cd2"></div>
-            <div class="cd2 g">1</div><div class="cd2 g">2</div><div class="cd2">3</div><div class="cd2">4</div>
-            <div class="cd2 g">5</div><div class="cd2 g">6</div><div class="cd2 g">7</div>
-            <div class="cd2">8</div><div class="cd2 g">9</div><div class="cd2 g">10</div><div class="cd2">11</div>
-            <div class="cd2 g">12</div><div class="cd2 g">13</div><div class="cd2 g">14</div>
-            <div class="cd2 g">15</div><div class="cd2">16</div><div class="cd2 g">17</div><div class="cd2 g">18</div>
-            <div class="cd2 g">19</div><div class="cd2 g">20</div><div class="cd2">21</div>
-            <div class="cd2 g">22</div><div class="cd2 g">23</div><div class="cd2 g">24</div><div class="cd2 t">25</div>
-            <div class="cd2" style="color:#1e1e2a">26</div><div class="cd2" style="color:#1e1e2a">27</div><div class="cd2" style="color:#1e1e2a">28</div>
-            <div class="cd2" style="color:#1e1e2a">29</div><div class="cd2" style="color:#1e1e2a">30</div><div class="cd2" style="color:#1e1e2a">31</div><div class="cd2"></div>
-          </div>
-        </div>
-        <div style="padding:0 14px;margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-            <div style="font-size:12px;font-weight:700">Consistencia Mayo</div>
-            <div style="font-size:12px;font-weight:800;color:#00ff88">75%</div>
-          </div>
-          <div style="height:7px;background:#1a1a1a;border-radius:4px;overflow:hidden">
-            <div style="width:75%;height:100%;background:linear-gradient(90deg,#00ff88,#00d4ff);border-radius:4px"></div>
-          </div>
-        </div>
-        <div style="display:flex;gap:4px;padding:0 14px 6px;font-size:9px;color:#444;align-items:center">
-          ↑ tab Calendario &nbsp;·&nbsp; tab 🏆 Récords mostraría Hall of Fame
-        </div>
-        <div class="sec">Historial reciente</div>
-        <div style="padding:0 14px">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #141420">
-            <div style="width:38px;background:#13131c;border-radius:9px;padding:5px 3px;text-align:center;flex-shrink:0">
-              <div style="font-size:16px;font-weight:900;color:#00ff88">24</div>
-              <div style="font-size:8px;color:#444">MAY</div>
-            </div>
-            <div style="flex:1"><div style="font-size:12px;font-weight:700">Push Day</div><div style="font-size:10px;color:#444;margin-top:1px">7 ej · 28 series</div></div>
-            <div style="font-size:11px;color:#00d4ff;font-weight:700">58min</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #141420">
-            <div style="width:38px;background:#13131c;border-radius:9px;padding:5px 3px;text-align:center;flex-shrink:0">
-              <div style="font-size:16px;font-weight:900;color:#00ff88">23</div>
-              <div style="font-size:8px;color:#444">MAY</div>
-            </div>
-            <div style="flex:1"><div style="font-size:12px;font-weight:700">Leg Day</div><div style="font-size:10px;color:#444;margin-top:1px">6 ej · 24 series</div></div>
-            <div style="font-size:11px;color:#00d4ff;font-weight:700">67min</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
-            <div style="width:38px;background:#13131c;border-radius:9px;padding:5px 3px;text-align:center;flex-shrink:0">
-              <div style="font-size:16px;font-weight:900;color:#00ff88">22</div>
-              <div style="font-size:8px;color:#444">MAY</div>
-            </div>
-            <div style="flex:1"><div style="font-size:12px;font-weight:700">Pull Day</div><div style="font-size:10px;color:#444;margin-top:1px">6 ej · 24 series</div></div>
-            <div style="font-size:11px;color:#00d4ff;font-weight:700">72min</div>
-          </div>
-        </div>
-      </div>
-      <div class="nav">
-        <div class="ni"><div class="ni-ic">🏠</div><div class="ni-lb">Home</div></div>
-        <div class="ni"><div class="ni-ic">📋</div><div class="ni-lb">Rutinas</div></div>
-        <div class="ni on"><div class="ni-ic">📅</div><div class="ni-lb">Calendario</div><div class="nd"></div></div>
-        <div class="ni"><div class="ni-ic">📈</div><div class="ni-lb">Progreso</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PROGRESS -->
-<div class="sw">
-  <div class="sl">8 · Progreso · Mes vs Mes</div>
-  <div class="ph sm">
-    <div class="sb"><span class="sb-t">9:41</span><span class="sb-i">WiFi 🔋</span></div>
-    <div class="sc">
-      <div class="sa">
-        <div class="hd"><div class="hd-t">Mi Progreso</div><div class="hd-s">Comparativa mes a mes</div></div>
-        <div class="per-tabs">
-          <div class="pt">3m</div><div class="pt on">6m</div><div class="pt">1a</div><div class="pt">Todo</div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-hd">
-            <div><div class="ch-ex">Press de Banca</div><div class="ch-sb">Peso máximo · kg</div></div>
-            <div style="text-align:right"><div class="ch-v g">100 kg</div><div class="ch-d g">↑ +18% vs Dic</div></div>
-          </div>
-          <div class="bars">
-            <div class="bc"><div class="b old" style="height:40px"></div><div class="bl">DIC</div></div>
-            <div class="bc"><div class="b old" style="height:46px"></div><div class="bl">ENE</div></div>
-            <div class="bc"><div class="b old" style="height:54px"></div><div class="bl">FEB</div></div>
-            <div class="bc"><div class="b old" style="height:60px"></div><div class="bl">MAR</div></div>
-            <div class="bc"><div class="b old" style="height:68px"></div><div class="bl">ABR</div></div>
-            <div class="bc"><div class="b ng" style="height:76px"></div><div class="bl a">MAY</div></div>
-          </div>
-          <div class="cp">📈 <strong>+15kg (+18%)</strong> desde diciembre</div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-hd">
-            <div><div class="ch-ex">Sentadilla</div><div class="ch-sb">Peso máximo · kg</div></div>
-            <div style="text-align:right"><div class="ch-v b">130 kg</div><div class="ch-d b">↑ +18% vs Dic</div></div>
-          </div>
-          <div class="bars">
-            <div class="bc"><div class="b old" style="height:38px"></div><div class="bl">DIC</div></div>
-            <div class="bc"><div class="b old" style="height:46px"></div><div class="bl">ENE</div></div>
-            <div class="bc"><div class="b old" style="height:54px"></div><div class="bl">FEB</div></div>
-            <div class="bc"><div class="b old" style="height:60px"></div><div class="bl">MAR</div></div>
-            <div class="bc"><div class="b old" style="height:68px"></div><div class="bl">ABR</div></div>
-            <div class="bc"><div class="b nb" style="height:76px"></div><div class="bl ab">MAY</div></div>
-          </div>
-          <div class="cp b">🚀 <strong>+20kg (+18%)</strong> desde diciembre</div>
-        </div>
-        <div class="ch-card">
-          <div class="ch-hd">
-            <div><div class="ch-ex">Peso Muerto</div><div class="ch-sb">Peso máximo · kg</div></div>
-            <div style="text-align:right"><div class="ch-v" style="color:#ffd700">160 kg</div><div class="ch-d" style="color:#ffd700">↑ +21% vs Dic</div></div>
-          </div>
-          <div class="bars">
-            <div class="bc"><div class="b old" style="height:38px"></div><div class="bl">DIC</div></div>
-            <div class="bc"><div class="b old" style="height:46px"></div><div class="bl">ENE</div></div>
-            <div class="bc"><div class="b old" style="height:54px"></div><div class="bl">FEB</div></div>
-            <div class="bc"><div class="b old" style="height:62px"></div><div class="bl">MAR</div></div>
-            <div class="bc"><div class="b old" style="height:70px"></div><div class="bl">ABR</div></div>
-            <div class="bc"><div class="b ny" style="height:76px"></div><div class="bl ay">MAY</div></div>
-          </div>
-          <div class="cp y">🏆 <strong>+28kg (+21%)</strong> — PR nuevo!</div>
-        </div>
-      </div>
-      <div class="nav">
-        <div class="ni"><div class="ni-ic">🏠</div><div class="ni-lb">Home</div></div>
-        <div class="ni"><div class="ni-ic">📋</div><div class="ni-lb">Rutinas</div></div>
-        <div class="ni"><div class="ni-ic">📅</div><div class="ni-lb">Calendario</div></div>
-        <div class="ni on"><div class="ni-ic">📈</div><div class="ni-lb">Progreso</div><div class="nd"></div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-</div><!-- end flow row 2 -->
-
-<!-- FLOW DIAGRAM TEXT -->
-<div style="max-width:900px;margin:60px auto 0;padding:0 20px">
-  <div style="text-align:center;font-size:10px;font-weight:700;color:#1e1e2a;text-transform:uppercase;letter-spacing:3px;margin-bottom:24px">Arquitectura de navegación</div>
-  <div style="background:#13131c;border:1px solid #1e1e2a;border-radius:20px;padding:24px 28px">
-    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;font-size:12px">
-      <div style="background:#00ff8818;border:1px solid #00ff8835;border-radius:10px;padding:8px 14px;color:#00ff88;font-weight:700">🏠 Home</div>
-      <div style="color:#333">→</div>
-      <div style="background:#1e1e2a;border:1px solid #2a2a3a;border-radius:10px;padding:8px 14px;color:#aaa;font-weight:700">📋 Rutinas</div>
-      <div style="color:#333">→</div>
-      <div style="background:#1e1e2a;border:1px solid #2a2a3a;border-radius:10px;padding:8px 14px;color:#aaa;font-weight:700">📄 Detalle Rutina</div>
-      <div style="color:#333">→ submenú →</div>
-      <div style="background:#00d4ff18;border:1px solid #00d4ff35;border-radius:10px;padding:8px 14px;color:#00d4ff;font-weight:700">📚 Elegir Ejercicio</div>
-    </div>
-    <div style="height:1px;background:#1a1a24;margin:16px 0"></div>
-    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;font-size:12px">
-      <div style="background:#1e1e2a;border:1px solid #2a2a3a;border-radius:10px;padding:8px 14px;color:#aaa;font-weight:700">📄 Detalle Rutina</div>
-      <div style="color:#333">→ Iniciar →</div>
-      <div style="background:#00ff8818;border:1px solid #00ff8835;border-radius:10px;padding:8px 14px;color:#00ff88;font-weight:700">🏋️ Entreno Activo</div>
-      <div style="color:#333">→ Check set →</div>
-      <div style="background:#00ff8818;border:1px solid #00ff8835;border-radius:10px;padding:8px 14px;color:#00ff88;font-weight:700">⏱ Timer Pausa</div>
-      <div style="color:#333">→ Terminar →</div>
-      <div style="background:#ffd70018;border:1px solid #ffd70035;border-radius:10px;padding:8px 14px;color:#ffd700;font-weight:700">🏆 PR detectado</div>
-      <div style="color:#333">·</div>
-      <div style="background:#1e1e2a;border:1px solid #2a2a3a;border-radius:10px;padding:8px 14px;color:#555;font-weight:600;font-size:11px">Récords en 📅 Calendario</div>
-    </div>
-  </div>
-</div>
-
-<div style="text-align:center;padding:50px 0 20px;color:#1a1a24;font-size:11px">
-  GymPro v3 · React + Vite PWA · 8 pantallas · Nav: Home / Rutinas / Calendario / Progreso · Récords como sub-tab en Calendario
-</div>
-
 </body>
 </html>

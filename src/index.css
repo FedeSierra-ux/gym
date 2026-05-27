@@ -12,13 +12,14 @@
   --primary-dim: #00cc6a;
   --info: #00d4ff;
   --gold: #ffd700;
-  --bg: #07070d;
-  --card: #0f0f1a;
-  --surface: #13131c;
-  --border: #1e1e2a;
-  --glow-primary: 0 0 20px rgba(0, 255, 136, 0.3);
-  --glow-info: 0 0 20px rgba(0, 212, 255, 0.3);
-  --glow-gold: 0 0 20px rgba(255, 215, 0, 0.3);
+  --bg: #06060f;
+  --card: #0d0d1c;
+  --surface: #121225;
+  --border: rgba(255,255,255,0.06);
+  --border-hi: rgba(255,255,255,0.10);
+  --glow-primary: 0 0 24px rgba(0, 255, 136, 0.35);
+  --glow-info: 0 0 24px rgba(0, 212, 255, 0.35);
+  --glow-gold: 0 0 24px rgba(255, 215, 0, 0.35);
 }
 
 html, body {
@@ -52,25 +53,26 @@ html, body {
 }
 .scroll-area::-webkit-scrollbar { display: none; }
 
-/* Cards con profundidad */
+/* Cards con profundidad real */
 .card-glow {
-  background: linear-gradient(135deg, #0f0f1a 0%, #12121f 100%);
-  border: 1px solid #1e1e2a;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+  background: linear-gradient(160deg, #111124 0%, #0d0d1c 60%, #0a0a18 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 1px 0 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.5);
 }
 
-/* Glow en botón primario */
+/* Botón primario con glow */
 .btn-primary-glow {
-  background: var(--primary);
+  background: linear-gradient(135deg, #00ff88, #00e87a);
   color: #000;
   font-weight: 700;
-  box-shadow: 0 4px 20px rgba(0,255,136,0.35), 0 1px 4px rgba(0,255,136,0.2);
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 24px rgba(0,255,136,0.4), 0 1px 0 rgba(255,255,255,0.3) inset;
   transition: all 0.2s;
 }
-.btn-primary-glow:active { transform: scale(0.96); }
-.btn-primary-glow:hover { box-shadow: 0 6px 28px rgba(0,255,136,0.5); }
+.btn-primary-glow:active { transform: scale(0.96); box-shadow: 0 2px 12px rgba(0,255,136,0.3); }
+.btn-primary-glow:hover { box-shadow: 0 6px 32px rgba(0,255,136,0.55); }
 
-/* Tab activo con glow */
+/* Tab activo */
 .tab-active-glow {
   color: var(--primary);
   text-shadow: 0 0 12px rgba(0,255,136,0.6);
@@ -132,10 +134,11 @@ h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
 }
 .scale-in { animation: scale-in 0.2s cubic-bezier(0.34,1.56,0.64,1); }
 
-/* Stat card gradient */
+/* Stat card */
 .stat-card {
-  background: linear-gradient(135deg, #0f0f1a 0%, #111120 100%);
-  border: 1px solid #1e1e2a;
+  background: linear-gradient(160deg, #111124 0%, #0d0d1c 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 1px 0 0 rgba(255,255,255,0.05) inset, 0 4px 20px rgba(0,0,0,0.4);
   position: relative;
   overflow: hidden;
 }
@@ -144,7 +147,7 @@ h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
 }
 
 /* Gradient text */
@@ -157,9 +160,10 @@ h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
 
 /* Bottom nav */
 .bottom-nav {
-  background: linear-gradient(180deg, rgba(13,13,22,0.95) 0%, #0d0d16 100%);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid #1a1a28;
+  background: rgba(8, 8, 18, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 /* Exercise icon wrapper */
@@ -173,9 +177,40 @@ h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
 
 /* Section header */
 .section-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: #4b5563;
+  color: rgba(255,255,255,0.3);
+}
+
+/* Premium card base */
+.card-base {
+  background: linear-gradient(160deg, #111124 0%, #0d0d1c 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.45);
+}
+
+/* Day dot */
+.day-dot-active {
+  background: var(--primary);
+  color: #000;
+  box-shadow: 0 0 16px rgba(0,255,136,0.6), 0 0 6px rgba(0,255,136,0.4);
+}
+.day-dot-today {
+  border: 1.5px solid rgba(0,255,136,0.5);
+  color: var(--primary);
+}
+.day-dot-past {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.2);
+}
+.day-dot-future {
+  color: rgba(255,255,255,0.1);
+}
+
+/* Workout card gradient accent */
+.workout-card-accent {
+  background: linear-gradient(135deg, rgba(0,255,136,0.06) 0%, rgba(0,212,255,0.03) 100%);
+  border: 1px solid rgba(0,255,136,0.12);
 }

@@ -51,28 +51,52 @@ export function ExercisePickerScreen({ routineName }: Props) {
   return (
     <div className="flex-1 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-12 pb-3 border-b border-border">
+      <div
+        className="flex-shrink-0 px-4 pt-12 pb-3 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => setShowExercisePicker(false)}
-            className="text-gray-400 hover:text-white transition-colors text-2xl leading-none font-light"
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.5)',
+            }}
           >
-            ‹
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
           </button>
           <div>
             <h1 className="text-base font-bold text-white">Elegir ejercicio</h1>
-            <p className="text-xs text-gray-500">{routineName}</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{routineName}</p>
           </div>
-          <div className="ml-auto flex bg-surface rounded-xl border border-border overflow-hidden">
+          <div
+            className="ml-auto flex rounded-xl overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}
+          >
             <button
               onClick={() => setMode('browse')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${mode === 'browse' ? 'bg-primary/20 text-primary' : 'text-gray-500'}`}
+              className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={mode === 'browse' ? {
+                background: 'rgba(0,255,136,0.15)',
+                color: 'var(--primary)',
+              } : { color: 'rgba(255,255,255,0.3)' }}
             >
               Grupos
             </button>
             <button
               onClick={() => { setMode('search') }}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${mode === 'search' ? 'bg-primary/20 text-primary' : 'text-gray-500'}`}
+              className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={mode === 'search' ? {
+                background: 'rgba(0,255,136,0.15)',
+                color: 'var(--primary)',
+              } : { color: 'rgba(255,255,255,0.3)' }}
             >
               Buscar
             </button>
@@ -81,21 +105,25 @@ export function ExercisePickerScreen({ routineName }: Props) {
 
         {mode === 'search' && (
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>🔍</span>
             <input
               type="text"
               placeholder="Buscar ejercicio..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
-              className="w-full bg-surface border border-border rounded-xl py-2.5 pl-9 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-primary text-sm"
+              className="w-full rounded-xl py-2.5 pl-9 pr-4 text-white text-sm focus:outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
             />
           </div>
         )}
       </div>
 
       {/* Group filter pills — show in both modes */}
-      <div className="flex-shrink-0 px-4 py-2.5 border-b border-border">
+      <div className="flex-shrink-0 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           <button
             onClick={() => setSelectedGroup(null)}
@@ -205,7 +233,14 @@ function ExerciseRow({
 }) {
   const cfg = muscleGroupConfig[exercise.muscleGroup]
   return (
-    <div className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 active:scale-[0.98] transition-transform">
+    <div
+      className="rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all"
+      style={{
+        background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 2px 8px rgba(0,0,0,0.3)',
+      }}
+    >
       {/* Tapping icon/name → detail */}
       <button
         onClick={onDetail}
@@ -218,18 +253,23 @@ function ExerciseRow({
         />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm truncate">{exercise.nameEs}</p>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{exercise.primaryMuscles.join(', ')}</p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{exercise.primaryMuscles.join(', ')}</p>
         </div>
       </button>
 
       {/* Add button */}
       <button
         onClick={onAdd}
-        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all font-bold text-lg ${
-          isAdded
-            ? 'bg-primary/20 text-primary'
-            : 'bg-surface text-gray-400 hover:bg-primary hover:text-black border border-border'
-        }`}
+        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all font-bold text-lg"
+        style={isAdded ? {
+          background: 'rgba(0,255,136,0.15)',
+          color: 'var(--primary)',
+          border: '1px solid rgba(0,255,136,0.3)',
+        } : {
+          background: 'rgba(255,255,255,0.06)',
+          color: 'rgba(255,255,255,0.4)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
       >
         {isAdded ? '✓' : '+'}
       </button>
