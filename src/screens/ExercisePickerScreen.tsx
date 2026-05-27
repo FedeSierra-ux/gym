@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseDetailSheet } from '../components/ExerciseDetailSheet'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import type { MuscleGroup, Exercise } from '../types'
 
 interface Props {
@@ -246,11 +247,7 @@ function ExerciseRow({
         onClick={onDetail}
         className="flex items-center gap-3 flex-1 min-w-0 text-left"
       >
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: cfg.color + '18' }}
-          dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="44" height="44" viewBox') }}
-        />
+        <ExerciseThumbnail exercise={exercise} size={44} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm truncate">{exercise.nameEs}</p>
           <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{exercise.primaryMuscles.join(', ')}</p>
