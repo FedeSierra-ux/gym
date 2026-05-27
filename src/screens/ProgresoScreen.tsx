@@ -1,4 +1,13 @@
 import { useState } from 'react'
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts'
 import { useStore } from '../store/useStore'
 
 type Period = '3m' | '6m' | '1a' | 'todo'
@@ -21,6 +30,40 @@ interface ExerciseProgress {
   firstMax: number
   change: number
   changePct: number
+}
+
+interface ChartDataPoint {
+  label: string
+  kg: number
+}
+
+interface TooltipPayloadEntry {
+  value: number
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayloadEntry[]
+  label?: string
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+  return (
+    <div
+      style={{
+        background: '#111124',
+        border: '1px solid rgba(0,255,136,0.2)',
+        borderRadius: 8,
+        padding: '6px 10px',
+      }}
+    >
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, margin: 0 }}>{label}</p>
+      <p style={{ color: '#fff', fontSize: 12, fontWeight: 700, margin: 0 }}>
+        {payload[0].value} kg
+      </p>
+    </div>
+  )
 }
 
 export function ProgresoScreen() {
@@ -78,9 +121,6 @@ export function ProgresoScreen() {
 
   progressList.sort((a, b) => b.change - a.change)
 
-  const barCount = Math.min(monthsBack, 6)
-  const barsToShow = months.slice(-barCount)
-
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-shrink-0 px-4 pt-12 pb-4">
@@ -115,12 +155,10 @@ export function ProgresoScreen() {
               const ex = exercises.find((e) => e.id === ep.exerciseId)
               if (!ex) return null
 
-              const maxKg = Math.max(...ep.months.map((m) => m.maxKg), 1)
-              const barsData = ep.months.slice(-barCount).map((m, i) => ({
-                ...m,
-                isLast: i === barCount - 1,
-                label: barsToShow[i]?.label ?? m.label,
-              }))
+              // Only plot months that have data
+              const chartData: ChartDataPoint[] = ep.months
+                .filter((m) => m.maxKg > 0)
+                .map((m) => ({ label: m.label, kg: m.maxKg }))
 
               const firstMonthLabel = MONTH_NAMES_SHORT[new Date(workouts.find(
                 (w) => w.exercises.some((e) => e.exerciseId === ep.exerciseId)
@@ -128,6 +166,7 @@ export function ProgresoScreen() {
 
               return (
                 <div key={ep.exerciseId} className="bg-card rounded-2xl border border-border p-4">
+                  {/* Top row: name + current max + change badge */}
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold text-white text-sm">{ex.nameEs}</h3>
@@ -150,29 +189,49 @@ export function ProgresoScreen() {
                     )}
                   </div>
 
-                  <div className="flex items-end gap-2 h-20">
-                    {barsData.map((bar, i) => {
-                      const heightPct = bar.maxKg > 0 ? (bar.maxKg / maxKg) * 100 : 3
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                          <div className="w-full flex items-end" style={{ height: '64px' }}>
-                            <div
-                              className="w-full rounded-t-lg transition-all"
-                              style={{
-                                height: `${heightPct}%`,
-                                backgroundColor: bar.isLast
-                                  ? '#00ff88'
-                                  : bar.maxKg > 0
-                                  ? '#00ff8840'
-                                  : '#1e1e2a',
-                                minHeight: '4px',
-                              }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-600">{bar.label}</span>
-                        </div>
-                      )
-                    })}
+                  {/* Area chart */}
+                  <div style={{ height: 80 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={chartData}
+                        margin={{ top: 4, right: 0, left: -32, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id={`grad-${ep.exerciseId}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(0,255,136,0.2)" />
+                            <stop offset="100%" stopColor="rgba(0,255,136,0)" />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="0"
+                          stroke="rgba(255,255,255,0.05)"
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          domain={['auto', 'auto']}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area
+                          type="monotone"
+                          dataKey="kg"
+                          stroke="#00ff88"
+                          strokeWidth={2}
+                          fill={`url(#grad-${ep.exerciseId})`}
+                          dot={false}
+                          activeDot={{ r: 4, fill: '#00ff88', stroke: 'none' }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )

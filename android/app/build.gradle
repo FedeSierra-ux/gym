@@ -1,13 +1,15 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 android {
     namespace 'com.fedesierra.gympro'
-    compileSdkVersion 34
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.fedesierra.gympro"
-        minSdkVersion 21
-        targetSdkVersion 34
+        minSdk 21
+        targetSdk 34
         versionCode 1
         versionName "1.0"
     }

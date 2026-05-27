@@ -1,5 +1,10 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
-  <rect width='512' height='512' rx='80' fill='#07070d'/>
-  <text x='256' y='320' text-anchor='middle' font-size='260' font-family='Arial'>💪</text>
-  <text x='256' y='460' text-anchor='middle' fill='#00ff88' font-size='52' font-weight='bold' font-family='Arial'>GymPro</text>
+  <rect width='512' height='512' rx='96' fill='#06060f'/>
+  <rect x='136' y='236' width='240' height='40' rx='10' fill='#00ff88' opacity='0.95'/>
+  <rect x='116' y='220' width='32' height='72' rx='10' fill='#00e07a'/>
+  <rect x='364' y='220' width='32' height='72' rx='10' fill='#00e07a'/>
+  <rect x='72' y='196' width='48' height='120' rx='14' fill='#00ff88'/>
+  <rect x='392' y='196' width='48' height='120' rx='14' fill='#00ff88'/>
+  <rect x='52' y='210' width='22' height='92' rx='8' fill='#00cc6a' opacity='0.8'/>
+  <rect x='438' y='210' width='22' height='92' rx='8' fill='#00cc6a' opacity='0.8'/>
 </svg>

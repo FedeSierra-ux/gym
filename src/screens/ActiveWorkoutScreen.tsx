@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
+import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { vibrate } from '../utils/haptics'
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
   const { exerciseTips, setExerciseTip } = useStore()
@@ -57,6 +60,22 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
   )
 }
 
+function AdjustButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <button
+      onClick={onPress}
+      className="w-6 h-7 rounded flex items-center justify-center flex-shrink-0 text-[9px] font-bold transition-all active:scale-90"
+      style={{
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        color: 'rgba(255,255,255,0.45)',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 function formatElapsed(ms: number) {
   const totalSeconds = Math.floor(ms / 1000)
   const h = Math.floor(totalSeconds / 3600)
@@ -66,21 +85,20 @@ function formatElapsed(ms: number) {
 }
 
 export function ActiveWorkoutScreen() {
+  const { exercises, routines, workouts, prs } = useStore()
   const {
     activeWorkout,
-    exercises,
-    routines,
-    workouts,
     updateSetValue,
     completeSet,
     addSetToExercise,
     finishWorkout,
     cancelWorkout,
-    prs,
-  } = useStore()
+  } = useWorkoutStore()
 
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
+  const [flashingSet, setFlashingSet] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeWorkout) return
@@ -97,16 +115,10 @@ export function ActiveWorkoutScreen() {
 
   const routine = routines.find((r) => r.id === activeWorkout.routineId)
 
-  const handleFinish = () => {
-    if (confirm('¿Terminar el entrenamiento?')) {
-      finishWorkout()
-    }
-  }
-
-  const handleCancel = () => {
-    if (confirm('¿Cancelar el entrenamiento? Se perderá el progreso.')) {
-      cancelWorkout()
-    }
+  const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
+    const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
+    const current = parseFloat(currentVal) || 0
+    updateSetValue(exIdx, setIdx, field, String(Math.max(0, current + delta)))
   }
 
   return (
@@ -121,13 +133,13 @@ export function ActiveWorkoutScreen() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={handleCancel}
+              onClick={() => setConfirmAction('cancel')}
               className="px-3 py-1.5 rounded-lg text-gray-400 text-sm border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
             >
               Cancelar
             </button>
             <button
-              onClick={handleFinish}
+              onClick={() => setConfirmAction('finish')}
               className="px-4 py-1.5 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary/90 active:scale-95 transition-transform"
             >
               Terminar
@@ -142,7 +154,6 @@ export function ActiveWorkoutScreen() {
             const ex = exercises.find((e) => e.id === activeEx.exerciseId)
             if (!ex) return null
             const config = muscleGroupConfig[ex.muscleGroup]
-
             const pr = prs.find((p) => p.exerciseId === ex.id)
 
             const prevWorkout = [...workouts]
@@ -155,12 +166,9 @@ export function ActiveWorkoutScreen() {
 
             return (
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
+                {/* Exercise header */}
                 <div className="p-3 border-b border-border flex items-center gap-3">
-                  <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="64" height="64" viewBox') }}
-                  />
+                  <ExerciseThumbnail exercise={ex} size={56} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
                     <span
@@ -170,68 +178,90 @@ export function ActiveWorkoutScreen() {
                       {config.label}
                     </span>
                     {pr && (
-                      <p className="text-xs text-gold mt-1">
-                        🏆 PR: {pr.kg}kg × {pr.reps} reps
-                      </p>
+                      <p className="text-xs text-gold mt-1">🏆 PR: {pr.kg}kg × {pr.reps} reps</p>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="text-sm font-semibold text-white">{completedCount}/{totalSets}</p>
                     <p className="text-[10px] text-gray-500">series</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-[32px_1fr_72px_72px_40px] gap-2 px-3 py-2 border-b border-border">
-                  <span className="text-[10px] text-gray-600 font-medium">SET</span>
-                  <span className="text-[10px] text-gray-600 font-medium">ANTERIOR</span>
-                  <span className="text-[10px] text-gray-600 font-medium text-center">KG</span>
-                  <span className="text-[10px] text-gray-600 font-medium text-center">REPS</span>
-                  <span className="text-[10px] text-gray-600 font-medium text-center">✓</span>
+                {/* Column headers */}
+                <div className="flex items-center px-3 py-1.5 border-b border-border gap-2">
+                  <span className="w-5 text-[10px] text-gray-600 font-medium flex-shrink-0">#</span>
+                  <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">KG</span>
+                  <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">REPS</span>
+                  <span className="w-8 text-[10px] text-gray-600 font-medium text-center flex-shrink-0">✓</span>
                 </div>
 
+                {/* Sets */}
                 {activeEx.sets.map((set, setIdx) => {
-                  const prev = prevSets[setIdx]
+                  const isCompleted = set.completed
+                  const flashKey = `${exIdx}-${setIdx}`
+
                   return (
                     <div
                       key={setIdx}
-                      className={`grid grid-cols-[32px_1fr_72px_72px_40px] gap-2 px-3 py-2 items-center transition-colors ${
-                        set.completed ? 'bg-primary/5' : ''
-                      }`}
+                      className={`flex items-center px-3 py-2 gap-2 transition-colors ${
+                        isCompleted ? 'bg-primary/5' : ''
+                      } ${flashingSet === flashKey ? 'set-complete-flash' : ''}`}
                     >
-                      <span className={`text-sm font-bold ${set.completed ? 'text-primary' : 'text-gray-500'}`}>
+                      {/* Set number */}
+                      <span className={`w-5 text-sm font-bold flex-shrink-0 ${isCompleted ? 'text-primary' : 'text-gray-500'}`}>
                         {setIdx + 1}
                       </span>
-                      <span className="text-xs text-gray-500 truncate">
-                        {prev ? `${prev.kg}kg×${prev.reps}` : '—'}
-                      </span>
-                      <input
-                        type="number"
-                        value={set.kg}
-                        onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
-                        placeholder="0"
-                        disabled={set.completed}
-                        className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                          set.completed
-                            ? 'bg-primary/10 border-primary/20 text-primary'
-                            : 'bg-surface border-border text-white'
-                        }`}
-                      />
-                      <input
-                        type="number"
-                        value={set.reps}
-                        onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                        placeholder="0"
-                        disabled={set.completed}
-                        className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                          set.completed
-                            ? 'bg-primary/10 border-primary/20 text-primary'
-                            : 'bg-surface border-border text-white'
-                        }`}
-                      />
+
+                      {/* KG: − / input / + (−5kg / +2.5kg) */}
+                      <div className="flex-1 flex items-center gap-1 min-w-0">
+                        {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
+                        <div className="flex-1 min-w-0 relative">
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={set.kg}
+                            onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
+                            placeholder="kg"
+                            disabled={isCompleted}
+                            className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
+                              isCompleted ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface border-border text-white'
+                            }`}
+                          />
+                        </div>
+                        {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
+                      </div>
+
+                      {/* REPS: − / input / + (−1 / +1) */}
+                      <div className="flex-1 flex items-center gap-1 min-w-0">
+                        {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            value={set.reps}
+                            onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
+                            placeholder="reps"
+                            disabled={isCompleted}
+                            className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
+                              isCompleted ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface border-border text-white'
+                            }`}
+                          />
+                        </div>
+                        {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
+                      </div>
+
+                      {/* Complete button */}
                       <button
-                        onClick={() => completeSet(exIdx, setIdx)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto transition-all ${
-                          set.completed
+                        onClick={() => {
+                          completeSet(exIdx, setIdx)
+                          if (!isCompleted) {
+                            vibrate([40, 20, 40])
+                            setFlashingSet(flashKey)
+                            setTimeout(() => setFlashingSet(null), 600)
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                          isCompleted
                             ? 'bg-primary text-black'
                             : 'bg-surface border border-border text-gray-600 hover:border-primary hover:text-primary'
                         }`}
@@ -270,6 +300,41 @@ export function ActiveWorkoutScreen() {
       </div>
 
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
+
+      {confirmAction && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-white font-bold text-lg mb-2">
+              {confirmAction === 'finish' ? '¿Terminar entreno?' : '¿Cancelar entreno?'}
+            </h3>
+            {confirmAction === 'cancel' && (
+              <p className="text-gray-400 text-sm mb-4">Se perderá todo el progreso de esta sesión.</p>
+            )}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 py-3 rounded-xl border border-border text-gray-400 text-sm font-medium hover:border-gray-500 transition-colors"
+              >
+                Volver
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmAction(null)
+                  if (confirmAction === 'finish') finishWorkout()
+                  else cancelWorkout()
+                }}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
+                  confirmAction === 'finish'
+                    ? 'bg-primary text-black hover:bg-primary/90'
+                    : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
+                }`}
+              >
+                {confirmAction === 'finish' ? '✓ Terminar' : '✕ Cancelar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

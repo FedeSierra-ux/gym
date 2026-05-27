@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'GymPro',
-        short_name: 'GymPro',
+        name: 'Gym',
+        short_name: 'Gym',
         description: 'Tu compañero de entrenamiento definitivo',
         theme_color: '#07070d',
         background_color: '#07070d',

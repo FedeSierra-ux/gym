@@ -1,18 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ActiveWorkoutExercise, ExerciseTips } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
-
-interface ActiveWorkout {
-  routineId: string
-  startedAt: number
-  exercises: ActiveWorkoutExercise[]
-  restTimerVisible: boolean
-  restSecondsLeft: number
-  restTotalSeconds: number
-  lastCompletedSet?: { exerciseId: string; setIdx: number; kg: number; reps: number }
-}
 
 interface AppState {
   // Navigation
@@ -20,7 +10,6 @@ interface AppState {
   calendarSubTab: CalendarSubTab
   activeRoutineId: string | null
   showExercisePicker: boolean
-  activeWorkout: ActiveWorkout | null
 
   // Data
   exercises: Exercise[]
@@ -30,6 +19,9 @@ interface AppState {
   exerciseTips: ExerciseTips
   userName: string
   seeded: boolean
+  onboarded: boolean
+  anthropicApiKey: string
+  toasts: AppToast[]
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -45,19 +37,21 @@ interface AppState {
   removeExerciseFromRoutine: (routineId: string, exerciseId: string) => void
   reorderRoutineExercises: (routineId: string, exercises: Routine['exercises']) => void
 
-  // Workout
-  startWorkout: (routineId: string) => void
-  updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
-  completeSet: (exerciseIdx: number, setIdx: number) => void
-  addSetToExercise: (exerciseIdx: number) => void
-  finishWorkout: () => void
-  cancelWorkout: () => void
-  dismissRestTimer: () => void
-  adjustRestTimer: (delta: number) => void
-  setRestPreset: (seconds: number) => void
+  // Workout history
+  deleteWorkout: (id: string) => void
+  deletePr: (exerciseId: string) => void
 
   // Tips
   setExerciseTip: (exerciseId: string, tip: string) => void
+
+  // Profile
+  updateUserName: (name: string) => void
+  setOnboarded: () => void
+  setAnthropicApiKey: (key: string) => void
+
+  // Toasts
+  addToast: (message: string, type: AppToast['type']) => void
+  removeToast: (id: string) => void
 
   // Seed
   seedData: () => void
@@ -70,7 +64,6 @@ export const useStore = create<AppState>()(
       calendarSubTab: 'calendario',
       activeRoutineId: null,
       showExercisePicker: false,
-      activeWorkout: null,
       exercises: exerciseDb,
       routines: [],
       workouts: [],
@@ -78,6 +71,9 @@ export const useStore = create<AppState>()(
       exerciseTips: {},
       userName: 'Atleta',
       seeded: false,
+      onboarded: false,
+      anthropicApiKey: '',
+      toasts: [],
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -117,193 +113,21 @@ export const useStore = create<AppState>()(
           routines: s.routines.map((r) => (r.id === routineId ? { ...r, exercises } : r)),
         })),
 
-      startWorkout: (routineId) => {
-        const { routines, workouts, exercises: exDb } = get()
-        const routine = routines.find((r) => r.id === routineId)
-        if (!routine) return
+      deleteWorkout: (id) => set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) })),
 
-        const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          const prevWorkout = [...workouts]
-            .filter((w) => w.routineId === routineId && w.finishedAt)
-            .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
-
-          const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
-
-          const ex = exDb.find((e) => e.id === re.exerciseId)
-          void ex
-
-          return {
-            exerciseId: re.exerciseId,
-            sets: Array.from({ length: re.sets }, (_, i) => ({
-              kg: prevSets[i] ? String(prevSets[i].kg) : '',
-              reps: prevSets[i] ? String(prevSets[i].reps) : '',
-              completed: false,
-            })),
-          }
-        })
-
-        set({
-          activeWorkout: {
-            routineId,
-            startedAt: Date.now(),
-            exercises: activeExercises,
-            restTimerVisible: false,
-            restSecondsLeft: 120,
-            restTotalSeconds: 120,
-          },
-        })
-      },
-
-      updateSetValue: (exerciseIdx, setIdx, field, value) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          const exercises = s.activeWorkout.exercises.map((ex, ei) => {
-            if (ei !== exerciseIdx) return ex
-            return {
-              ...ex,
-              sets: ex.sets.map((st, si) => (si === setIdx ? { ...st, [field]: value } : st)),
-            }
-          })
-          return { activeWorkout: { ...s.activeWorkout, exercises } }
-        }),
-
-      completeSet: (exerciseIdx, setIdx) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          const exercises = s.activeWorkout.exercises.map((ex, ei) => {
-            if (ei !== exerciseIdx) return ex
-            return {
-              ...ex,
-              sets: ex.sets.map((st, si) => (si === setIdx ? { ...st, completed: !st.completed } : st)),
-            }
-          })
-          const completedSet = exercises[exerciseIdx].sets[setIdx]
-          const lastCompletedSet = completedSet.completed
-            ? {
-                exerciseId: exercises[exerciseIdx].exerciseId,
-                setIdx,
-                kg: parseFloat(completedSet.kg) || 0,
-                reps: parseInt(completedSet.reps) || 0,
-              }
-            : s.activeWorkout.lastCompletedSet
-
-          return {
-            activeWorkout: {
-              ...s.activeWorkout,
-              exercises,
-              lastCompletedSet,
-              restTimerVisible: completedSet.completed,
-              restSecondsLeft: 120,
-              restTotalSeconds: 120,
-            },
-          }
-        }),
-
-      addSetToExercise: (exerciseIdx) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          const exercises = s.activeWorkout.exercises.map((ex, ei) => {
-            if (ei !== exerciseIdx) return ex
-            const lastSet = ex.sets[ex.sets.length - 1]
-            return {
-              ...ex,
-              sets: [...ex.sets, { kg: lastSet?.kg ?? '', reps: lastSet?.reps ?? '', completed: false }],
-            }
-          })
-          return { activeWorkout: { ...s.activeWorkout, exercises } }
-        }),
-
-      finishWorkout: () => {
-        const { activeWorkout, routines, prs } = get()
-        if (!activeWorkout) return
-
-        const finishedAt = Date.now()
-        const durationMin = Math.round((finishedAt - activeWorkout.startedAt) / 60000)
-
-        const workoutExercises = activeWorkout.exercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          sets: ex.sets
-            .filter((s) => s.completed)
-            .map((s) => ({
-              kg: parseFloat(s.kg) || 0,
-              reps: parseInt(s.reps) || 0,
-              completedAt: finishedAt,
-            })),
-        }))
-
-        const newWorkout: Workout = {
-          id: `workout-${Date.now()}`,
-          routineId: activeWorkout.routineId,
-          startedAt: activeWorkout.startedAt,
-          finishedAt,
-          durationMin,
-          kcal: Math.round(durationMin * 6.5),
-          exercises: workoutExercises,
-        }
-
-        const totalSets = workoutExercises.reduce((acc, ex) => acc + ex.sets.length, 0)
-        const routineExerciseCount = routines.find((r) => r.id === activeWorkout.routineId)?.exercises.length ?? 1
-        void totalSets
-        void routineExerciseCount
-
-        const newPrs = [...prs]
-        for (const ex of workoutExercises) {
-          for (const s of ex.sets) {
-            const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)
-            const volume = s.kg * s.reps
-            const existingVolume = existing ? existing.kg * existing.reps : 0
-            if (!existing || volume > existingVolume) {
-              const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
-              const pr = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: finishedAt }
-              if (idx >= 0) newPrs[idx] = pr
-              else newPrs.push(pr)
-            }
-          }
-        }
-
-        set((s) => ({
-          workouts: [...s.workouts, newWorkout],
-          prs: newPrs,
-          activeWorkout: null,
-          activeTab: 'home',
-        }))
-      },
-
-      cancelWorkout: () => set({ activeWorkout: null }),
+      deletePr: (exerciseId) => set((s) => ({ prs: s.prs.filter((p) => p.exerciseId !== exerciseId) })),
 
       setExerciseTip: (exerciseId, tip) =>
         set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
 
-      dismissRestTimer: () =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          return { activeWorkout: { ...s.activeWorkout, restTimerVisible: false } }
-        }),
-
-      adjustRestTimer: (delta) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          const newSeconds = Math.max(0, s.activeWorkout.restSecondsLeft + delta)
-          return {
-            activeWorkout: {
-              ...s.activeWorkout,
-              restSecondsLeft: newSeconds,
-              restTotalSeconds: Math.max(s.activeWorkout.restTotalSeconds, newSeconds),
-            },
-          }
-        }),
-
-      setRestPreset: (seconds) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          return {
-            activeWorkout: {
-              ...s.activeWorkout,
-              restSecondsLeft: seconds,
-              restTotalSeconds: seconds,
-            },
-          }
-        }),
+      updateUserName: (name) => set({ userName: name }),
+      setOnboarded: () => set({ onboarded: true }),
+      setAnthropicApiKey: (key) => set({ anthropicApiKey: key }),
+      addToast: (message, type) =>
+        set((s) => ({
+          toasts: [...s.toasts, { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message, type }],
+        })),
+      removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
       seedData: () => {
         const { seeded } = get()
@@ -326,7 +150,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'gympro-storage',
+      name: 'gympro-storage-v2',
       partialize: (state) => ({
         routines: state.routines,
         workouts: state.workouts,
@@ -334,6 +158,8 @@ export const useStore = create<AppState>()(
         exerciseTips: state.exerciseTips,
         userName: state.userName,
         seeded: state.seeded,
+        onboarded: state.onboarded,
+        anthropicApiKey: state.anthropicApiKey,
       }),
     }
   )

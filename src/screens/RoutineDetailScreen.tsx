@@ -1,7 +1,53 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
+import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+
+function BackIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+  )
+}
+
+function PlayIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      <path d="M10 11v6M14 11v6"/>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+    </svg>
+  )
+}
 
 export function RoutineDetailScreen() {
   const {
@@ -10,14 +56,17 @@ export function RoutineDetailScreen() {
     exercises,
     workouts,
     setActiveRoutineId,
-    startWorkout,
     removeExerciseFromRoutine,
     updateRoutine,
+    deleteRoutine,
+    reorderRoutineExercises,
     showExercisePicker,
     setShowExercisePicker,
   } = useStore()
+  const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
   const [editMode, setEditMode] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
   if (!routine) return null
@@ -27,136 +76,298 @@ export function RoutineDetailScreen() {
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
   const lastUsedDate = lastWorkout
-    ? new Date(lastWorkout.startedAt).toLocaleDateString('es-ES', {
+    ? new Date(lastWorkout.startedAt).toLocaleDateString('es-AR', {
         day: 'numeric',
-        month: 'long',
-        year: 'numeric',
+        month: 'short',
       })
-    : 'Nunca usado'
+    : null
 
   const totalDuration = routine.exercises.reduce((acc, re) => acc + re.sets * 2.5, 0)
+
+  const moveExercise = (idx: number, dir: 'up' | 'down') => {
+    const sorted = [...routine.exercises].sort((a, b) => a.order - b.order)
+    const newIdx = dir === 'up' ? idx - 1 : idx + 1
+    if (newIdx < 0 || newIdx >= sorted.length) return
+    const reordered = sorted.map((ex, i) => {
+      if (i === idx) return { ...ex, order: newIdx }
+      if (i === newIdx) return { ...ex, order: idx }
+      return ex
+    })
+    reorderRoutineExercises(routine.id, reordered)
+  }
 
   if (showExercisePicker) {
     return <ExercisePickerScreen routineName={routine.name} />
   }
 
+  const sortedExercises = [...routine.exercises].sort((a, b) => a.order - b.order)
+
   return (
-    <div className="flex-1 flex flex-col screen-enter">
-      <div className="flex-shrink-0 px-4 pt-12 pb-4 bg-background border-b border-border">
-        <div className="flex items-center gap-3 mb-4">
+    <div className="flex-1 min-h-0 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
+      {/* Header */}
+      <div
+        className="flex-shrink-0 px-4 pt-12 pb-4 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(0,212,255,0.05) 0%, transparent 70%)' }}
+        />
+        <div className="flex items-center gap-3 mb-4 relative">
           <button
             onClick={() => setActiveRoutineId(null)}
-            className="text-gray-400 hover:text-white transition-colors text-xl leading-none"
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.5)',
+            }}
           >
-            ‹
+            <BackIcon />
           </button>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {editMode ? (
               <input
-                className="bg-surface border border-border rounded-lg px-3 py-1.5 text-white font-bold text-lg w-full focus:outline-none focus:border-primary"
+                className="w-full rounded-xl px-3 py-1.5 text-white font-bold text-lg focus:outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(0,255,136,0.3)',
+                }}
                 value={routine.name}
                 onChange={(e) => updateRoutine({ ...routine, name: e.target.value })}
               />
             ) : (
-              <h1 className="text-xl font-bold text-white">
+              <h1 className="text-xl font-bold text-white truncate">
                 {routine.emoji} {routine.name}
               </h1>
             )}
           </div>
+          {editMode && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                color: 'rgba(239,68,68,0.7)',
+              }}
+            >
+              <TrashIcon />
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          <span>{routine.exercises.length} ejercicios</span>
-          <span>·</span>
-          <span>~{Math.round(totalDuration)} min</span>
-          <span>·</span>
-          <span>Último: {lastUsedDate}</span>
+        <div className="flex items-center gap-2 relative">
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+          >
+            {routine.exercises.length} ejercicios
+          </span>
+          <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+          >
+            ~{Math.round(totalDuration)} min
+          </span>
+          {lastUsedDate && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+              <span
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style={{ background: 'rgba(0,255,136,0.06)', color: 'rgba(0,255,136,0.5)' }}
+              >
+                Último: {lastUsedDate}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex-shrink-0 px-4 py-3 flex gap-3 border-b border-border">
+      {/* Action buttons */}
+      <div
+        className="flex-shrink-0 px-4 py-3 flex gap-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      >
         <button
           onClick={() => startWorkout(routine.id)}
-          className="flex-1 bg-primary text-black font-bold py-3 rounded-xl text-sm hover:bg-primary/90 active:scale-95 transition-transform"
+          className="flex-1 btn-primary-glow py-3 rounded-xl text-sm flex items-center justify-center gap-2"
         >
-          ▶ Iniciar
+          <PlayIcon />
+          <span>Iniciar</span>
         </button>
         <button
           onClick={() => setEditMode(!editMode)}
-          className={`px-4 py-3 rounded-xl text-sm font-semibold border transition-colors ${
-            editMode
-              ? 'bg-primary/20 text-primary border-primary/40'
-              : 'bg-surface text-gray-300 border-border'
-          }`}
+          className="px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
+          style={editMode ? {
+            background: 'rgba(0,255,136,0.12)',
+            border: '1px solid rgba(0,255,136,0.3)',
+            color: 'var(--primary)',
+          } : {
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.6)',
+          }}
         >
-          {editMode ? '✓ Listo' : '✏️ Editar'}
+          {editMode ? <CheckIcon /> : <EditIcon />}
+          <span>{editMode ? 'Listo' : 'Editar'}</span>
         </button>
       </div>
 
-      <div className="flex-1 scroll-area px-4 py-3">
-        <div className="flex flex-col gap-2">
-          {routine.exercises
-            .sort((a, b) => a.order - b.order)
-            .map((re, idx) => {
-              const ex = exercises.find((e) => e.id === re.exerciseId)
-              if (!ex) return null
-              const config = muscleGroupConfig[ex.muscleGroup]
+      {/* Exercise list */}
+      <div className="flex-1 min-h-0 scroll-area px-4 py-4">
+        <div className="flex flex-col gap-2.5">
+          {sortedExercises.map((re, idx) => {
+            const ex = exercises.find((e) => e.id === re.exerciseId)
+            if (!ex) return null
+            const config = muscleGroupConfig[ex.muscleGroup]
 
-              return (
-                <div
-                  key={re.exerciseId}
-                  className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
-                >
-                  {editMode && (
-                    <span className="text-gray-600 text-lg cursor-grab select-none">⠷</span>
-                  )}
-
-                  <div
-                    className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="48" height="48" viewBox') }}
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0"
-                        style={{ color: config.color, backgroundColor: config.color + '20' }}
-                      >
-                        {config.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {re.sets} series · {re.repsMin}–{re.repsMax} reps
-                    </p>
-                  </div>
-
-                  {editMode && (
+            return (
+              <div
+                key={re.exerciseId}
+                className="rounded-2xl p-3 flex items-center gap-3"
+                style={{
+                  background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 16px rgba(0,0,0,0.35)',
+                }}
+              >
+                {editMode && (
+                  <div className="flex flex-col gap-1 flex-shrink-0">
                     <button
-                      onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
-                      className="text-red-500 hover:text-red-400 transition-colors ml-auto flex-shrink-0"
+                      onClick={() => moveExercise(idx, 'up')}
+                      disabled={idx === 0}
+                      className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
+                      style={{
+                        color: idx === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+                        background: 'rgba(255,255,255,0.04)',
+                      }}
                     >
-                      <span className="text-lg">×</span>
+                      ↑
                     </button>
-                  )}
+                    <button
+                      onClick={() => moveExercise(idx, 'down')}
+                      disabled={idx === sortedExercises.length - 1}
+                      className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
+                      style={{
+                        color: idx === sortedExercises.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+                        background: 'rgba(255,255,255,0.04)',
+                      }}
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )}
 
-                  {!editMode && (
-                    <span className="text-gray-700 text-sm">{idx + 1}</span>
-                  )}
+                <ExerciseThumbnail exercise={ex} size={48} />
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white text-sm truncate mb-0.5">{ex.nameEs}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                      style={{ color: config.color, backgroundColor: config.color + '18' }}
+                    >
+                      {config.label}
+                    </span>
+                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      {re.sets} series · {re.repsMin}–{re.repsMax} reps
+                    </span>
+                  </div>
                 </div>
-              )
-            })}
+
+                {editMode ? (
+                  <button
+                    onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      background: 'rgba(239,68,68,0.1)',
+                      border: '1px solid rgba(239,68,68,0.2)',
+                      color: 'rgba(239,68,68,0.7)',
+                      fontSize: '18px',
+                    }}
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <span
+                    className="text-xs font-bold flex-shrink-0"
+                    style={{ color: 'rgba(255,255,255,0.15)' }}
+                  >
+                    {idx + 1}
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
 
+        {/* Add exercise button */}
         <button
           onClick={() => setShowExercisePicker(true)}
-          className="w-full mt-3 border border-dashed border-border rounded-xl py-3 text-gray-500 flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors"
+          className="w-full mt-3 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all"
+          style={{
+            border: '1.5px dashed rgba(0,255,136,0.2)',
+            background: 'rgba(0,255,136,0.02)',
+            color: 'rgba(0,255,136,0.5)',
+          }}
         >
-          <span>+</span>
-          <span className="text-sm">Agregar ejercicio</span>
+          <span className="text-lg leading-none">+</span>
+          <span className="text-sm font-semibold">Agregar ejercicio</span>
         </button>
+
+        <div className="h-6" />
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6">
+          <div
+            className="w-full max-w-sm rounded-2xl p-6"
+            style={{
+              background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+            }}
+          >
+            <h3 className="text-white font-bold text-lg mb-2">¿Eliminar rutina?</h3>
+            <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Se eliminará "{routine.name}" y no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-colors"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.5)',
+                  background: 'rgba(255,255,255,0.04)',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  deleteRoutine(routine.id)
+                  setActiveRoutineId(null)
+                }}
+                className="flex-1 py-3 rounded-xl font-bold text-sm transition-colors"
+                style={{
+                  background: 'rgba(239,68,68,0.15)',
+                  color: 'rgb(248,113,113)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

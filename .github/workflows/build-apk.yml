@@ -14,6 +14,8 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -27,24 +29,27 @@ jobs:
 
       - name: Accept Android SDK licenses
         run: |
-          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "sdk.dir=${SDK_ROOT}" > android/local.properties
+          SDKM="${SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -f "$SDKM" ]; then
-            SDKM=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
+            SDKM=$(find "${SDK_ROOT}/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
           fi
           if [ -n "$SDKM" ]; then
             yes | "$SDKM" --licenses > /dev/null 2>&1 || true
-            "$SDKM" "platforms;android-34" "build-tools;34.0.0" 2>&1 || true
+            "$SDKM" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
           fi
-          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
 
       - name: Install Gradle 8.4
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.4/bin" >> $GITHUB_PATH
+
+      - name: Generate Gradle wrapper
+        run: cd android && /opt/gradle/gradle-8.4/bin/gradle wrapper --gradle-version 8.4
 
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --project-dir android
+        run: cd android && ./gradlew assembleDebug --no-daemon --stacktrace
         env:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
 
@@ -74,9 +79,14 @@ jobs:
             -H "Authorization: token $GH_TOKEN" \
             -H "Content-Type: application/json" \
             "$API/releases" \
-            -d '{"tag_name":"apk-latest","name":"GymPro Android APK","body":"Descargar GymPro.apk e instalar en el celu.\n(Activar Instalar desde fuentes desconocidas si lo pide)","draft":false,"prerelease":false}')
+            -d '{"tag_name":"apk-latest","name":"GymPro Android APK","body":"Descargar GymPro.apk e instalar en el celu.\n(Activar Instalar desde fuentes desconocidas si lo pide)","draft":false,"prerelease":false}' || echo "")
 
-          RID=$(echo "$REL" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          RID=$(echo "$REL" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || echo "")
+
+          if [ -z "$RID" ]; then
+            echo "ERROR: failed to create release. Response: $REL" >&2
+            exit 1
+          fi
 
           curl -sf -X POST \
             -H "Authorization: token $GH_TOKEN" \
