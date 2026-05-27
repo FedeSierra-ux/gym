@@ -134,7 +134,7 @@ export const exercises: Exercise[] = [
   { id: 'pecho-06', nameEs: 'Fondos en Paralelas', muscleGroup: 'pecho', primaryMuscles: ['Pectoral inferior'], equipment: 'Paralelas', equipmentType: 'peso_corporal', icon: svgs.pecho, wgerId: 91 },
   { id: 'pecho-07', nameEs: 'Flexiones', muscleGroup: 'pecho', primaryMuscles: ['Pectoral', 'Tríceps'], equipment: 'Peso corporal', equipmentType: 'peso_corporal', icon: svgs.pecho, wgerId: 415 },
   { id: 'pecho-08', nameEs: 'Press Declinado Barra', muscleGroup: 'pecho', primaryMuscles: ['Pectoral inferior'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.pecho, wgerId: 135 },
-  { id: 'pecho-09', nameEs: 'Pec Deck', muscleGroup: 'pecho', primaryMuscles: ['Pectoral'], equipment: 'Máquina', equipmentType: 'maquina', icon: svgs.pecho, wgerId: 129 },
+  { id: 'pecho-09', nameEs: 'Pec Deck', nameArg: 'Mariposa en Máquina', muscleGroup: 'pecho', primaryMuscles: ['Pectoral'], equipment: 'Máquina', equipmentType: 'maquina', icon: svgs.pecho, wgerId: 129 },
   { id: 'pecho-10', nameEs: 'Press Inclinado Barra', muscleGroup: 'pecho', primaryMuscles: ['Pectoral superior'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.pecho, wgerId: 130 },
   { id: 'pecho-11', nameEs: 'Crossover Cable Alto', muscleGroup: 'pecho', primaryMuscles: ['Pectoral inferior', 'Pectoral medio'], equipment: 'Cable', equipmentType: 'cable', icon: svgs.pecho },
   { id: 'pecho-12', nameEs: 'Crossover Cable Bajo', muscleGroup: 'pecho', primaryMuscles: ['Pectoral superior'], equipment: 'Cable', equipmentType: 'cable', icon: svgs.pecho },
@@ -148,6 +148,7 @@ export const exercises: Exercise[] = [
   { id: 'pecho-20', nameEs: 'Press Landmine', muscleGroup: 'pecho', primaryMuscles: ['Pectoral superior', 'Hombros'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.pecho },
   { id: 'pecho-21', nameEs: 'Cable Fly Horizontal', muscleGroup: 'pecho', primaryMuscles: ['Pectoral medio'], equipment: 'Cable', equipmentType: 'cable', icon: svgs.pecho },
   { id: 'pecho-22', nameEs: 'Floor Press', muscleGroup: 'pecho', primaryMuscles: ['Pectoral', 'Tríceps'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.pecho },
+  { id: 'pecho-23', nameEs: 'Press Plano Máquina', nameArg: 'Press en Máquina', muscleGroup: 'pecho', primaryMuscles: ['Pectoral mayor'], equipment: 'Máquina', equipmentType: 'maquina', icon: svgs.pecho, wgerId: 117 },
 
   // ESPALDA (22)
   { id: 'espalda-01', nameEs: 'Peso Muerto', muscleGroup: 'espalda', primaryMuscles: ['Erector espinal', 'Trapecios'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.espalda, wgerId: 223 },
@@ -238,6 +239,7 @@ export const exercises: Exercise[] = [
   { id: 'triceps-18', nameEs: 'Extensión Unilateral Cable', muscleGroup: 'triceps', primaryMuscles: ['Tríceps'], equipment: 'Cable', equipmentType: 'cable', icon: svgs.triceps },
   { id: 'triceps-19', nameEs: 'Skull Crusher EZ', muscleGroup: 'triceps', primaryMuscles: ['Tríceps largo'], equipment: 'Barra EZ', equipmentType: 'barra', icon: svgs.triceps },
   { id: 'triceps-20', nameEs: 'Press Francés DB', muscleGroup: 'triceps', primaryMuscles: ['Tríceps largo'], equipment: 'Mancuernas', equipmentType: 'mancuernas', icon: svgs.triceps },
+  { id: 'triceps-21', nameEs: 'Press Francés Parado (1 mano)', nameArg: 'Extensión Overhead Unilateral', muscleGroup: 'triceps', primaryMuscles: ['Tríceps largo'], equipment: 'Mancuerna', equipmentType: 'mancuernas', icon: svgs.triceps },
 
   // PIERNAS (27)
   { id: 'piernas-01', nameEs: 'Sentadilla', muscleGroup: 'piernas', primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Barra', equipmentType: 'barra', icon: svgs.piernas, wgerId: 222 },
