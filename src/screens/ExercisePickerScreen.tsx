@@ -232,7 +232,6 @@ function ExerciseRow({
   onAdd: () => void
   onDetail: () => void
 }) {
-  const cfg = muscleGroupConfig[exercise.muscleGroup]
   return (
     <div
       className="rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all"
