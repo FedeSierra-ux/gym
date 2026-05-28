@@ -10,6 +10,7 @@ export interface Exercise {
   id: string
   nameEs: string
   nameArg?: string   // nombre vernacular argentino (ej: "Press de Banco")
+  nameEn?: string    // nombre en inglés para búsqueda en wger API
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
