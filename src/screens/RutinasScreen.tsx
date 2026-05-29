@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
+import { CustomExercisesScreen } from './CustomExercisesScreen'
 import type { MuscleGroup } from '../types'
 
 function getRoutineMuscleGroups(exerciseIds: string[], exercises: { id: string; muscleGroup: MuscleGroup }[]) {
@@ -24,8 +26,10 @@ function PlusIcon() {
 }
 
 export function RutinasScreen() {
-  const { routines, exercises, workouts, setActiveRoutineId, addRoutine } = useStore()
+  const { routines, exercises, workouts, customExercises, setActiveRoutineId, addRoutine } = useStore()
+  const [showCustomExercises, setShowCustomExercises] = useState(false)
 
+  const allExercises = [...exercises, ...customExercises]
   const sortedWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
@@ -41,6 +45,10 @@ export function RutinasScreen() {
       createdAt: Date.now(),
     })
     setActiveRoutineId(id)
+  }
+
+  if (showCustomExercises) {
+    return <CustomExercisesScreen onClose={() => setShowCustomExercises(false)} />
   }
 
   return (
@@ -61,7 +69,7 @@ export function RutinasScreen() {
         {routines.map((routine) => {
           const muscleGroups = getRoutineMuscleGroups(
             routine.exercises.map((e) => e.exerciseId),
-            exercises
+            allExercises
           )
           const totalSets = routine.exercises.map((e) => e.sets)
           const duration = getApproxDuration(totalSets)
@@ -144,6 +152,30 @@ export function RutinasScreen() {
         >
           <PlusIcon />
           <span className="font-semibold text-sm">Crear nueva rutina</span>
+        </button>
+      </div>
+
+      {/* Custom exercises button */}
+      <div className="px-4 mt-2 mb-2">
+        <button
+          onClick={() => setShowCustomExercises(true)}
+          className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-colors"
+          style={{
+            border: '1px solid rgba(0,212,255,0.15)',
+            background: 'rgba(0,212,255,0.04)',
+            color: 'rgba(0,212,255,0.6)',
+          }}
+        >
+          <span className="text-base leading-none">💪</span>
+          <span className="font-semibold text-sm">Mis ejercicios</span>
+          {customExercises.length > 0 && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+              style={{ background: 'rgba(0,212,255,0.15)', color: 'rgba(0,212,255,0.8)' }}
+            >
+              {customExercises.length}
+            </span>
+          )}
         </button>
       </div>
     </div>

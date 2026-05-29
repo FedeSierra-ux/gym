@@ -132,6 +132,7 @@ export function RoutineDetailScreen() {
         <div className="flex items-center gap-3 mb-4 relative">
           <button
             onClick={() => setActiveRoutineId(null)}
+            aria-label="Volver"
             className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
             style={{
               background: 'rgba(255,255,255,0.05)',
@@ -161,6 +162,7 @@ export function RoutineDetailScreen() {
           {editMode && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
+              aria-label="Eliminar rutina"
               className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
               style={{
                 background: 'rgba(239,68,68,0.1)',
@@ -260,6 +262,7 @@ export function RoutineDetailScreen() {
                     <button
                       onClick={() => moveExercise(idx, 'up')}
                       disabled={idx === 0}
+                      aria-label="Mover arriba"
                       className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
                       style={{
                         color: idx === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
@@ -271,6 +274,7 @@ export function RoutineDetailScreen() {
                     <button
                       onClick={() => moveExercise(idx, 'down')}
                       disabled={idx === sortedExercises.length - 1}
+                      aria-label="Mover abajo"
                       className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
                       style={{
                         color: idx === sortedExercises.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
@@ -346,6 +350,7 @@ export function RoutineDetailScreen() {
                 {editMode ? (
                   <button
                     onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                    aria-label="Quitar ejercicio"
                     className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
                     style={{
                       background: 'rgba(239,68,68,0.1)',

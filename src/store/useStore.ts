@@ -22,6 +22,8 @@ interface AppState {
   onboarded: boolean
   anthropicApiKey: string
   toasts: AppToast[]
+  weekPlan: Record<number, string | null>
+  customExercises: Exercise[]
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -53,6 +55,13 @@ interface AppState {
   addToast: (message: string, type: AppToast['type']) => void
   removeToast: (id: string) => void
 
+  // Week plan
+  setWeekPlanDay: (dow: number, routineId: string | null) => void
+
+  // Custom exercises
+  addCustomExercise: (ex: Exercise) => void
+  deleteCustomExercise: (id: string) => void
+
   // Seed
   seedData: () => void
 }
@@ -74,6 +83,8 @@ export const useStore = create<AppState>()(
       onboarded: false,
       anthropicApiKey: '',
       toasts: [],
+      weekPlan: {},
+      customExercises: [],
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -133,6 +144,15 @@ export const useStore = create<AppState>()(
         })),
       removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
+      setWeekPlanDay: (dow, routineId) =>
+        set((s) => ({ weekPlan: { ...s.weekPlan, [dow]: routineId } })),
+
+      addCustomExercise: (ex) =>
+        set((s) => ({ customExercises: [...s.customExercises, ex] })),
+
+      deleteCustomExercise: (id) =>
+        set((s) => ({ customExercises: s.customExercises.filter((e) => e.id !== id) })),
+
       seedData: () => {
         const { seeded } = get()
         if (seeded) return
@@ -164,6 +184,8 @@ export const useStore = create<AppState>()(
         seeded: state.seeded,
         onboarded: state.onboarded,
         anthropicApiKey: state.anthropicApiKey,
+        weekPlan: state.weekPlan,
+        customExercises: state.customExercises,
       }),
     }
   )

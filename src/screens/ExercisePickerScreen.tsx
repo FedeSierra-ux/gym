@@ -16,7 +16,8 @@ const muscleGroupOrder: MuscleGroup[] = [
 ]
 
 export function ExercisePickerScreen({ routineName }: Props) {
-  const { exercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
+  const { exercises, customExercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
+  const allExercises = useMemo(() => [...exercises, ...customExercises], [exercises, customExercises])
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
@@ -35,7 +36,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
   }, [activeRoutineId, addedIds, addExerciseToRoutine])
 
   // Search mode: filter by query (and optionally group)
-  const searchFiltered = mode === 'search' ? exercises.filter((ex) => {
+  const searchFiltered = mode === 'search' ? allExercises.filter((ex) => {
     const matchGroup = !selectedGroup || ex.muscleGroup === selectedGroup
     const q = search.toLowerCase()
     const matchSearch = !search
@@ -52,7 +53,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
         .map(mg => ({
           group: mg,
           config: muscleGroupConfig[mg],
-          exercises: exercises.filter(ex => ex.muscleGroup === mg),
+          exercises: allExercises.filter(ex => ex.muscleGroup === mg),
         }))
     : []
 

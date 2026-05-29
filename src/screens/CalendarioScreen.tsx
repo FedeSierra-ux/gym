@@ -8,6 +8,7 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 type SelectedDay = { day: number; month: number; year: number }
 
@@ -39,7 +40,6 @@ function DaySheet({
   const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const handleStart = (routineId: string) => {
-    // For today, pass undefined so the store uses Date.now() at dispatch time (not render time)
     const dateOverride = isToday
       ? undefined
       : new Date(year, month, day, 12, 0, 0).getTime()
@@ -60,7 +60,13 @@ function DaySheet({
             <h3 className="font-bold text-white text-lg capitalize">{dateLabel}</h3>
             {isToday && <p className="text-primary text-xs font-semibold">Hoy</p>}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="text-gray-500 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
+          >
+            ×
+          </button>
         </div>
 
         {showRoutinePicker ? (
@@ -113,6 +119,7 @@ function DaySheet({
                           </div>
                           <button
                             onClick={() => deleteWorkout(w.id)}
+                            aria-label="Eliminar entreno"
                             className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
                           >
                             🗑
@@ -158,12 +165,180 @@ function DaySheet({
   )
 }
 
+function getStreaks(workouts: Array<{ startedAt: number; finishedAt?: number }>) {
+  const days = new Set<string>()
+  for (const w of workouts) {
+    if (!w.finishedAt) continue
+    const d = new Date(w.startedAt)
+    days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`)
+  }
+
+  const today = new Date()
+  let current = 0
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    if (days.has(key)) {
+      current++
+    } else {
+      if (i === 0) continue
+      break
+    }
+  }
+
+  let best = 0
+  let streak = 0
+  const sorted = Array.from(days).map(k => {
+    const [y, m, d] = k.split('-').map(Number)
+    return new Date(y, m, d).getTime()
+  }).sort((a, b) => a - b)
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (i === 0) { streak = 1; continue }
+    const diff = (sorted[i] - sorted[i - 1]) / 86400000
+    if (diff === 1) {
+      streak++
+    } else {
+      streak = 1
+    }
+    if (streak > best) best = streak
+  }
+  if (streak > best) best = streak
+
+  return { current, best }
+}
+
+function ActivityHeatmap({ workouts }: { workouts: Array<{ startedAt: number; finishedAt?: number }> }) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const WEEKS = 16
+  const TOTAL_DAYS = WEEKS * 7
+
+  const startDate = new Date(today)
+  startDate.setDate(today.getDate() - (TOTAL_DAYS - 1))
+
+  const countByDay = new Map<string, number>()
+  for (const w of workouts) {
+    if (!w.finishedAt) continue
+    const d = new Date(w.startedAt)
+    d.setHours(0, 0, 0, 0)
+    const key = d.getTime().toString()
+    countByDay.set(key, (countByDay.get(key) ?? 0) + 1)
+  }
+
+  const cells: { date: Date; count: number }[] = []
+  for (let i = 0; i < TOTAL_DAYS; i++) {
+    const d = new Date(startDate)
+    d.setDate(startDate.getDate() + i)
+    const key = d.getTime().toString()
+    cells.push({ date: d, count: countByDay.get(key) ?? 0 })
+  }
+
+  const weeks: typeof cells[] = []
+  for (let w = 0; w < WEEKS; w++) {
+    weeks.push(cells.slice(w * 7, (w + 1) * 7))
+  }
+
+  const getColor = (count: number) => {
+    if (count === 0) return 'rgba(255,255,255,0.05)'
+    if (count === 1) return 'rgba(0,255,136,0.25)'
+    if (count === 2) return 'rgba(0,255,136,0.5)'
+    return 'rgba(0,255,136,0.85)'
+  }
+
+  return (
+    <div>
+      <div className="flex gap-0.5">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col gap-0.5 flex-1">
+            {week.map((cell, di) => {
+              const isToday = cell.date.getTime() === today.getTime()
+              return (
+                <div
+                  key={di}
+                  title={`${cell.date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}${cell.count > 0 ? ` · ${cell.count} entreno${cell.count > 1 ? 's' : ''}` : ''}`}
+                  className="aspect-square rounded-sm"
+                  style={{
+                    background: getColor(cell.count),
+                    outline: isToday ? '1.5px solid rgba(0,255,136,0.7)' : undefined,
+                    outlineOffset: '1px',
+                  }}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-end gap-1.5 mt-2">
+        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Menos</span>
+        {[0, 1, 2, 3].map(c => (
+          <div key={c} className="w-3 h-3 rounded-sm" style={{ background: getColor(c) }} />
+        ))}
+        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Más</span>
+      </div>
+    </div>
+  )
+}
+
+function WeekPlanner() {
+  const { weekPlan, setWeekPlanDay, routines } = useStore()
+
+  return (
+    <div
+      className="rounded-2xl p-4"
+      style={{
+        background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        Semana tipo
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {DOW_LABELS.map((label, dow) => {
+          const routineId = weekPlan[dow] ?? null
+          const routine = routineId ? routines.find(r => r.id === routineId) : null
+          return (
+            <div key={dow} className="flex items-center gap-2">
+              <span
+                className="text-[11px] font-semibold w-7 flex-shrink-0"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                {label}
+              </span>
+              <select
+                value={routineId ?? ''}
+                onChange={(e) => setWeekPlanDay(dow, e.target.value || null)}
+                className="flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none appearance-none"
+                style={{
+                  background: routine ? 'rgba(0,255,136,0.08)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${routine ? 'rgba(0,255,136,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                  color: routine ? 'var(--primary)' : 'rgba(255,255,255,0.25)',
+                }}
+              >
+                <option value="" style={{ background: '#0d0d1c', color: '#9ca3af' }}>— Descanso —</option>
+                {routines.map((r) => (
+                  <option key={r.id} value={r.id} style={{ background: '#0d0d1c', color: '#fff' }}>
+                    {r.emoji} {r.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function CalendarioTab() {
-  const { workouts, routines, deleteWorkout } = useStore()
+  const { workouts, routines, weekPlan, deleteWorkout } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [viewDate, setViewDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
 
+  const today = new Date()
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
 
@@ -191,14 +366,15 @@ function CalendarioTab() {
   const gymDaysCount = gymDays.size
   const totalDays = daysInMonth
   const restDays = totalDays - gymDaysCount
-  const today = new Date()
   const todayInMonth = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
   const daysPassed = todayInMonth > 0 ? todayInMonth : totalDays
   const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
 
+  const finishedWorkouts = workouts.filter(w => w.finishedAt)
+  const { current: currentStreak, best: bestStreak } = getStreaks(finishedWorkouts)
+
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
   const nextMonth = () => setViewDate(new Date(year, month + 1, 1))
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
 
   const recentWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
@@ -207,8 +383,47 @@ function CalendarioTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* 16-week heatmap */}
+      <div
+        className="rounded-2xl p-4"
+        style={{
+          background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            Actividad · 16 semanas
+          </p>
+          <div className="flex gap-2">
+            {currentStreak > 0 && (
+              <span
+                className="text-[11px] px-2.5 py-1 rounded-full font-bold"
+                style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--primary)', border: '1px solid rgba(0,255,136,0.2)' }}
+              >
+                🔥 {currentStreak}d racha
+              </span>
+            )}
+            {bestStreak > 0 && (
+              <span
+                className="text-[11px] px-2.5 py-1 rounded-full font-bold"
+                style={{ background: 'rgba(255,215,0,0.1)', color: 'rgba(255,215,0,0.8)', border: '1px solid rgba(255,215,0,0.2)' }}
+              >
+                🏆 mejor: {bestStreak}d
+              </span>
+            )}
+          </div>
+        </div>
+        <ActivityHeatmap workouts={finishedWorkouts} />
+      </div>
+
+      {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={prevMonth}
+          aria-label="Mes anterior"
+          className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors"
+        >
           ‹
         </button>
         <h2 className="text-base font-bold text-white">
@@ -216,8 +431,8 @@ function CalendarioTab() {
         </h2>
         <button
           onClick={nextMonth}
-          disabled={isCurrentMonth}
-          className={`w-9 h-9 rounded-full bg-surface border border-border transition-colors ${isCurrentMonth ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+          aria-label="Mes siguiente"
+          className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors"
         >
           ›
         </button>
@@ -257,23 +472,23 @@ function CalendarioTab() {
             const isGym = gymDays.has(day)
             const isToday = day === todayInMonth
             const isFuture = todayInMonth > 0 && day > todayInMonth
+            const cellDate = new Date(year, month, day)
+            const cellDow = (cellDate.getDay() + 6) % 7
+            const plannedRoutineId = isFuture ? (weekPlan[cellDow] ?? null) : null
+            const plannedRoutine = plannedRoutineId ? routines.find(r => r.id === plannedRoutineId) : null
 
             return (
               <div
                 key={day}
                 className="flex items-center justify-center aspect-square"
-                onClick={() => {
-                  if (!isFuture) setSelectedDay({ day, month, year })
-                }}
+                onClick={() => setSelectedDay({ day, month, year })}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center relative transition-all ${
-                    !isFuture ? 'cursor-pointer active:scale-90' : ''
-                  } ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center relative transition-all cursor-pointer active:scale-90 ${
                     isToday
                       ? 'bg-primary text-black font-bold'
                       : isFuture
-                      ? 'text-gray-700'
+                      ? 'text-gray-600'
                       : isGym
                       ? 'text-primary'
                       : 'text-gray-400'
@@ -282,6 +497,13 @@ function CalendarioTab() {
                   <span className="text-xs font-medium">{day}</span>
                   {isGym && !isToday && (
                     <div className="absolute bottom-0.5 w-1.5 h-1.5 bg-primary rounded-full" />
+                  )}
+                  {plannedRoutine && !isGym && (
+                    <div
+                      className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full"
+                      style={{ background: 'rgba(0,212,255,0.7)' }}
+                      title={plannedRoutine.name}
+                    />
                   )}
                 </div>
               </div>
@@ -302,6 +524,8 @@ function CalendarioTab() {
           />
         </div>
       </div>
+
+      <WeekPlanner />
 
       <div>
         <h3 className="text-sm font-semibold text-gray-400 mb-2">Historial reciente</h3>
@@ -330,6 +554,7 @@ function CalendarioTab() {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteWorkout(w.id) }}
+                  aria-label="Eliminar entreno"
                   className="p-2 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
                 >
                   🗑
@@ -359,6 +584,7 @@ function CalendarioTab() {
 
 function RecordsTab() {
   const { prs, exercises, deletePr } = useStore()
+  const [expandedPr, setExpandedPr] = useState<string | null>(null)
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
@@ -384,44 +610,81 @@ function RecordsTab() {
             day: 'numeric',
             month: 'short',
           })
+          const isExpanded = expandedPr === pr.exerciseId
+          const hasHistory = pr.history && pr.history.length > 0
 
           return (
             <div
               key={pr.exerciseId}
-              className={`bg-card rounded-xl border p-3 flex items-center gap-3 ${
+              className={`bg-card rounded-xl border p-3 ${
                 isNew ? 'border-primary/30 pulse-pr' : 'border-border'
               }`}
             >
-              <div className="w-8 text-center flex-shrink-0">
-                {idx < 3 ? (
-                  <span className="text-xl">{medals[idx]}</span>
-                ) : (
-                  <span className="text-sm font-bold text-gray-500">{idx + 1}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
-                  {isNew && (
-                    <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold flex-shrink-0">
-                      NEW
-                    </span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 text-center flex-shrink-0">
+                  {idx < 3 ? (
+                    <span className="text-xl">{medals[idx]}</span>
+                  ) : (
+                    <span className="text-sm font-bold text-gray-500">{idx + 1}</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">{prDate}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
+                    {isNew && (
+                      <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">{prDate}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-white text-sm">{pr.kg}kg × {pr.reps}</p>
+                  <p className="text-[10px] text-gray-600">Vol: {pr.kg * pr.reps}kg</p>
+                </div>
+                {hasHistory && (
+                  <button
+                    onClick={() => setExpandedPr(isExpanded ? null : pr.exerciseId)}
+                    aria-label={isExpanded ? 'Ocultar historial' : 'Ver historial'}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
+                    style={{
+                      background: isExpanded ? 'rgba(0,255,136,0.12)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${isExpanded ? 'rgba(0,255,136,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                      color: isExpanded ? 'var(--primary)' : 'rgba(255,255,255,0.3)',
+                    }}
+                  >
+                    <span className="text-xs">{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar el PR de ${ex.nameEs}?`)) deletePr(pr.exerciseId)
+                  }}
+                  aria-label={`Eliminar PR de ${ex.nameEs}`}
+                  className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  🗑
+                </button>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="font-bold text-white text-sm">{pr.kg}kg × {pr.reps}</p>
-                <p className="text-[10px] text-gray-600">Vol: {pr.kg * pr.reps}kg</p>
-              </div>
-              <button
-                onClick={() => {
-                  if (window.confirm(`¿Eliminar el PR de ${ex.nameEs}?`)) deletePr(pr.exerciseId)
-                }}
-                className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
-              >
-                🗑
-              </button>
+
+              {isExpanded && hasHistory && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    Historial
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {[...pr.history!].reverse().map((h, hi) => (
+                      <div key={hi} className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {new Date(h.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-400">{h.kg}kg × {h.reps}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
