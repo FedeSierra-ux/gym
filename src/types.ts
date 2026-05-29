@@ -76,6 +76,7 @@ export interface ActiveWorkoutSet {
   kg: string
   reps: string
   completed: boolean
+  isWarmup?: boolean
 }
 
 export interface ActiveWorkoutExercise {
