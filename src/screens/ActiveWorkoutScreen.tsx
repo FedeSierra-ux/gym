@@ -102,14 +102,14 @@ export function ActiveWorkoutScreen() {
 
   useEffect(() => {
     if (!activeWorkout) return
-    const start = activeWorkout.startedAt
+    const start = activeWorkout.realStartedAt
     intervalRef.current = setInterval(() => {
       setElapsed(Date.now() - start)
     }, 1000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [activeWorkout?.startedAt])
+  }, [activeWorkout?.realStartedAt])
 
   if (!activeWorkout) return null
 

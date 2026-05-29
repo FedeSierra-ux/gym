@@ -18,9 +18,10 @@ function getWeekStreak(workouts: Array<{ startedAt: number; finishedAt?: number 
     const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
     const end = start + 86400000
     if (workouts.some(w => w.finishedAt && w.startedAt >= start && w.startedAt < end)) {
-      if (i === 0 || streak > 0) streak++
+      streak++
     } else {
-      if (streak > 0) break
+      if (i === 0) continue  // today not trained yet — don't break the streak
+      break
     }
   }
   return streak

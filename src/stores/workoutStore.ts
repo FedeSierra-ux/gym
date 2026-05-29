@@ -142,7 +142,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const { activeWorkout } = get()
     if (!activeWorkout) return
 
-    const { routines, prs } = useStore.getState()
+    const { prs } = useStore.getState()
 
     const finishedAt = Date.now()
     const durationMin = Math.round((finishedAt - activeWorkout.realStartedAt) / 60000)
@@ -168,15 +168,13 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       exercises: workoutExercises,
     }
 
-    void routines.find((r) => r.id === activeWorkout.routineId)?.exercises.length
-
     const newPrs = [...prs]
     for (const ex of workoutExercises) {
       for (const s of ex.sets) {
+        if (s.kg <= 0) continue
         const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)
-        const volume = s.kg * s.reps
-        const existingVolume = existing ? existing.kg * existing.reps : 0
-        if (!existing || volume > existingVolume) {
+        const isNewPr = !existing || s.kg > existing.kg || (s.kg === existing.kg && s.reps > existing.reps)
+        if (isNewPr) {
           const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
           const pr: PR = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: finishedAt }
           if (idx >= 0) newPrs[idx] = pr
@@ -187,7 +185,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
     const newPrCount = newPrs.filter((np) => {
       const old = prs.find((p) => p.exerciseId === np.exerciseId)
-      return !old || np.kg * np.reps > old.kg * old.reps
+      return !old || np.kg > (old.kg) || (np.kg === old.kg && np.reps > old.reps)
     }).length
 
     const successToast: AppToast = {

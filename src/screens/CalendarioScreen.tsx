@@ -196,10 +196,8 @@ function CalendarioTab() {
   const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
 
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
-  const nextMonth = () => {
-    const next = new Date(year, month + 1, 1)
-    if (next <= new Date()) setViewDate(next)
-  }
+  const nextMonth = () => setViewDate(new Date(year, month + 1, 1))
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
 
   const recentWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
@@ -215,7 +213,11 @@ function CalendarioTab() {
         <h2 className="text-base font-bold text-white">
           {MONTH_NAMES[month]} {year}
         </h2>
-        <button onClick={nextMonth} className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={nextMonth}
+          disabled={isCurrentMonth}
+          className={`w-9 h-9 rounded-full bg-surface border border-border transition-colors ${isCurrentMonth ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+        >
           ›
         </button>
       </div>
@@ -412,7 +414,9 @@ function RecordsTab() {
                 <p className="text-[10px] text-gray-600">Vol: {pr.kg * pr.reps}kg</p>
               </div>
               <button
-                onClick={() => deletePr(pr.exerciseId)}
+                onClick={() => {
+                  if (window.confirm(`¿Eliminar el PR de ${ex.nameEs}?`)) deletePr(pr.exerciseId)
+                }}
                 className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
               >
                 🗑
