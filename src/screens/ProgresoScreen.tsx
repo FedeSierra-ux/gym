@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
-import { useStore } from '../store/useStore'
+import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import type { MuscleGroup } from '../types'
 
@@ -73,7 +73,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 const MUSCLE_ORDER: MuscleGroup[] = ['pecho', 'espalda', 'hombros', 'biceps', 'triceps', 'piernas', 'gluteos', 'core']
 
 function MuscleVolumeSection({ period }: { period: Period }) {
-  const { workouts, exercises } = useStore()
+  const { workouts } = useStore()
+  const exercises = useAllExercises()
 
   const monthsBack = getMonthsBack(period)
   const now = new Date()
@@ -139,7 +140,8 @@ function MuscleVolumeSection({ period }: { period: Period }) {
 }
 
 export function ProgresoScreen() {
-  const { workouts, exercises } = useStore()
+  const { workouts } = useStore()
+  const exercises = useAllExercises()
   const [period, setPeriod] = useState<Period>('6m')
   const [tab, setTab] = useState<Tab>('fuerza')
 

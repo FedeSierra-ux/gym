@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import type { CalendarSubTab, Routine, Workout } from '../types'
 
@@ -25,7 +25,8 @@ function DaySheet({
   onClose: () => void
   onStartWorkout: (routineId: string, dateOverride?: number) => void
 }) {
-  const { exercises, deleteWorkout } = useStore()
+  const { deleteWorkout } = useStore()
+  const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
 
   const { day, month, year } = selectedDay
@@ -583,7 +584,8 @@ function CalendarioTab() {
 }
 
 function RecordsTab() {
-  const { prs, exercises, deletePr } = useStore()
+  const { prs, deletePr } = useStore()
+  const exercises = useAllExercises()
   const [expandedPr, setExpandedPr] = useState<string | null>(null)
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()

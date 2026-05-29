@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useStore } from '../store/useStore'
+import { useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { vibrate, playBeep } from '../utils/haptics'
 
@@ -19,7 +19,7 @@ function formatTime(seconds: number) {
 }
 
 export function RestTimerOverlay() {
-  const { exercises } = useStore()
+  const exercises = useAllExercises()
   const {
     activeWorkout,
     dismissRestTimer,

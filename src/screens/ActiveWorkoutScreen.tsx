@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
@@ -113,8 +113,8 @@ function formatElapsed(ms: number) {
 function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
   exerciseId: string; kg: number; reps: number; onDismiss: () => void
 }) {
-  const { exercises } = useStore()
-  const ex = exercises.find(e => e.id === exerciseId)
+  const allExercises = useAllExercises()
+  const ex = allExercises.find(e => e.id === exerciseId)
 
   useEffect(() => {
     const t = setTimeout(onDismiss, 4000)
@@ -159,7 +159,8 @@ function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
 }
 
 export function ActiveWorkoutScreen() {
-  const { exercises, routines, workouts, prs } = useStore()
+  const { routines, workouts, prs } = useStore()
+  const exercises = useAllExercises()
   const {
     activeWorkout,
     updateSetValue,
