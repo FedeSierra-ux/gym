@@ -4,7 +4,8 @@ import { useStore } from '../store/useStore'
 
 export interface ActiveWorkout {
   routineId: string
-  startedAt: number
+  startedAt: number      // date the workout is recorded for (may be a past-date override)
+  realStartedAt: number  // actual wall-clock time when the screen opened (for duration)
   exercises: ActiveWorkoutExercise[]
   restTimerVisible: boolean
   restSecondsLeft: number
@@ -15,7 +16,7 @@ export interface ActiveWorkout {
 interface WorkoutState {
   activeWorkout: ActiveWorkout | null
 
-  startWorkout: (routineId: string) => void
+  startWorkout: (routineId: string, dateOverride?: number) => void
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
@@ -40,7 +41,7 @@ function clampValue(field: 'kg' | 'reps', value: string): string {
 export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   activeWorkout: null,
 
-  startWorkout: (routineId) => {
+  startWorkout: (routineId, dateOverride) => {
     const { routines, workouts } = useStore.getState()
 
     const routine = routines.find((r) => r.id === routineId)
@@ -63,10 +64,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       }
     })
 
+    const now = Date.now()
     set({
       activeWorkout: {
         routineId,
-        startedAt: Date.now(),
+        startedAt: dateOverride ?? now,
+        realStartedAt: now,
         exercises: activeExercises,
         restTimerVisible: false,
         restSecondsLeft: 75,
@@ -142,7 +145,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const { routines, prs } = useStore.getState()
 
     const finishedAt = Date.now()
-    const durationMin = Math.round((finishedAt - activeWorkout.startedAt) / 60000)
+    const durationMin = Math.round((finishedAt - activeWorkout.realStartedAt) / 60000)
 
     const workoutExercises = activeWorkout.exercises.map((ex) => ({
       exerciseId: ex.exerciseId,

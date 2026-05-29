@@ -112,8 +112,8 @@ export function HomeScreen() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
-      <div className="flex-1 scroll-area">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+      <div className="flex-1 min-h-0 scroll-area">
         {/* Header */}
         <div className="px-5 pt-14 pb-5 relative overflow-hidden">
           {/* Ambient glow bg */}

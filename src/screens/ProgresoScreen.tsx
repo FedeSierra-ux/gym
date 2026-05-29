@@ -122,7 +122,7 @@ export function ProgresoScreen() {
   progressList.sort((a, b) => b.change - a.change)
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex-shrink-0 px-4 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-white">Progreso</h1>
 
@@ -141,7 +141,7 @@ export function ProgresoScreen() {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 pb-4">
+      <div className="flex-1 min-h-0 scroll-area px-4 pb-4">
         {progressList.length === 0 ? (
           <div className="flex items-center justify-center h-48">
             <div className="text-center">
