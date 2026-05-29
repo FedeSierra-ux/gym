@@ -34,7 +34,11 @@ export function ExercisePickerScreen({ routineName }: Props) {
   // Search mode: filter by query (and optionally group)
   const searchFiltered = mode === 'search' ? exercises.filter((ex) => {
     const matchGroup = !selectedGroup || ex.muscleGroup === selectedGroup
-    const matchSearch = !search || ex.nameEs.toLowerCase().includes(search.toLowerCase())
+    const q = search.toLowerCase()
+    const matchSearch = !search
+      || ex.nameEs.toLowerCase().includes(q)
+      || (ex.nameArg ?? '').toLowerCase().includes(q)
+      || (ex.nameEn ?? '').toLowerCase().includes(q)
     return matchGroup && matchSearch
   }) : []
 

@@ -91,6 +91,7 @@ export function ActiveWorkoutScreen() {
     updateSetValue,
     completeSet,
     addSetToExercise,
+    removeSetFromExercise,
     finishWorkout,
     cancelWorkout,
   } = useWorkoutStore()
@@ -193,6 +194,7 @@ export function ActiveWorkoutScreen() {
                   <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">KG</span>
                   <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">REPS</span>
                   <span className="w-8 text-[10px] text-gray-600 font-medium text-center flex-shrink-0">✓</span>
+                  <span className="w-6 flex-shrink-0" />
                 </div>
 
                 {/* Sets */}
@@ -267,6 +269,20 @@ export function ActiveWorkoutScreen() {
                         }`}
                       >
                         <span className="text-sm font-bold">✓</span>
+                      </button>
+
+                      {/* Delete set */}
+                      <button
+                        onClick={() => removeSetFromExercise(exIdx, setIdx)}
+                        disabled={isCompleted || activeEx.sets.length <= 1}
+                        className="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{
+                          color: isCompleted || activeEx.sets.length <= 1
+                            ? 'rgba(255,255,255,0.08)'
+                            : 'rgba(255,255,255,0.2)',
+                        }}
+                      >
+                        <span className="text-xs">✕</span>
                       </button>
                     </div>
                   )

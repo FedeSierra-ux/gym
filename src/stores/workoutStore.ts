@@ -20,6 +20,7 @@ interface WorkoutState {
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
+  removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
   finishWorkout: () => void
   cancelWorkout: () => void
   dismissRestTimer: () => void
@@ -30,7 +31,7 @@ interface WorkoutState {
 function clampValue(field: 'kg' | 'reps', value: string): string {
   if (value === '') return ''
   const num = parseFloat(value)
-  if (isNaN(num)) return value
+  if (isNaN(num)) return ''
   if (field === 'kg') {
     return String(Math.min(500, Math.max(0, num)))
   } else {
@@ -95,6 +96,14 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   completeSet: (exerciseIdx, setIdx) =>
     set((s) => {
       if (!s.activeWorkout) return {}
+      const targetSet = s.activeWorkout.exercises[exerciseIdx]?.sets[setIdx]
+      if (!targetSet) return {}
+      // Prevent completing a set with no data (unless un-completing)
+      if (!targetSet.completed) {
+        const kg = parseFloat(targetSet.kg)
+        const reps = parseInt(targetSet.reps)
+        if (isNaN(kg) || kg <= 0 || isNaN(reps) || reps <= 0) return {}
+      }
       const exercises = s.activeWorkout.exercises.map((ex, ei) => {
         if (ei !== exerciseIdx) return ex
         return {
@@ -129,11 +138,24 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       if (!s.activeWorkout) return {}
       const exercises = s.activeWorkout.exercises.map((ex, ei) => {
         if (ei !== exerciseIdx) return ex
-        const lastSet = ex.sets[ex.sets.length - 1]
+        // Copy from last set that has actual values, fall back to last set
+        const lastWithValues = [...ex.sets].reverse().find((st) => st.kg !== '' || st.reps !== '')
+        const template = lastWithValues ?? ex.sets[ex.sets.length - 1]
         return {
           ...ex,
-          sets: [...ex.sets, { kg: lastSet?.kg ?? '', reps: lastSet?.reps ?? '', completed: false }],
+          sets: [...ex.sets, { kg: template?.kg ?? '', reps: template?.reps ?? '', completed: false }],
         }
+      })
+      return { activeWorkout: { ...s.activeWorkout, exercises } }
+    }),
+
+  removeSetFromExercise: (exerciseIdx, setIdx) =>
+    set((s) => {
+      if (!s.activeWorkout) return {}
+      const exercises = s.activeWorkout.exercises.map((ex, ei) => {
+        if (ei !== exerciseIdx) return ex
+        if (ex.sets.length <= 1) return ex
+        return { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) }
       })
       return { activeWorkout: { ...s.activeWorkout, exercises } }
     }),
