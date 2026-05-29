@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useMemo } from 'react'
 import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
@@ -190,3 +191,10 @@ export const useStore = create<AppState>()(
     }
   )
 )
+
+/** Returns the merged list of built-in + custom exercises. Use this everywhere a user-created exercise might appear. */
+export function useAllExercises(): Exercise[] {
+  const exercises = useStore(s => s.exercises)
+  const customExercises = useStore(s => s.customExercises)
+  return useMemo(() => [...exercises, ...customExercises], [exercises, customExercises])
+}
