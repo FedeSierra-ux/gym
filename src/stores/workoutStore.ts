@@ -198,7 +198,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
         const isNewPr = !existing || s.kg > existing.kg || (s.kg === existing.kg && s.reps > existing.reps)
         if (isNewPr) {
           const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
-          const pr: PR = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: finishedAt }
+          const pr: PR = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: activeWorkout.startedAt }
           if (idx >= 0) newPrs[idx] = pr
           else newPrs.push(pr)
         }
