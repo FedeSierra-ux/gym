@@ -183,6 +183,20 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const { activeWorkout } = get()
     if (!activeWorkout) return
 
+    const hasWorkingSets = activeWorkout.exercises.some(ex =>
+      ex.sets.some(s => s.completed && !s.isWarmup)
+    )
+    if (!hasWorkingSets) {
+      useStore.setState(s => ({
+        toasts: [...s.toasts, {
+          id: `toast-${Date.now()}`,
+          message: 'Completá al menos una serie antes de terminar',
+          type: 'info' as const,
+        }],
+      }))
+      return
+    }
+
     const { prs } = useStore.getState()
 
     const finishedAt = Date.now()

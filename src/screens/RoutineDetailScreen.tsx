@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useStore } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import type { Routine } from '../types'
 
 function BackIcon() {
   return (
@@ -70,6 +71,17 @@ export function RoutineDetailScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
+
+  const updateExerciseConfig = useCallback((exerciseId: string, patch: Partial<Routine['exercises'][0]>) => {
+    if (!routine) return
+    updateRoutine({
+      ...routine,
+      exercises: routine.exercises.map(re =>
+        re.exerciseId === exerciseId ? { ...re, ...patch } : re
+      ),
+    })
+  }, [routine, updateRoutine])
+
   if (!routine) return null
 
   const lastWorkout = [...workouts]
@@ -274,16 +286,60 @@ export function RoutineDetailScreen() {
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white text-sm truncate mb-0.5">{ex.nameEs}</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                       style={{ color: config.color, backgroundColor: config.color + '18' }}
                     >
                       {config.label}
                     </span>
-                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {re.sets} series · {re.repsMin}–{re.repsMax} reps
-                    </span>
+                    {editMode ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={re.sets}
+                          min={1}
+                          max={20}
+                          onChange={e => {
+                            const v = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
+                            updateExerciseConfig(re.exerciseId, { sets: v })
+                          }}
+                          className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>s ·</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={re.repsMin}
+                          min={1}
+                          max={re.repsMax}
+                          onChange={e => {
+                            const v = Math.max(1, Math.min(re.repsMax, parseInt(e.target.value) || 1))
+                            updateExerciseConfig(re.exerciseId, { repsMin: v })
+                          }}
+                          className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>–</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={re.repsMax}
+                          min={re.repsMin}
+                          max={100}
+                          onChange={e => {
+                            const v = Math.max(re.repsMin, Math.min(100, parseInt(e.target.value) || re.repsMin))
+                            updateExerciseConfig(re.exerciseId, { repsMax: v })
+                          }}
+                          className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>r</span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        {re.sets} series · {re.repsMin}–{re.repsMax} reps
+                      </span>
+                    )}
                   </div>
                 </div>
 

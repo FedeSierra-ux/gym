@@ -177,16 +177,16 @@ export function ActiveWorkoutScreen() {
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
   const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
 
+  const realStartedAt = activeWorkout?.realStartedAt
   useEffect(() => {
-    if (!activeWorkout) return
-    const start = activeWorkout.realStartedAt
+    if (!realStartedAt) return
     intervalRef.current = setInterval(() => {
-      setElapsed(Date.now() - start)
+      setElapsed(Date.now() - realStartedAt)
     }, 1000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [activeWorkout?.realStartedAt])
+  }, [realStartedAt])
 
   if (!activeWorkout) return null
 

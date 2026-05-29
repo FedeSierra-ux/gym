@@ -22,7 +22,7 @@ function DaySheet({
   allWorkouts: Workout[]
   routines: Routine[]
   onClose: () => void
-  onStartWorkout: (routineId: string, dateOverride: number) => void
+  onStartWorkout: (routineId: string, dateOverride?: number) => void
 }) {
   const { exercises, deleteWorkout } = useStore()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
@@ -39,8 +39,9 @@ function DaySheet({
   const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const handleStart = (routineId: string) => {
+    // For today, pass undefined so the store uses Date.now() at dispatch time (not render time)
     const dateOverride = isToday
-      ? Date.now()
+      ? undefined
       : new Date(year, month, day, 12, 0, 0).getTime()
     onStartWorkout(routineId, dateOverride)
     onClose()

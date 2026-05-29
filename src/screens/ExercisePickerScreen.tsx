@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseDetailSheet } from '../components/ExerciseDetailSheet'
@@ -23,7 +23,10 @@ export function ExercisePickerScreen({ routineName }: Props) {
   const [mode, setMode] = useState<'browse' | 'search'>('browse')
 
   const routine = routines.find((r) => r.id === activeRoutineId)
-  const addedIds = new Set(routine?.exercises.map((e) => e.exerciseId) ?? [])
+  const addedIds = useMemo(
+    () => new Set(routine?.exercises.map((e) => e.exerciseId) ?? []),
+    [routine?.exercises]
+  )
 
   const handleAdd = useCallback((exerciseId: string) => {
     if (activeRoutineId && !addedIds.has(exerciseId)) {

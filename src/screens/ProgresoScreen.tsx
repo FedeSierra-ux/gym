@@ -258,9 +258,8 @@ export function ProgresoScreen() {
                 .filter((m) => m.maxKg > 0)
                 .map((m) => ({ label: m.label, kg: m.maxKg }))
 
-              const firstMonthLabel = MONTH_NAMES_SHORT[new Date(workouts.find(
-                (w) => w.exercises.some((e) => e.exerciseId === ep.exerciseId)
-              )?.startedAt ?? Date.now()).getMonth()]
+              // Use the first month with data inside the filtered period, not the global first workout
+              const firstMonthLabel = ep.months.find((m) => m.maxKg > 0)?.label ?? ''
 
               return (
                 <div key={ep.exerciseId} className="bg-card rounded-2xl border border-border p-4">
