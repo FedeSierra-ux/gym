@@ -83,18 +83,22 @@ export const useStore = create<AppState>()(
       addRoutine: (routine) => set((s) => ({ routines: [...s.routines, routine] })),
       updateRoutine: (routine) =>
         set((s) => ({ routines: s.routines.map((r) => (r.id === routine.id ? routine : r)) })),
-      deleteRoutine: (id) => set((s) => ({ routines: s.routines.filter((r) => r.id !== id) })),
+      deleteRoutine: (id) => set((s) => ({
+        routines: s.routines.filter((r) => r.id !== id),
+        activeRoutineId: s.activeRoutineId === id ? null : s.activeRoutineId,
+      })),
 
       addExerciseToRoutine: (routineId, exerciseId) =>
         set((s) => ({
           routines: s.routines.map((r) => {
             if (r.id !== routineId) return r
             if (r.exercises.some((e) => e.exerciseId === exerciseId)) return r
+            const maxOrder = r.exercises.reduce((max, e) => Math.max(max, e.order), -1)
             return {
               ...r,
               exercises: [
                 ...r.exercises,
-                { exerciseId, sets: 3, repsMin: 8, repsMax: 12, order: r.exercises.length },
+                { exerciseId, sets: 3, repsMin: 8, repsMax: 12, order: maxOrder + 1 },
               ],
             }
           }),

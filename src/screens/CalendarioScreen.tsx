@@ -74,10 +74,10 @@ function DaySheet({
               <p className="text-sm font-semibold text-white">Elegí una rutina</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
-              {routines.length === 0 ? (
-                <p className="text-gray-600 text-sm text-center py-8">No tenés rutinas creadas aún</p>
+              {routines.filter(r => r.exercises.length > 0).length === 0 ? (
+                <p className="text-gray-600 text-sm text-center py-8">No tenés rutinas con ejercicios aún</p>
               ) : (
-                routines.map((r) => (
+                routines.filter(r => r.exercises.length > 0).map((r) => (
                   <button
                     key={r.id}
                     onClick={() => handleStart(r.id)}

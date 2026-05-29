@@ -11,6 +11,7 @@ export interface ActiveWorkout {
   restSecondsLeft: number
   restTotalSeconds: number
   lastCompletedSet?: { exerciseId: string; setIdx: number; kg: number; reps: number }
+  livePr?: { exerciseId: string; kg: number; reps: number } | null
 }
 
 interface WorkoutState {
@@ -20,17 +21,20 @@ interface WorkoutState {
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
+  removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
   finishWorkout: () => void
   cancelWorkout: () => void
   dismissRestTimer: () => void
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
+  toggleWarmup: (exerciseIdx: number, setIdx: number) => void
+  dismissLivePr: () => void
 }
 
 function clampValue(field: 'kg' | 'reps', value: string): string {
   if (value === '') return ''
   const num = parseFloat(value)
-  if (isNaN(num)) return value
+  if (isNaN(num)) return ''
   if (field === 'kg') {
     return String(Math.min(500, Math.max(0, num)))
   } else {
@@ -95,6 +99,13 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   completeSet: (exerciseIdx, setIdx) =>
     set((s) => {
       if (!s.activeWorkout) return {}
+      const targetSet = s.activeWorkout.exercises[exerciseIdx]?.sets[setIdx]
+      if (!targetSet) return {}
+      if (!targetSet.completed) {
+        const kg = parseFloat(targetSet.kg)
+        const reps = parseInt(targetSet.reps)
+        if (isNaN(kg) || kg <= 0 || isNaN(reps) || reps <= 0) return {}
+      }
       const exercises = s.activeWorkout.exercises.map((ex, ei) => {
         if (ei !== exerciseIdx) return ex
         return {
@@ -112,12 +123,29 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
           }
         : s.activeWorkout.lastCompletedSet
 
+      // Detect live PR (skip warmup sets)
+      let livePr = s.activeWorkout.livePr
+      if (completedSet.completed && !completedSet.isWarmup) {
+        const { prs } = useStore.getState()
+        const exerciseId = exercises[exerciseIdx].exerciseId
+        const kg = parseFloat(completedSet.kg) || 0
+        const reps = parseInt(completedSet.reps) || 0
+        if (kg > 0) {
+          const existing = prs.find((p) => p.exerciseId === exerciseId)
+          const isPr = !existing || kg > existing.kg || (kg === existing.kg && reps > existing.reps)
+          livePr = isPr ? { exerciseId, kg, reps } : null
+        }
+      } else if (!completedSet.completed) {
+        livePr = null
+      }
+
       return {
         activeWorkout: {
           ...s.activeWorkout,
           exercises,
           lastCompletedSet,
-          restTimerVisible: completedSet.completed,
+          livePr,
+          restTimerVisible: completedSet.completed && !completedSet.isWarmup,
           restSecondsLeft: s.activeWorkout.restTotalSeconds,
           restTotalSeconds: s.activeWorkout.restTotalSeconds,
         },
@@ -129,11 +157,24 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       if (!s.activeWorkout) return {}
       const exercises = s.activeWorkout.exercises.map((ex, ei) => {
         if (ei !== exerciseIdx) return ex
-        const lastSet = ex.sets[ex.sets.length - 1]
+        // Copy from last set that has actual values, fall back to last set
+        const lastWithValues = [...ex.sets].reverse().find((st) => st.kg !== '' || st.reps !== '')
+        const template = lastWithValues ?? ex.sets[ex.sets.length - 1]
         return {
           ...ex,
-          sets: [...ex.sets, { kg: lastSet?.kg ?? '', reps: lastSet?.reps ?? '', completed: false }],
+          sets: [...ex.sets, { kg: template?.kg ?? '', reps: template?.reps ?? '', completed: false }],
         }
+      })
+      return { activeWorkout: { ...s.activeWorkout, exercises } }
+    }),
+
+  removeSetFromExercise: (exerciseIdx, setIdx) =>
+    set((s) => {
+      if (!s.activeWorkout) return {}
+      const exercises = s.activeWorkout.exercises.map((ex, ei) => {
+        if (ei !== exerciseIdx) return ex
+        if (ex.sets.length <= 1) return ex
+        return { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) }
       })
       return { activeWorkout: { ...s.activeWorkout, exercises } }
     }),
@@ -147,6 +188,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const finishedAt = Date.now()
     const durationMin = Math.round((finishedAt - activeWorkout.realStartedAt) / 60000)
 
+    // Warmup sets are saved to history but excluded from PR tracking
     const workoutExercises = activeWorkout.exercises.map((ex) => ({
       exerciseId: ex.exerciseId,
       sets: ex.sets
@@ -169,14 +211,17 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     }
 
     const newPrs = [...prs]
-    for (const ex of workoutExercises) {
+    for (const ex of activeWorkout.exercises) {
       for (const s of ex.sets) {
-        if (s.kg <= 0) continue
+        if (!s.completed || s.isWarmup) continue  // skip incomplete and warmup sets
+        const kg = parseFloat(s.kg) || 0
+        const reps = parseInt(s.reps) || 0
+        if (kg <= 0) continue
         const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)
-        const isNewPr = !existing || s.kg > existing.kg || (s.kg === existing.kg && s.reps > existing.reps)
+        const isNewPr = !existing || kg > existing.kg || (kg === existing.kg && reps > existing.reps)
         if (isNewPr) {
           const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
-          const pr: PR = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: finishedAt }
+          const pr: PR = { exerciseId: ex.exerciseId, kg, reps, date: activeWorkout.startedAt }
           if (idx >= 0) newPrs[idx] = pr
           else newPrs.push(pr)
         }
@@ -240,5 +285,26 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
           restTotalSeconds: seconds,
         },
       }
+    }),
+
+  toggleWarmup: (exerciseIdx, setIdx) =>
+    set((s) => {
+      if (!s.activeWorkout) return {}
+      const exercises = s.activeWorkout.exercises.map((ex, ei) => {
+        if (ei !== exerciseIdx) return ex
+        return {
+          ...ex,
+          sets: ex.sets.map((st, si) =>
+            si === setIdx ? { ...st, isWarmup: !st.isWarmup, completed: false } : st
+          ),
+        }
+      })
+      return { activeWorkout: { ...s.activeWorkout, exercises } }
+    }),
+
+  dismissLivePr: () =>
+    set((s) => {
+      if (!s.activeWorkout) return {}
+      return { activeWorkout: { ...s.activeWorkout, livePr: null } }
     }),
 }))

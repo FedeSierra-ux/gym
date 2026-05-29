@@ -6,6 +6,31 @@ import { RestTimerOverlay } from './RestTimerOverlay'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { vibrate } from '../utils/haptics'
 
+// Epley 1RM formula
+function estimate1RM(kg: number, reps: number): number {
+  if (reps === 1) return kg
+  return Math.round(kg * (1 + reps / 30))
+}
+
+// Plate calculator (assumes 20kg Olympic bar)
+const BAR_KG = 20
+const PLATES = [20, 15, 10, 5, 2.5, 1.25]
+
+function getPlates(totalKg: number): string {
+  const perSide = (totalKg - BAR_KG) / 2
+  if (perSide <= 0) return `Solo barra (${BAR_KG}kg)`
+  const result: string[] = []
+  let remaining = perSide
+  for (const p of PLATES) {
+    const count = Math.floor(remaining / p + 0.001)
+    if (count > 0) {
+      result.push(`${count}×${p}kg`)
+      remaining -= count * p
+    }
+  }
+  return result.length ? result.join(' + ') + ' / lado' : `${perSide}kg / lado`
+}
+
 function TipsRow({ exerciseId }: { exerciseId: string }) {
   const { exerciseTips, setExerciseTip } = useStore()
   const [open, setOpen] = useState(false)
@@ -84,6 +109,54 @@ function formatElapsed(ms: number) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
+  exerciseId: string; kg: number; reps: number; onDismiss: () => void
+}) {
+  const { exercises } = useStore()
+  const ex = exercises.find(e => e.id === exerciseId)
+
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <div
+      className="absolute top-0 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2"
+      style={{ pointerEvents: 'none' }}
+    >
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-2xl w-full max-w-sm screen-enter"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,215,0,0.18) 0%, rgba(255,165,0,0.12) 100%)',
+          border: '1px solid rgba(255,215,0,0.4)',
+          boxShadow: '0 4px 24px rgba(255,215,0,0.2)',
+          backdropFilter: 'blur(8px)',
+          pointerEvents: 'auto',
+        }}
+      >
+        <span className="text-2xl">🏆</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#FFD700' }}>
+            ¡Nuevo PR!
+          </p>
+          <p className="text-white text-sm font-semibold truncate">
+            {ex?.nameEs ?? ''} — {kg}kg × {reps} reps
+          </p>
+          {reps > 1 && (
+            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,215,0,0.7)' }}>
+              ~1RM estimado: {estimate1RM(kg, reps)}kg
+            </p>
+          )}
+        </div>
+        <button onClick={onDismiss} style={{ color: 'rgba(255,255,255,0.4)', pointerEvents: 'auto' }}>
+          <span className="text-xs">✕</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function ActiveWorkoutScreen() {
   const { exercises, routines, workouts, prs } = useStore()
   const {
@@ -91,6 +164,9 @@ export function ActiveWorkoutScreen() {
     updateSetValue,
     completeSet,
     addSetToExercise,
+    removeSetFromExercise,
+    toggleWarmup,
+    dismissLivePr,
     finishWorkout,
     cancelWorkout,
   } = useWorkoutStore()
@@ -99,6 +175,7 @@ export function ActiveWorkoutScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
+  const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
 
   useEffect(() => {
     if (!activeWorkout) return
@@ -122,7 +199,17 @@ export function ActiveWorkoutScreen() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-background screen-enter">
+    <div className="flex-1 min-h-0 flex flex-col bg-background screen-enter relative">
+      {/* Live PR banner */}
+      {activeWorkout.livePr && (
+        <LivePrBanner
+          exerciseId={activeWorkout.livePr.exerciseId}
+          kg={activeWorkout.livePr.kg}
+          reps={activeWorkout.livePr.reps}
+          onDismiss={dismissLivePr}
+        />
+      )}
+
       <div className="flex-shrink-0 px-4 pt-12 pb-3 bg-surface border-b border-border">
         <div className="flex items-center justify-between">
           <div>
@@ -155,6 +242,7 @@ export function ActiveWorkoutScreen() {
             if (!ex) return null
             const config = muscleGroupConfig[ex.muscleGroup]
             const pr = prs.find((p) => p.exerciseId === ex.id)
+            const isBarbellLike = ex.equipmentType === 'barra'
 
             const prevWorkout = [...workouts]
               .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
@@ -178,7 +266,10 @@ export function ActiveWorkoutScreen() {
                       {config.label}
                     </span>
                     {pr && (
-                      <p className="text-xs text-gold mt-1">🏆 PR: {pr.kg}kg × {pr.reps} reps</p>
+                      <p className="text-xs text-gold mt-1">
+                        🏆 PR: {pr.kg}kg × {pr.reps} reps
+                        {pr.reps > 1 ? ` · ~${estimate1RM(pr.kg, pr.reps)}kg 1RM` : ''}
+                      </p>
                     )}
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -193,87 +284,155 @@ export function ActiveWorkoutScreen() {
                   <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">KG</span>
                   <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">REPS</span>
                   <span className="w-8 text-[10px] text-gray-600 font-medium text-center flex-shrink-0">✓</span>
+                  <span className="w-6 flex-shrink-0" />
                 </div>
 
                 {/* Sets */}
                 {activeEx.sets.map((set, setIdx) => {
                   const isCompleted = set.completed
+                  const isWarmup = !!set.isWarmup
                   const flashKey = `${exIdx}-${setIdx}`
+                  const kg = parseFloat(set.kg) || 0
+                  const reps = parseInt(set.reps) || 0
+                  const orm = isCompleted && !isWarmup && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+                  const plateKey = `${exIdx}-${setIdx}`
+                  const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
 
                   return (
-                    <div
-                      key={setIdx}
-                      className={`flex items-center px-3 py-2 gap-2 transition-colors ${
-                        isCompleted ? 'bg-primary/5' : ''
-                      } ${flashingSet === flashKey ? 'set-complete-flash' : ''}`}
-                    >
-                      {/* Set number */}
-                      <span className={`w-5 text-sm font-bold flex-shrink-0 ${isCompleted ? 'text-primary' : 'text-gray-500'}`}>
-                        {setIdx + 1}
-                      </span>
-
-                      {/* KG: − / input / + (−5kg / +2.5kg) */}
-                      <div className="flex-1 flex items-center gap-1 min-w-0">
-                        {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
-                        <div className="flex-1 min-w-0 relative">
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            value={set.kg}
-                            onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
-                            placeholder="kg"
-                            disabled={isCompleted}
-                            className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                              isCompleted ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface border-border text-white'
-                            }`}
-                          />
-                        </div>
-                        {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
-                      </div>
-
-                      {/* REPS: − / input / + (−1 / +1) */}
-                      <div className="flex-1 flex items-center gap-1 min-w-0">
-                        {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
-                        <div className="flex-1 min-w-0">
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={set.reps}
-                            onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                            placeholder="reps"
-                            disabled={isCompleted}
-                            className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                              isCompleted ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface border-border text-white'
-                            }`}
-                          />
-                        </div>
-                        {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
-                      </div>
-
-                      {/* Complete button */}
-                      <button
-                        onClick={() => {
-                          completeSet(exIdx, setIdx)
-                          if (!isCompleted) {
-                            vibrate([40, 20, 40])
-                            setFlashingSet(flashKey)
-                            setTimeout(() => setFlashingSet(null), 600)
-                          }
-                        }}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                          isCompleted
-                            ? 'bg-primary text-black'
-                            : 'bg-surface border border-border text-gray-600 hover:border-primary hover:text-primary'
-                        }`}
+                    <div key={setIdx}>
+                      <div
+                        className={`flex items-center px-3 py-2 gap-2 transition-colors ${
+                          isCompleted ? (isWarmup ? 'bg-blue-500/5' : 'bg-primary/5') : ''
+                        } ${flashingSet === flashKey ? 'set-complete-flash' : ''}`}
                       >
-                        <span className="text-sm font-bold">✓</span>
-                      </button>
+                        {/* Set number + warmup indicator */}
+                        <div className="w-5 flex flex-col items-center gap-0.5 flex-shrink-0">
+                          <button
+                            onClick={() => !isCompleted && toggleWarmup(exIdx, setIdx)}
+                            className="flex flex-col items-center"
+                            title={isWarmup ? 'Serie de calentamiento (toca para cambiar)' : 'Serie de trabajo (toca para marcar calent.)'}
+                          >
+                            <span className={`text-sm font-bold leading-none ${isCompleted ? (isWarmup ? 'text-blue-400' : 'text-primary') : 'text-gray-500'}`}>
+                              {setIdx + 1}
+                            </span>
+                            {isWarmup && (
+                              <span className="text-[7px] font-bold uppercase leading-none mt-0.5" style={{ color: 'rgba(96,165,250,0.8)' }}>
+                                W
+                              </span>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* KG */}
+                        <div className="flex-1 flex items-center gap-1 min-w-0">
+                          {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={set.kg}
+                              onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
+                              onFocus={() => {
+                                if (isBarbellLike) setPlateHintFor(plateKey)
+                              }}
+                              onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
+                              placeholder="kg"
+                              disabled={isCompleted}
+                              className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
+                                isCompleted
+                                  ? isWarmup
+                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                                    : 'bg-primary/10 border-primary/20 text-primary'
+                                  : 'bg-surface border-border text-white'
+                              }`}
+                            />
+                          </div>
+                          {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
+                        </div>
+
+                        {/* REPS */}
+                        <div className="flex-1 flex items-center gap-1 min-w-0">
+                          {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
+                          <div className="flex-1 min-w-0">
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={set.reps}
+                              onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
+                              placeholder="reps"
+                              disabled={isCompleted}
+                              className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
+                                isCompleted
+                                  ? isWarmup
+                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+                                    : 'bg-primary/10 border-primary/20 text-primary'
+                                  : 'bg-surface border-border text-white'
+                              }`}
+                            />
+                          </div>
+                          {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
+                        </div>
+
+                        {/* Complete button */}
+                        <button
+                          onClick={() => {
+                            completeSet(exIdx, setIdx)
+                            if (!isCompleted) {
+                              vibrate([40, 20, 40])
+                              setFlashingSet(flashKey)
+                              setTimeout(() => setFlashingSet(null), 600)
+                            }
+                          }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                            isCompleted
+                              ? isWarmup
+                                ? 'border border-blue-400/40 text-blue-400'
+                                : 'bg-primary text-black'
+                              : 'bg-surface border border-border text-gray-600 hover:border-primary hover:text-primary'
+                          }`}
+                        >
+                          <span className="text-sm font-bold">✓</span>
+                        </button>
+
+                        {/* Delete set */}
+                        <button
+                          onClick={() => removeSetFromExercise(exIdx, setIdx)}
+                          disabled={isCompleted || activeEx.sets.length <= 1}
+                          className="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors"
+                          style={{
+                            color: isCompleted || activeEx.sets.length <= 1
+                              ? 'rgba(255,255,255,0.08)'
+                              : 'rgba(255,255,255,0.2)',
+                          }}
+                        >
+                          <span className="text-xs">✕</span>
+                        </button>
+                      </div>
+
+                      {/* Plate calculator hint */}
+                      {showPlate && (
+                        <div
+                          className="px-3 py-1.5 text-[11px] font-medium"
+                          style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.04)' }}
+                        >
+                          🏋️ {getPlates(kg)}
+                        </div>
+                      )}
+
+                      {/* 1RM estimate for completed working sets */}
+                      {orm !== null && (
+                        <div className="px-3 pb-1" style={{ marginTop: -2 }}>
+                          <span className="text-[10px] font-medium" style={{ color: 'rgba(0,255,136,0.45)' }}>
+                            ~1RM: {orm}kg
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
 
                 {prevSets.length > 0 && (
-                  <div className="px-3 py-2 bg-surface/50">
+                  <div className="px-3 py-2 bg-surface/50 border-t border-border">
                     <p className="text-[10px] text-gray-600">
                       💡 Última vez: {prevSets[0]?.kg}kg × {prevSets[0]?.reps} reps
                     </p>
@@ -282,13 +441,24 @@ export function ActiveWorkoutScreen() {
 
                 <TipsRow exerciseId={ex.id} />
 
-                <div className="px-3 py-2 border-t border-border">
+                <div className="px-3 py-2 border-t border-border flex items-center justify-between">
                   <button
                     onClick={() => addSetToExercise(exIdx)}
                     className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1"
                   >
                     <span>+</span>
                     <span>Agregar serie</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newIdx = activeEx.sets.length
+                      addSetToExercise(exIdx)
+                      setTimeout(() => toggleWarmup(exIdx, newIdx), 0)
+                    }}
+                    className="text-xs text-gray-600 hover:text-blue-400 transition-colors flex items-center gap-1"
+                  >
+                    <span>+</span>
+                    <span>Calent.</span>
                   </button>
                 </div>
               </div>

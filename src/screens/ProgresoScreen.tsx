@@ -9,8 +9,11 @@ import {
   Tooltip,
 } from 'recharts'
 import { useStore } from '../store/useStore'
+import { muscleGroupConfig } from '../data/muscleGroups'
+import type { MuscleGroup } from '../types'
 
 type Period = '3m' | '6m' | '1a' | 'todo'
+type Tab = 'fuerza' | 'volumen'
 
 const MONTH_NAMES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -66,9 +69,79 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   )
 }
 
+
+const MUSCLE_ORDER: MuscleGroup[] = ['pecho', 'espalda', 'hombros', 'biceps', 'triceps', 'piernas', 'gluteos', 'core']
+
+function MuscleVolumeSection({ period }: { period: Period }) {
+  const { workouts, exercises } = useStore()
+
+  const monthsBack = getMonthsBack(period)
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1).getTime()
+
+  // Count working sets per muscle group
+  const volumeMap: Record<string, number> = {}
+  for (const w of workouts) {
+    if (!w.finishedAt || w.startedAt < cutoff) continue
+    for (const wex of w.exercises) {
+      const ex = exercises.find(e => e.id === wex.exerciseId)
+      if (!ex) continue
+      volumeMap[ex.muscleGroup] = (volumeMap[ex.muscleGroup] ?? 0) + wex.sets.length
+    }
+  }
+
+  const chartData = MUSCLE_ORDER
+    .filter(mg => volumeMap[mg] > 0)
+    .map(mg => ({
+      name: muscleGroupConfig[mg].label,
+      sets: volumeMap[mg],
+      color: muscleGroupConfig[mg].color,
+      mg,
+    }))
+    .sort((a, b) => b.sets - a.sets)
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <p className="text-gray-600 text-sm">Sin datos en el período seleccionado</p>
+      </div>
+    )
+  }
+
+  const maxSets = Math.max(...chartData.map(d => d.sets))
+
+  return (
+    <div className="flex flex-col gap-3">
+      {chartData.map(item => (
+        <div key={item.mg} className="flex items-center gap-3">
+          <div className="w-20 flex-shrink-0 text-right">
+            <span className="text-xs font-medium" style={{ color: item.color }}>
+              {muscleGroupConfig[item.mg].emoji} {item.name}
+            </span>
+          </div>
+          <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(item.sets / maxSets) * 100}%`,
+                background: `linear-gradient(90deg, ${item.color}90, ${item.color})`,
+                minWidth: 4,
+              }}
+            />
+          </div>
+          <div className="w-10 flex-shrink-0">
+            <span className="text-xs font-bold text-white">{item.sets}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ProgresoScreen() {
   const { workouts, exercises } = useStore()
   const [period, setPeriod] = useState<Period>('6m')
+  const [tab, setTab] = useState<Tab>('fuerza')
 
   const monthsBack = getMonthsBack(period)
   const now = new Date()
@@ -126,7 +199,27 @@ export function ProgresoScreen() {
       <div className="flex-shrink-0 px-4 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-white">Progreso</h1>
 
-        <div className="flex bg-surface rounded-xl p-1 border border-border mt-4">
+        {/* Tabs */}
+        <div
+          className="flex mt-4 rounded-xl overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          {([['fuerza', '💪 Fuerza'], ['volumen', '📊 Volumen muscular']] as [Tab, string][]).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="flex-1 py-2.5 text-sm font-semibold transition-all"
+              style={tab === t ? {
+                background: 'rgba(0,255,136,0.12)',
+                color: 'var(--primary)',
+              } : { color: 'rgba(255,255,255,0.35)' }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex bg-surface rounded-xl p-1 border border-border mt-3">
           {(['3m', '6m', '1a', 'todo'] as Period[]).map((p) => (
             <button
               key={p}
@@ -142,7 +235,13 @@ export function ProgresoScreen() {
       </div>
 
       <div className="flex-1 min-h-0 scroll-area px-4 pb-4">
-        {progressList.length === 0 ? (
+        {tab === 'volumen' ? (
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <h3 className="font-bold text-white text-sm mb-1">Series por grupo muscular</h3>
+            <p className="text-[11px] text-gray-600 mb-4">Total de series completadas en el período</p>
+            <MuscleVolumeSection period={period} />
+          </div>
+        ) : progressList.length === 0 ? (
           <div className="flex items-center justify-center h-48">
             <div className="text-center">
               <p className="text-gray-400 text-sm">No hay datos de progreso aún</p>
@@ -155,7 +254,6 @@ export function ProgresoScreen() {
               const ex = exercises.find((e) => e.id === ep.exerciseId)
               if (!ex) return null
 
-              // Only plot months that have data
               const chartData: ChartDataPoint[] = ep.months
                 .filter((m) => m.maxKg > 0)
                 .map((m) => ({ label: m.label, kg: m.maxKg }))
@@ -166,7 +264,6 @@ export function ProgresoScreen() {
 
               return (
                 <div key={ep.exerciseId} className="bg-card rounded-2xl border border-border p-4">
-                  {/* Top row: name + current max + change badge */}
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold text-white text-sm">{ex.nameEs}</h3>
@@ -189,7 +286,6 @@ export function ProgresoScreen() {
                     )}
                   </div>
 
-                  {/* Area chart */}
                   <div style={{ height: 80 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
@@ -202,11 +298,7 @@ export function ProgresoScreen() {
                             <stop offset="100%" stopColor="rgba(0,255,136,0)" />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid
-                          strokeDasharray="0"
-                          stroke="rgba(255,255,255,0.05)"
-                          vertical={false}
-                        />
+                        <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.05)" vertical={false} />
                         <XAxis
                           dataKey="label"
                           tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
