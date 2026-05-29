@@ -18,9 +18,10 @@ function getWeekStreak(workouts: Array<{ startedAt: number; finishedAt?: number 
     const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
     const end = start + 86400000
     if (workouts.some(w => w.finishedAt && w.startedAt >= start && w.startedAt < end)) {
-      if (i === 0 || streak > 0) streak++
+      streak++
     } else {
-      if (streak > 0) break
+      if (i === 0) continue  // today not trained yet — don't break the streak
+      break
     }
   }
   return streak
@@ -112,8 +113,8 @@ export function HomeScreen() {
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
-      <div className="flex-1 scroll-area">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
+      <div className="flex-1 min-h-0 scroll-area">
         {/* Header */}
         <div className="px-5 pt-14 pb-5 relative overflow-hidden">
           {/* Ambient glow bg */}

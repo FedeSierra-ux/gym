@@ -4,7 +4,8 @@ import { useStore } from '../store/useStore'
 
 export interface ActiveWorkout {
   routineId: string
-  startedAt: number
+  startedAt: number      // date the workout is recorded for (may be a past-date override)
+  realStartedAt: number  // actual wall-clock time when the screen opened (for duration)
   exercises: ActiveWorkoutExercise[]
   restTimerVisible: boolean
   restSecondsLeft: number
@@ -15,7 +16,7 @@ export interface ActiveWorkout {
 interface WorkoutState {
   activeWorkout: ActiveWorkout | null
 
-  startWorkout: (routineId: string) => void
+  startWorkout: (routineId: string, dateOverride?: number) => void
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
@@ -40,7 +41,7 @@ function clampValue(field: 'kg' | 'reps', value: string): string {
 export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
   activeWorkout: null,
 
-  startWorkout: (routineId) => {
+  startWorkout: (routineId, dateOverride) => {
     const { routines, workouts } = useStore.getState()
 
     const routine = routines.find((r) => r.id === routineId)
@@ -63,10 +64,12 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       }
     })
 
+    const now = Date.now()
     set({
       activeWorkout: {
         routineId,
-        startedAt: Date.now(),
+        startedAt: dateOverride ?? now,
+        realStartedAt: now,
         exercises: activeExercises,
         restTimerVisible: false,
         restSecondsLeft: 75,
@@ -139,10 +142,10 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
     const { activeWorkout } = get()
     if (!activeWorkout) return
 
-    const { routines, prs } = useStore.getState()
+    const { prs } = useStore.getState()
 
     const finishedAt = Date.now()
-    const durationMin = Math.round((finishedAt - activeWorkout.startedAt) / 60000)
+    const durationMin = Math.round((finishedAt - activeWorkout.realStartedAt) / 60000)
 
     const workoutExercises = activeWorkout.exercises.map((ex) => ({
       exerciseId: ex.exerciseId,
@@ -165,15 +168,13 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
       exercises: workoutExercises,
     }
 
-    void routines.find((r) => r.id === activeWorkout.routineId)?.exercises.length
-
     const newPrs = [...prs]
     for (const ex of workoutExercises) {
       for (const s of ex.sets) {
+        if (s.kg <= 0) continue
         const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)
-        const volume = s.kg * s.reps
-        const existingVolume = existing ? existing.kg * existing.reps : 0
-        if (!existing || volume > existingVolume) {
+        const isNewPr = !existing || s.kg > existing.kg || (s.kg === existing.kg && s.reps > existing.reps)
+        if (isNewPr) {
           const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
           const pr: PR = { exerciseId: ex.exerciseId, kg: s.kg, reps: s.reps, date: finishedAt }
           if (idx >= 0) newPrs[idx] = pr
@@ -184,7 +185,7 @@ export const useWorkoutStore = create<WorkoutState>()((set, get) => ({
 
     const newPrCount = newPrs.filter((np) => {
       const old = prs.find((p) => p.exerciseId === np.exerciseId)
-      return !old || np.kg * np.reps > old.kg * old.reps
+      return !old || np.kg > (old.kg) || (np.kg === old.kg && np.reps > old.reps)
     }).length
 
     const successToast: AppToast = {

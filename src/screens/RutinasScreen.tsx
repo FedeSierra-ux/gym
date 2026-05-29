@@ -44,7 +44,7 @@ export function RutinasScreen() {
   }
 
   return (
-    <div className="flex-1 scroll-area pb-4">
+    <div className="flex-1 min-h-0 scroll-area pb-4">
       {/* Header */}
       <div className="px-5 pt-14 pb-5 relative overflow-hidden">
         <div

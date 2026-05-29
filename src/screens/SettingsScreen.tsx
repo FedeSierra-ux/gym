@@ -21,7 +21,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
         <h1 className="text-lg font-bold text-white">Ajustes</h1>
       </div>
 
-      <div className="flex-1 scroll-area px-4 py-4 flex flex-col gap-5">
+      <div className="flex-1 min-h-0 scroll-area px-4 py-4 flex flex-col gap-5">
         {/* Nombre */}
         <div>
           <p className="section-label mb-2">Tu nombre</p>

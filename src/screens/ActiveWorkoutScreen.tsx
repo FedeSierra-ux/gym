@@ -102,14 +102,14 @@ export function ActiveWorkoutScreen() {
 
   useEffect(() => {
     if (!activeWorkout) return
-    const start = activeWorkout.startedAt
+    const start = activeWorkout.realStartedAt
     intervalRef.current = setInterval(() => {
       setElapsed(Date.now() - start)
     }, 1000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [activeWorkout?.startedAt])
+  }, [activeWorkout?.realStartedAt])
 
   if (!activeWorkout) return null
 
@@ -122,7 +122,7 @@ export function ActiveWorkoutScreen() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background screen-enter">
+    <div className="flex-1 min-h-0 flex flex-col bg-background screen-enter">
       <div className="flex-shrink-0 px-4 pt-12 pb-3 bg-surface border-b border-border">
         <div className="flex items-center justify-between">
           <div>
@@ -148,7 +148,7 @@ export function ActiveWorkoutScreen() {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 py-3">
+      <div className="flex-1 min-h-0 scroll-area px-4 py-3">
         <div className="flex flex-col gap-4">
           {activeWorkout.exercises.map((activeEx, exIdx) => {
             const ex = exercises.find((e) => e.id === activeEx.exerciseId)

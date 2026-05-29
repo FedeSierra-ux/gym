@@ -62,6 +62,7 @@ export function RoutineDetailScreen() {
     reorderRoutineExercises,
     showExercisePicker,
     setShowExercisePicker,
+    addToast,
   } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
@@ -194,7 +195,13 @@ export function RoutineDetailScreen() {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <button
-          onClick={() => startWorkout(routine.id)}
+          onClick={() => {
+            if (routine.exercises.length === 0) {
+              addToast('Agregá al menos un ejercicio antes de iniciar', 'info')
+              return
+            }
+            startWorkout(routine.id)
+          }}
           className="flex-1 btn-primary-glow py-3 rounded-xl text-sm flex items-center justify-center gap-2"
         >
           <PlayIcon />

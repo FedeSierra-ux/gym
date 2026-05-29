@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-import type { CalendarSubTab, Workout } from '../types'
+import { useWorkoutStore } from '../stores/workoutStore'
+import type { CalendarSubTab, Routine, Workout } from '../types'
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -8,83 +9,149 @@ const MONTH_NAMES = [
 ]
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
-function WorkoutDetailSheet({ workout, onClose }: { workout: Workout; onClose: () => void }) {
-  const { routines, exercises, deleteWorkout } = useStore()
-  const routine = routines.find((r) => r.id === workout.routineId)
-  const date = new Date(workout.startedAt)
-  const totalSets = workout.exercises.reduce((a, e) => a + e.sets.length, 0)
+type SelectedDay = { day: number; month: number; year: number }
+
+function DaySheet({
+  selectedDay,
+  allWorkouts,
+  routines,
+  onClose,
+  onStartWorkout,
+}: {
+  selectedDay: SelectedDay
+  allWorkouts: Workout[]
+  routines: Routine[]
+  onClose: () => void
+  onStartWorkout: (routineId: string, dateOverride: number) => void
+}) {
+  const { exercises, deleteWorkout } = useStore()
+  const [showRoutinePicker, setShowRoutinePicker] = useState(false)
+
+  const { day, month, year } = selectedDay
+  const dayWorkouts = allWorkouts.filter((w) => {
+    if (!w.finishedAt) return false
+    const d = new Date(w.startedAt)
+    return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
+  })
+
+  const date = new Date(year, month, day)
+  const isToday = date.toDateString() === new Date().toDateString()
+  const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const handleStart = (routineId: string) => {
+    const dateOverride = isToday
+      ? Date.now()
+      : new Date(year, month, day, 12, 0, 0).getTime()
+    onStartWorkout(routineId, dateOverride)
+    onClose()
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-end" onClick={onClose}>
       <div
-        className="w-full bg-card rounded-t-3xl border-t border-border px-4 pt-4 pb-8 max-h-[75vh] flex flex-col screen-enter"
+        className="w-full bg-card rounded-t-3xl border-t border-border px-4 pt-4 pb-8 max-h-[80vh] flex flex-col screen-enter"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-border rounded-full mx-auto mb-4" />
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <div>
-            <h3 className="font-bold text-white text-lg">
-              {routine?.emoji} {routine?.name}
-            </h3>
-            <p className="text-gray-400 text-sm">
-              {date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
+            <h3 className="font-bold text-white text-lg capitalize">{dateLabel}</h3>
+            {isToday && <p className="text-primary text-xs font-semibold">Hoy</p>}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
         </div>
 
-        <div className="flex gap-3 mb-4">
-          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
-            <p className="text-primary font-bold text-lg">{workout.durationMin ?? 0}m</p>
-            <p className="text-[10px] text-gray-500">Duración</p>
-          </div>
-          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
-            <p className="text-info font-bold text-lg">{workout.exercises.length}</p>
-            <p className="text-[10px] text-gray-500">Ejercicios</p>
-          </div>
-          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
-            <p className="text-gold font-bold text-lg">{totalSets}</p>
-            <p className="text-[10px] text-gray-500">Series</p>
-          </div>
-          <div className="bg-surface border border-border rounded-xl p-3 flex-1 text-center">
-            <p className="text-white font-bold text-lg">{workout.kcal ?? 0}</p>
-            <p className="text-[10px] text-gray-500">kcal</p>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-2">
-            {workout.exercises.map((we) => {
-              const ex = exercises.find((e) => e.id === we.exerciseId)
-              if (!ex) return null
-              const best = we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0])
-              return (
-                <div key={we.exerciseId} className="bg-surface rounded-xl border border-border p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-white text-sm font-semibold">{ex.nameEs}</p>
-                    <p className="text-gray-500 text-xs">{we.sets.length} series</p>
-                  </div>
-                  {best && (
-                    <p className="text-gray-300 text-sm font-medium">
-                      Mejor: {best.kg}kg × {best.reps}
-                    </p>
-                  )}
+        {showRoutinePicker ? (
+          <>
+            <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+              <button
+                onClick={() => setShowRoutinePicker(false)}
+                className="text-gray-500 hover:text-white transition-colors text-sm"
+              >
+                ‹ Volver
+              </button>
+              <p className="text-sm font-semibold text-white">Elegí una rutina</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
+              {routines.length === 0 ? (
+                <p className="text-gray-600 text-sm text-center py-8">No tenés rutinas creadas aún</p>
+              ) : (
+                routines.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => handleStart(r.id)}
+                    className="bg-surface border border-border rounded-xl p-3 flex items-center gap-3 text-left transition-all active:scale-[0.98] w-full"
+                  >
+                    <span className="text-2xl flex-shrink-0">{r.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white text-sm">{r.name}</p>
+                      <p className="text-xs text-gray-500">{r.exercises.length} ejercicios</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {dayWorkouts.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-8">Sin actividad registrada</p>
+              ) : (
+                <div className="flex flex-col gap-2 pb-2">
+                  {dayWorkouts.map((w) => {
+                    const routine = routines.find((r) => r.id === w.routineId)
+                    const totalSets = w.exercises.reduce((a, e) => a + e.sets.length, 0)
+                    return (
+                      <div key={w.id} className="bg-surface border border-border rounded-xl p-3">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white text-sm">{routine?.emoji} {routine?.name}</p>
+                            <p className="text-xs text-gray-500">{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
+                          </div>
+                          <button
+                            onClick={() => deleteWorkout(w.id)}
+                            className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {w.exercises.slice(0, 4).map((we) => {
+                            const ex = exercises.find((e) => e.id === we.exerciseId)
+                            if (!ex) return null
+                            const best = we.sets.length > 0
+                              ? we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0])
+                              : null
+                            return (
+                              <div key={we.exerciseId} className="flex items-center justify-between">
+                                <p className="text-gray-400 text-xs">{ex.nameEs}</p>
+                                {best && (
+                                  <p className="text-gray-500 text-xs">{best.kg}kg × {best.reps}</p>
+                                )}
+                              </div>
+                            )
+                          })}
+                          {w.exercises.length > 4 && (
+                            <p className="text-gray-600 text-xs">+{w.exercises.length - 4} más...</p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              )}
+            </div>
 
-        <button
-          onClick={() => {
-            deleteWorkout(workout.id)
-            onClose()
-          }}
-          className="mt-4 w-full py-3 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 text-sm font-semibold"
-        >
-          🗑 Eliminar este entreno
-        </button>
+            <button
+              onClick={() => setShowRoutinePicker(true)}
+              className="mt-4 w-full py-3.5 rounded-xl btn-primary-glow font-bold text-sm text-black flex-shrink-0"
+            >
+              + Registrar entreno
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -92,8 +159,9 @@ function WorkoutDetailSheet({ workout, onClose }: { workout: Workout; onClose: (
 
 function CalendarioTab() {
   const { workouts, routines, deleteWorkout } = useStore()
+  const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [viewDate, setViewDate] = useState(new Date())
-  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null)
+  const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
 
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -128,10 +196,8 @@ function CalendarioTab() {
   const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
 
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
-  const nextMonth = () => {
-    const next = new Date(year, month + 1, 1)
-    if (next <= new Date()) setViewDate(next)
-  }
+  const nextMonth = () => setViewDate(new Date(year, month + 1, 1))
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
 
   const recentWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
@@ -147,7 +213,11 @@ function CalendarioTab() {
         <h2 className="text-base font-bold text-white">
           {MONTH_NAMES[month]} {year}
         </h2>
-        <button onClick={nextMonth} className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={nextMonth}
+          disabled={isCurrentMonth}
+          className={`w-9 h-9 rounded-full bg-surface border border-border transition-colors ${isCurrentMonth ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+        >
           ›
         </button>
       </div>
@@ -186,21 +256,18 @@ function CalendarioTab() {
             const isGym = gymDays.has(day)
             const isToday = day === todayInMonth
             const isFuture = todayInMonth > 0 && day > todayInMonth
-            const dayWorkouts = gymDayWorkouts.get(day) ?? []
 
             return (
               <div
                 key={day}
                 className="flex items-center justify-center aspect-square"
                 onClick={() => {
-                  if (isGym && dayWorkouts.length > 0) {
-                    setSelectedWorkout(dayWorkouts[0])
-                  }
+                  if (!isFuture) setSelectedDay({ day, month, year })
                 }}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center relative transition-all ${
-                    isGym ? 'cursor-pointer active:scale-90' : ''
+                    !isFuture ? 'cursor-pointer active:scale-90' : ''
                   } ${
                     isToday
                       ? 'bg-primary text-black font-bold'
@@ -208,7 +275,7 @@ function CalendarioTab() {
                       ? 'text-gray-700'
                       : isGym
                       ? 'text-primary'
-                      : 'text-gray-500'
+                      : 'text-gray-400'
                   }`}
                 >
                   <span className="text-xs font-medium">{day}</span>
@@ -246,7 +313,7 @@ function CalendarioTab() {
               <div
                 key={w.id}
                 className="bg-card rounded-xl border border-border p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
-                onClick={() => setSelectedWorkout(w)}
+                onClick={() => setSelectedDay({ day: date.getDate(), month: date.getMonth(), year: date.getFullYear() })}
               >
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 text-center flex-shrink-0 w-14">
                   <p className="text-primary font-bold text-sm">{date.getDate()}</p>
@@ -276,10 +343,13 @@ function CalendarioTab() {
         </div>
       </div>
 
-      {selectedWorkout && (
-        <WorkoutDetailSheet
-          workout={selectedWorkout}
-          onClose={() => setSelectedWorkout(null)}
+      {selectedDay && (
+        <DaySheet
+          selectedDay={selectedDay}
+          allWorkouts={workouts}
+          routines={routines}
+          onClose={() => setSelectedDay(null)}
+          onStartWorkout={(routineId, dateOverride) => startWorkout(routineId, dateOverride)}
         />
       )}
     </div>
@@ -289,12 +359,9 @@ function CalendarioTab() {
 function RecordsTab() {
   const { prs, exercises, deletePr } = useStore()
 
-  const now = Date.now()
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
-
   const sortedPrs = [...prs].sort((a, b) => b.kg * b.reps - a.kg * a.reps)
-
   const medals: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' }
 
   return (
@@ -316,7 +383,6 @@ function RecordsTab() {
             day: 'numeric',
             month: 'short',
           })
-          void now
 
           return (
             <div
@@ -348,7 +414,9 @@ function RecordsTab() {
                 <p className="text-[10px] text-gray-600">Vol: {pr.kg * pr.reps}kg</p>
               </div>
               <button
-                onClick={() => deletePr(pr.exerciseId)}
+                onClick={() => {
+                  if (window.confirm(`¿Eliminar el PR de ${ex.nameEs}?`)) deletePr(pr.exerciseId)
+                }}
                 className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
               >
                 🗑
@@ -369,7 +437,7 @@ export function CalendarioScreen() {
   const { calendarSubTab, setCalendarSubTab } = useStore()
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex-shrink-0 px-4 pt-12 pb-0">
         <h1 className="text-2xl font-bold text-white mb-4">Seguimiento</h1>
 
@@ -392,7 +460,7 @@ export function CalendarioScreen() {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 py-4">
+      <div className="flex-1 min-h-0 scroll-area px-4 py-4">
         {calendarSubTab === 'calendario' ? <CalendarioTab /> : <RecordsTab />}
       </div>
     </div>
