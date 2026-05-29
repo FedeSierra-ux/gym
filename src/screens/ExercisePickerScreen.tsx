@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseDetailSheet } from '../components/ExerciseDetailSheet'
@@ -16,14 +16,18 @@ const muscleGroupOrder: MuscleGroup[] = [
 ]
 
 export function ExercisePickerScreen({ routineName }: Props) {
-  const { exercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
+  const { exercises, customExercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
+  const allExercises = useMemo(() => [...exercises, ...customExercises], [exercises, customExercises])
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   const [mode, setMode] = useState<'browse' | 'search'>('browse')
 
   const routine = routines.find((r) => r.id === activeRoutineId)
-  const addedIds = new Set(routine?.exercises.map((e) => e.exerciseId) ?? [])
+  const addedIds = useMemo(
+    () => new Set(routine?.exercises.map((e) => e.exerciseId) ?? []),
+    [routine?.exercises]
+  )
 
   const handleAdd = useCallback((exerciseId: string) => {
     if (activeRoutineId && !addedIds.has(exerciseId)) {
@@ -32,7 +36,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
   }, [activeRoutineId, addedIds, addExerciseToRoutine])
 
   // Search mode: filter by query (and optionally group)
-  const searchFiltered = mode === 'search' ? exercises.filter((ex) => {
+  const searchFiltered = mode === 'search' ? allExercises.filter((ex) => {
     const matchGroup = !selectedGroup || ex.muscleGroup === selectedGroup
     const q = search.toLowerCase()
     const matchSearch = !search
@@ -49,7 +53,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
         .map(mg => ({
           group: mg,
           config: muscleGroupConfig[mg],
-          exercises: exercises.filter(ex => ex.muscleGroup === mg),
+          exercises: allExercises.filter(ex => ex.muscleGroup === mg),
         }))
     : []
 

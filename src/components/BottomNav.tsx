@@ -63,6 +63,7 @@ export function BottomNav() {
           return (
             <button
               key={tab.id}
+              aria-label={tab.label}
               onClick={() => {
                 setActiveTab(tab.id)
                 if (tab.id !== 'rutinas') setActiveRoutineId(null)

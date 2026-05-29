@@ -85,10 +85,11 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
   )
 }
 
-function AdjustButton({ label, onPress }: { label: string; onPress: () => void }) {
+function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
   return (
     <button
       onClick={onPress}
+      aria-label={ariaLabel}
       className="w-6 h-7 rounded flex items-center justify-center flex-shrink-0 text-[9px] font-bold transition-all active:scale-90"
       style={{
         background: 'rgba(255,255,255,0.06)',
@@ -177,20 +178,26 @@ export function ActiveWorkoutScreen() {
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
   const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
 
+  const realStartedAt = activeWorkout?.realStartedAt
   useEffect(() => {
-    if (!activeWorkout) return
-    const start = activeWorkout.realStartedAt
+    if (!realStartedAt) return
     intervalRef.current = setInterval(() => {
-      setElapsed(Date.now() - start)
+      setElapsed(Date.now() - realStartedAt)
     }, 1000)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [activeWorkout?.realStartedAt])
+  }, [realStartedAt])
 
   if (!activeWorkout) return null
 
   const routine = routines.find((r) => r.id === activeWorkout.routineId)
+
+  const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => !s.isWarmup).length, 0)
+  const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed && !s.isWarmup).length, 0)
+  const totalVolume = activeWorkout.exercises.reduce((a, ex) =>
+    a + ex.sets.filter(s => s.completed && !s.isWarmup).reduce((b, s) => b + (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0), 0), 0)
+  const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
   const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
     const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
@@ -233,6 +240,27 @@ export function ActiveWorkoutScreen() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div
+        className="flex-shrink-0 px-4 py-2 flex items-center gap-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)' }}
+      >
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span className="text-xs font-bold text-white">{completedSets}</span>
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>/ {totalSets} series</span>
+        </div>
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${progressPct}%`, background: 'var(--primary)', boxShadow: progressPct > 0 ? '0 0 8px rgba(0,255,136,0.5)' : undefined }}
+          />
+        </div>
+        {totalVolume > 0 && (
+          <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'rgba(0,255,136,0.7)' }}>
+            {totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}t` : `${totalVolume}kg`}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 scroll-area px-4 py-3">
@@ -325,7 +353,7 @@ export function ActiveWorkoutScreen() {
 
                         {/* KG */}
                         <div className="flex-1 flex items-center gap-1 min-w-0">
-                          {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
+                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
                           <div className="flex-1 min-w-0">
                             <input
                               type="number"
@@ -347,12 +375,12 @@ export function ActiveWorkoutScreen() {
                               }`}
                             />
                           </div>
-                          {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
+                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar kg" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
                         </div>
 
                         {/* REPS */}
                         <div className="flex-1 flex items-center gap-1 min-w-0">
-                          {!isCompleted && <AdjustButton label="−" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
+                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
                           <div className="flex-1 min-w-0">
                             <input
                               type="number"
@@ -370,11 +398,12 @@ export function ActiveWorkoutScreen() {
                               }`}
                             />
                           </div>
-                          {!isCompleted && <AdjustButton label="+" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
+                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar reps" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
                         </div>
 
                         {/* Complete button */}
                         <button
+                          aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
                           onClick={() => {
                             completeSet(exIdx, setIdx)
                             if (!isCompleted) {
@@ -398,6 +427,7 @@ export function ActiveWorkoutScreen() {
                         <button
                           onClick={() => removeSetFromExercise(exIdx, setIdx)}
                           disabled={isCompleted || activeEx.sets.length <= 1}
+                          aria-label="Eliminar serie"
                           className="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors"
                           style={{
                             color: isCompleted || activeEx.sets.length <= 1

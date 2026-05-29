@@ -16,22 +16,25 @@ interface Props {
 }
 
 export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, actionDisabled }: Props) {
-  const [wgerInfo, setWgerInfo] = useState<WgerInfo | null>(null)
-  const [imgError, setImgError] = useState(false)
-
   const detail = exerciseDetails[exercise.id]
   const config = muscleGroupConfig[exercise.muscleGroup]
   const displayName = detail?.nameArg ?? exercise.nameArg ?? exercise.nameEs
 
   const wgerId = detail?.wgerId ?? exercise.wgerId
 
+  // Read cache synchronously in initializer to avoid setState-in-effect lint error
+  const [wgerInfo, setWgerInfo] = useState<WgerInfo | null>(() => {
+    if (!wgerId) return null
+    try {
+      const cached = sessionStorage.getItem(`wger-${wgerId}`)
+      if (cached) return JSON.parse(cached) as WgerInfo
+    } catch { /* ignore */ }
+    return null
+  })
+  const [imgError, setImgError] = useState(false)
+
   useEffect(() => {
-    if (!wgerId) return
-    const cached = sessionStorage.getItem(`wger-${wgerId}`)
-    if (cached) {
-      try { setWgerInfo(JSON.parse(cached)) } catch {}
-      return
-    }
+    if (!wgerId || wgerInfo) return
     fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
       .then(r => r.json())
       .then(data => {
@@ -40,8 +43,8 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
         sessionStorage.setItem(`wger-${wgerId}`, JSON.stringify(info))
         setWgerInfo(info)
       })
-      .catch(() => {})
-  }, [wgerId])
+      .catch(() => { /* ignore */ })
+  }, [wgerId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const imageUrl = wgerInfo?.imageUrl
 
@@ -211,15 +214,24 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
 }
 
 function WgerImage({ wgerId, name, onError, fallback }: { wgerId: number; name: string; onError: () => void; fallback?: React.ReactNode }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  // Read cache synchronously in initializer to avoid setState-in-effect lint error
+  const [imageUrl, setImageUrl] = useState<string | null>(() => {
+    try {
+      const cached = sessionStorage.getItem(`wger-${wgerId}`)
+      if (cached) {
+        const data = JSON.parse(cached)
+        return data.imageUrl ?? null
+      }
+    } catch { /* ignore */ }
+    return null
+  })
 
   useEffect(() => {
     const cached = sessionStorage.getItem(`wger-${wgerId}`)
     if (cached) {
       try {
         const data = JSON.parse(cached)
-        if (data.imageUrl) setImageUrl(data.imageUrl)
-        else onError()
+        if (!data.imageUrl) onError()
       } catch { onError() }
       return
     }

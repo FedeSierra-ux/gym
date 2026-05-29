@@ -22,7 +22,7 @@ async function resolveWgerId(exercise: Exercise): Promise<number | null> {
       const data = JSON.parse(cached)
       return data.baseId ?? null
     }
-  } catch {}
+  } catch { /* ignore */ }
 
   try {
     const res = await fetch(
@@ -48,7 +48,7 @@ async function resolveImageUrl(exercise: Exercise): Promise<string | null> {
       const data = JSON.parse(cached)
       return data.imageUrl ?? null
     }
-  } catch {}
+  } catch { /* ignore */ }
 
   try {
     const res = await fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
@@ -72,7 +72,7 @@ export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' 
           const data = JSON.parse(cached)
           return data.imageUrl ?? null
         }
-      } catch {}
+      } catch { /* ignore */ }
     } else if (exercise.nameEn) {
       try {
         const searchCached = sessionStorage.getItem(`wger-search-${exercise.id}`)
@@ -86,7 +86,7 @@ export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' 
             }
           }
         }
-      } catch {}
+      } catch { /* ignore */ }
     }
     return null
   })

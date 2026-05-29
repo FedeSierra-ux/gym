@@ -61,6 +61,7 @@ export interface PR {
   kg: number
   reps: number
   date: number
+  history?: Array<{ kg: number; reps: number; date: number }>
 }
 
 export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso'

@@ -136,6 +136,7 @@ export function HomeScreen() {
             </div>
             <button
               onClick={() => setShowSettings(true)}
+              aria-label="Configuración"
               className="w-10 h-10 rounded-2xl flex items-center justify-center transition-colors"
               style={{
                 background: 'rgba(255,255,255,0.05)',
