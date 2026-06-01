@@ -1,10 +1,16 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
-  <rect width='512' height='512' rx='96' fill='#06060f'/>
-  <rect x='136' y='236' width='240' height='40' rx='10' fill='#00ff88' opacity='0.95'/>
-  <rect x='116' y='220' width='32' height='72' rx='10' fill='#00e07a'/>
-  <rect x='364' y='220' width='32' height='72' rx='10' fill='#00e07a'/>
-  <rect x='72' y='196' width='48' height='120' rx='14' fill='#00ff88'/>
-  <rect x='392' y='196' width='48' height='120' rx='14' fill='#00ff88'/>
-  <rect x='52' y='210' width='22' height='92' rx='8' fill='#00cc6a' opacity='0.8'/>
-  <rect x='438' y='210' width='22' height='92' rx='8' fill='#00cc6a' opacity='0.8'/>
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black rounded square background (iOS-style ~22% corner radius) -->
+  <rect width="512" height="512" rx="114" fill="#000000"/>
+
+  <!-- Dumbbell / barbell icon in white, centered -->
+  <!-- Left outer weight plate -->
+  <rect x="52" y="186" width="76" height="140" rx="14" fill="white"/>
+  <!-- Left inner collar -->
+  <rect x="128" y="210" width="50" height="92" rx="8" fill="white"/>
+  <!-- Center bar -->
+  <rect x="178" y="230" width="156" height="52" rx="6" fill="white"/>
+  <!-- Right inner collar -->
+  <rect x="334" y="210" width="50" height="92" rx="8" fill="white"/>
+  <!-- Right outer weight plate -->
+  <rect x="384" y="186" width="76" height="140" rx="14" fill="white"/>
 </svg>
