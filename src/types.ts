@@ -15,7 +15,7 @@ export interface Exercise {
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
-  icon: string
+  instructions: string[]
 }
 
 export interface RoutineExercise {
