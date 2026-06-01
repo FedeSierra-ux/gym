@@ -202,8 +202,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         const { prs, routines, exercises: allExDb, customExercises } = useStore.getState()
         const allExercises = [...allExDb, ...customExercises]
 
-        const finishedAt = Date.now()
-        const durationMin = Math.round((finishedAt - activeWorkout.realStartedAt) / 60000)
+        const realFinishedAt = Date.now()
+        const durationMin = Math.round((realFinishedAt - activeWorkout.realStartedAt) / 60000)
+        // Use startedAt (which respects dateOverride) plus the real duration so that
+        // backdated workouts land on the correct date instead of today.
+        const finishedAt = activeWorkout.startedAt + (realFinishedAt - activeWorkout.realStartedAt)
 
         // Warmup sets are saved to history but excluded from PR tracking
         const workoutExercises = activeWorkout.exercises.map((ex) => ({

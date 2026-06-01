@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
+import { MuscleBodyMap } from '../components/MuscleBodyMap'
 import type { MuscleGroup, Exercise } from '../types'
 
 const muscleGroups: MuscleGroup[] = [
@@ -30,7 +31,6 @@ export function CustomExercisesScreen({ onClose }: Props) {
       primaryMuscles: [muscleGroupConfig[muscleGroup].label],
       equipment: equipment.trim() || 'Libre',
       equipmentType: 'mancuernas',
-      icon: '🏋️',
     }
     addCustomExercise(ex)
     setNameEs('')
@@ -101,10 +101,10 @@ export function CustomExercisesScreen({ onClose }: Props) {
               }}
             >
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ background: config.color + '15', border: `1px solid ${config.color}25` }}
               >
-                {ex.icon}
+                <MuscleBodyMap muscleGroup={ex.muscleGroup} size={32} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>

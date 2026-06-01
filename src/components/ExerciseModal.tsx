@@ -68,7 +68,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
             Instrucciones
           </h3>
           <ol className="flex flex-col gap-3">
-            {exercise.instructions.map((step, i) => (
+            {(exercise.instructions ?? []).map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span
                   className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
