@@ -81,7 +81,7 @@ function GearIcon() {
 }
 
 export function HomeScreen() {
-  const { userName, workouts, routines, prs, setActiveTab } = useStore()
+  const { userName, workouts, routines, prs, setActiveTab, getArchivedRoutineName } = useStore()
   const exercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [showSettings, setShowSettings] = useState(false)
@@ -89,7 +89,9 @@ export function HomeScreen() {
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const sortedWorkouts = [...finishedWorkouts].sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
   const lastWorkout = sortedWorkouts[0]
-  const lastRoutine = lastWorkout ? routines.find(r => r.id === lastWorkout.routineId) : null
+  const lastRoutine = lastWorkout
+    ? (routines.find(r => r.id === lastWorkout.routineId) ?? getArchivedRoutineName(lastWorkout.routineId))
+    : null
 
   const streak = getWeekStreak(finishedWorkouts)
   const weekWorkouts = getThisWeekWorkouts(finishedWorkouts)

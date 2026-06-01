@@ -4,7 +4,9 @@ import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate } from '../utils/haptics'
+import type { Exercise } from '../types'
 
 // Epley 1RM formula
 function estimate1RM(kg: number, reps: number): number {
@@ -175,6 +177,7 @@ export function ActiveWorkoutScreen() {
 
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
   const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
@@ -285,7 +288,9 @@ export function ActiveWorkoutScreen() {
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
                 {/* Exercise header */}
                 <div className="p-3 border-b border-border flex items-center gap-3">
-                  <ExerciseThumbnail exercise={ex} size={56} />
+                  <button onClick={() => setModalExercise(ex)} className="flex-shrink-0">
+                    <ExerciseThumbnail exercise={ex} size={56} />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
                     <span
@@ -535,6 +540,10 @@ export function ActiveWorkoutScreen() {
             </div>
           </div>
         </div>
+      )}
+
+      {modalExercise && (
+        <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
       )}
     </div>
   )

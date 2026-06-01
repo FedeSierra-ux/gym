@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import { ExerciseDetailSheet } from '../components/ExerciseDetailSheet'
+import { ExerciseModal } from '../components/ExerciseModal'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import type { MuscleGroup, Exercise } from '../types'
 
@@ -212,18 +212,9 @@ export function ExercisePickerScreen({ routineName }: Props) {
         )}
       </div>
 
-      {/* Detail sheet */}
+      {/* Exercise detail modal */}
       {detailExercise && (
-        <ExerciseDetailSheet
-          exercise={detailExercise}
-          onClose={() => setDetailExercise(null)}
-          actionLabel="Agregar a rutina"
-          onAction={() => {
-            handleAdd(detailExercise.id)
-            setDetailExercise(null)
-          }}
-          actionDisabled={addedIds.has(detailExercise.id)}
-        />
+        <ExerciseModal exercise={detailExercise} onClose={() => setDetailExercise(null)} />
       )}
     </div>
   )

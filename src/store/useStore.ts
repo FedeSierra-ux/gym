@@ -25,6 +25,7 @@ interface AppState {
   toasts: AppToast[]
   weekPlan: Record<number, string | null>
   customExercises: Exercise[]
+  archivedRoutineNames: Record<string, { name: string; emoji: string }>
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -63,6 +64,9 @@ interface AppState {
   addCustomExercise: (ex: Exercise) => void
   deleteCustomExercise: (id: string) => void
 
+  // Archived routines (for history display after deletion)
+  getArchivedRoutineName: (routineId: string) => { name: string; emoji: string } | null
+
   // Seed
   seedData: () => void
 }
@@ -86,6 +90,7 @@ export const useStore = create<AppState>()(
       toasts: [],
       weekPlan: {},
       customExercises: [],
+      archivedRoutineNames: {},
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -95,10 +100,17 @@ export const useStore = create<AppState>()(
       addRoutine: (routine) => set((s) => ({ routines: [...s.routines, routine] })),
       updateRoutine: (routine) =>
         set((s) => ({ routines: s.routines.map((r) => (r.id === routine.id ? routine : r)) })),
-      deleteRoutine: (id) => set((s) => ({
-        routines: s.routines.filter((r) => r.id !== id),
-        activeRoutineId: s.activeRoutineId === id ? null : s.activeRoutineId,
-      })),
+      deleteRoutine: (id) => set((s) => {
+        const routine = s.routines.find((r) => r.id === id)
+        const archived = routine
+          ? { ...s.archivedRoutineNames, [id]: { name: routine.name, emoji: routine.emoji } }
+          : s.archivedRoutineNames
+        return {
+          routines: s.routines.filter((r) => r.id !== id),
+          activeRoutineId: s.activeRoutineId === id ? null : s.activeRoutineId,
+          archivedRoutineNames: archived,
+        }
+      }),
 
       addExerciseToRoutine: (routineId, exerciseId) =>
         set((s) => ({
@@ -154,6 +166,11 @@ export const useStore = create<AppState>()(
       deleteCustomExercise: (id) =>
         set((s) => ({ customExercises: s.customExercises.filter((e) => e.id !== id) })),
 
+      getArchivedRoutineName: (routineId) => {
+        const { archivedRoutineNames } = get()
+        return archivedRoutineNames[routineId] ?? null
+      },
+
       seedData: () => {
         const { seeded } = get()
         if (seeded) return
@@ -187,6 +204,7 @@ export const useStore = create<AppState>()(
         anthropicApiKey: state.anthropicApiKey,
         weekPlan: state.weekPlan,
         customExercises: state.customExercises,
+        archivedRoutineNames: state.archivedRoutineNames,
       }),
     }
   )

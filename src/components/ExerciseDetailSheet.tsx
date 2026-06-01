@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { exerciseDetails } from '../data/exerciseDetails'
+import { MuscleBodyMap } from './MuscleBodyMap'
 
 interface WgerInfo {
   imageUrl?: string
@@ -65,12 +66,13 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
           <div className="px-5 pt-2 pb-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {/* Exercise SVG icon */}
+                {/* Exercise muscle map */}
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: config.color + '18', border: `1px solid ${config.color}25` }}
-                  dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="56" height="56" viewBox') }}
-                />
+                >
+                  <MuscleBodyMap muscleGroup={exercise.muscleGroup} size={40} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-white leading-tight">{displayName}</h2>
                   {detail?.nameArg && detail.nameArg !== exercise.nameEs && (
@@ -106,19 +108,10 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
               />
             ) : wgerId && !imgError ? (
               <WgerImage wgerId={wgerId} name={displayName} onError={() => setImgError(true)}
-                fallback={
-                  <div
-                    className="w-24 h-24"
-                    style={{ color: config.color }}
-                    dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="96" height="96" viewBox') }}
-                  />
-                }
+                fallback={<MuscleBodyMap muscleGroup={exercise.muscleGroup} size={96} />}
               />
             ) : (
-              <div
-                className="w-24 h-24"
-                dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', 'width="96" height="96" viewBox') }}
-              />
+              <MuscleBodyMap muscleGroup={exercise.muscleGroup} size={96} />
             )}
           </div>
 

@@ -334,7 +334,7 @@ function WeekPlanner() {
 }
 
 function CalendarioTab() {
-  const { workouts, routines, weekPlan, deleteWorkout } = useStore()
+  const { workouts, routines, weekPlan, deleteWorkout, getArchivedRoutineName } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [viewDate, setViewDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
@@ -366,16 +366,20 @@ function CalendarioTab() {
   const gymDays = new Set(gymDayWorkouts.keys())
   const gymDaysCount = gymDays.size
   const totalDays = daysInMonth
-  const restDays = totalDays - gymDaysCount
   const todayInMonth = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
   const daysPassed = todayInMonth > 0 ? todayInMonth : totalDays
+  const restDays = daysPassed - gymDaysCount
   const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
 
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const { current: currentStreak, best: bestStreak } = getStreaks(finishedWorkouts)
 
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
-  const nextMonth = () => setViewDate(new Date(year, month + 1, 1))
+  const nextMonth = () => {
+    if (isCurrentMonth) return
+    setViewDate(new Date(year, month + 1, 1))
+  }
 
   const recentWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
@@ -432,8 +436,11 @@ function CalendarioTab() {
         </h2>
         <button
           onClick={nextMonth}
+          disabled={isCurrentMonth}
           aria-label="Mes siguiente"
-          className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors"
+          className={`w-9 h-9 rounded-full bg-surface border border-border transition-colors ${
+            isCurrentMonth ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white'
+          }`}
         >
           ›
         </button>
@@ -532,7 +539,7 @@ function CalendarioTab() {
         <h3 className="text-sm font-semibold text-gray-400 mb-2">Historial reciente</h3>
         <div className="flex flex-col gap-2">
           {recentWorkouts.map((w) => {
-            const routine = routines.find((r) => r.id === w.routineId)
+            const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
             const date = new Date(w.startedAt)
             const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
             return (

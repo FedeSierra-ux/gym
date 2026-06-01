@@ -14,9 +14,9 @@ export interface Exercise {
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
-  equipmentType: ExerciseEquipment
-  icon: string
+  equipmentType?: ExerciseEquipment
   wgerId?: number    // ID en wger.de API para imágenes
+  instructions?: string[]
 }
 
 export interface RoutineExercise {

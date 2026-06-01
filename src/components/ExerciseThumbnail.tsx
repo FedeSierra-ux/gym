@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { exerciseDetails } from '../data/exerciseDetails'
+import { MuscleBodyMap } from './MuscleBodyMap'
 
 interface Props {
   exercise: Exercise
@@ -124,9 +125,8 @@ export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' 
     <div
       className={`flex-shrink-0 ${rounded} flex items-center justify-center`}
       style={{ width: size, height: size, backgroundColor: config.color + '18' }}
-      dangerouslySetInnerHTML={{
-        __html: exercise.icon.replace('viewBox', `width="${size}" height="${size}" viewBox`)
-      }}
-    />
+    >
+      <MuscleBodyMap muscleGroup={exercise.muscleGroup} size={Math.round(size * 0.75)} />
+    </div>
   )
 }
