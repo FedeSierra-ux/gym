@@ -25,27 +25,75 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
 
   // Read cache synchronously in initializer to avoid setState-in-effect lint error
   const [wgerInfo, setWgerInfo] = useState<WgerInfo | null>(() => {
-    if (!wgerId) return null
-    try {
-      const cached = sessionStorage.getItem(`wger-${wgerId}`)
-      if (cached) return JSON.parse(cached) as WgerInfo
-    } catch { /* ignore */ }
+    if (wgerId) {
+      try {
+        const cached = sessionStorage.getItem(`wger-${wgerId}`)
+        if (cached) return JSON.parse(cached) as WgerInfo
+      } catch { /* ignore */ }
+    } else if (exercise.nameEn) {
+      try {
+        const searchCached = sessionStorage.getItem(`wger-search-${exercise.id}`)
+        if (searchCached) {
+          const { baseId } = JSON.parse(searchCached)
+          if (baseId) {
+            const imgCached = sessionStorage.getItem(`wger-${baseId}`)
+            if (imgCached) return JSON.parse(imgCached) as WgerInfo
+          }
+        }
+      } catch { /* ignore */ }
+    }
     return null
   })
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
-    if (!wgerId || wgerInfo) return
-    fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
-      .then(r => r.json())
-      .then(data => {
-        const imageUrl = data.images?.[0]?.image ?? null
+    if (wgerInfo) return
+    if (wgerId) {
+      fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
+        .then(r => r.json())
+        .then(data => {
+          const imageUrl = data.images?.[0]?.image ?? null
+          const info: WgerInfo = { imageUrl: imageUrl ?? undefined }
+          sessionStorage.setItem(`wger-${wgerId}`, JSON.stringify(info))
+          setWgerInfo(info)
+        })
+        .catch(() => { /* ignore */ })
+      return
+    }
+    if (!exercise.nameEn) return
+    const searchAndFetch = async () => {
+      try {
+        const searchKey = `wger-search-${exercise.id}`
+        let baseId: number | null = null
+        const searchCached = sessionStorage.getItem(searchKey)
+        if (searchCached) {
+          baseId = JSON.parse(searchCached).baseId ?? null
+        } else {
+          const res = await fetch(
+            `https://wger.de/api/v2/exercise/search/?term=${encodeURIComponent(exercise.nameEn!)}&language=english&format=json`
+          )
+          const data = await res.json()
+          baseId = data.suggestions?.[0]?.data?.base_id ?? null
+          sessionStorage.setItem(searchKey, JSON.stringify({ baseId }))
+        }
+        if (!baseId) return
+        const imgKey = `wger-${baseId}`
+        const imgCached = sessionStorage.getItem(imgKey)
+        if (imgCached) {
+          const data = JSON.parse(imgCached) as WgerInfo
+          if (data.imageUrl) setWgerInfo(data)
+          return
+        }
+        const res = await fetch(`https://wger.de/api/v2/exerciseinfo/${baseId}/?format=json`)
+        const data = await res.json()
+        const imageUrl: string | null = data.images?.[0]?.image ?? null
         const info: WgerInfo = { imageUrl: imageUrl ?? undefined }
-        sessionStorage.setItem(`wger-${wgerId}`, JSON.stringify(info))
-        setWgerInfo(info)
-      })
-      .catch(() => { /* ignore */ })
-  }, [wgerId]) // eslint-disable-line react-hooks/exhaustive-deps
+        sessionStorage.setItem(imgKey, JSON.stringify(info))
+        if (imageUrl) setWgerInfo(info)
+      } catch { /* ignore */ }
+    }
+    void searchAndFetch()
+  }, [wgerId, exercise.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const imageUrl = wgerInfo?.imageUrl
 
