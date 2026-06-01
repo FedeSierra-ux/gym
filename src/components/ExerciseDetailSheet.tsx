@@ -147,7 +147,7 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
           <div className="mx-5 mb-4 rounded-2xl overflow-hidden h-44 flex items-center justify-center border border-border"
             style={{ background: config.color + '08' }}
           >
-            {wgerId && !imgError && imageUrl ? (
+            {imageUrl && !imgError ? (
               <img
                 src={imageUrl}
                 alt={displayName}
