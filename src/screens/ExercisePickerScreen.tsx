@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import type { MuscleGroup } from '../types'
+import type { MuscleGroup, Exercise } from '../types'
+import { MuscleBodyMap } from '../components/MuscleBodyMap'
+import { ExerciseModal } from '../components/ExerciseModal'
 
 interface ExercisePickerScreenProps {
   routineName: string
@@ -17,6 +19,7 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
   const { exercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null)
+  const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
   const addedIds = new Set(routine?.exercises.map((e) => e.exerciseId) ?? [])
@@ -90,11 +93,13 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
                 key={ex.id}
                 className="bg-card rounded-xl border border-border p-3 flex items-center gap-3"
               >
-                <div
+                <button
+                  onClick={() => setModalExercise(ex)}
                   className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: cfg.color + '15' }}
-                  dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="48" height="48" viewBox') }}
-                />
+                >
+                  <MuscleBodyMap muscleGroup={ex.muscleGroup} size={36} />
+                </button>
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
@@ -134,6 +139,9 @@ export function ExercisePickerScreen({ routineName }: ExercisePickerScreenProps)
           )}
         </div>
       </div>
+      {modalExercise && (
+        <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
+      )}
     </div>
   )
 }

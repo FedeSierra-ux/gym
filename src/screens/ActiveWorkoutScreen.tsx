@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import { MuscleBodyMap } from '../components/MuscleBodyMap'
+import { ExerciseModal } from '../components/ExerciseModal'
+import type { Exercise } from '../types'
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
   const { exerciseTips, setExerciseTip } = useStore()
@@ -81,6 +84,7 @@ export function ActiveWorkoutScreen() {
 
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
 
   useEffect(() => {
     if (!activeWorkout) return
@@ -156,11 +160,13 @@ export function ActiveWorkoutScreen() {
             return (
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
                 <div className="p-3 border-b border-border flex items-center gap-3">
-                  <div
+                  <button
+                    onClick={() => setModalExercise(ex)}
                     className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="64" height="64" viewBox') }}
-                  />
+                  >
+                    <MuscleBodyMap muscleGroup={ex.muscleGroup} size={48} />
+                  </button>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
                     <span
@@ -270,6 +276,9 @@ export function ActiveWorkoutScreen() {
       </div>
 
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
+      {modalExercise && (
+        <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
+      )}
     </div>
   )
 }

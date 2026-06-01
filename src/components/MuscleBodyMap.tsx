@@ -28,7 +28,6 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
   const glowId = `glow-${muscleGroup}-${size}`
 
   const inactive = { fill: '#1e1e2c', stroke: '#2a2a3e', opacity: 0.7 }
-  const active = { fill: color, opacity: 0.9 }
 
   function ActiveRegion({ children }: { children: React.ReactNode }) {
     return (

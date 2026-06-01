@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
+import { MuscleBodyMap } from '../components/MuscleBodyMap'
+import { ExerciseModal } from '../components/ExerciseModal'
+import type { Exercise } from '../types'
 
 export function RoutineDetailScreen() {
   const {
@@ -19,6 +22,7 @@ export function RoutineDetailScreen() {
   } = useStore()
 
   const [editMode, setEditMode] = useState(false)
+  const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
   if (!routine) return null
@@ -131,11 +135,13 @@ export function RoutineDetailScreen() {
                     <span className="text-gray-600 text-lg cursor-grab select-none">⠷</span>
                   )}
 
-                  <div
+                  <button
+                    onClick={() => setModalExercise(ex)}
                     className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="48" height="48" viewBox') }}
-                  />
+                  >
+                    <MuscleBodyMap muscleGroup={ex.muscleGroup} size={36} />
+                  </button>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
@@ -177,6 +183,9 @@ export function RoutineDetailScreen() {
           <span className="text-sm">Agregar ejercicio</span>
         </button>
       </div>
+      {modalExercise && (
+        <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
+      )}
     </div>
   )
 }
