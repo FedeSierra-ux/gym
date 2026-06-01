@@ -1,7 +1,19 @@
 import { useState } from 'react'
-import { useStore } from '../store/useStore'
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts'
+import { useStore, useAllExercises } from '../store/useStore'
+import { muscleGroupConfig } from '../data/muscleGroups'
+import type { MuscleGroup } from '../types'
 
 type Period = '3m' | '6m' | '1a' | 'todo'
+type Tab = 'fuerza' | 'volumen'
 
 const MONTH_NAMES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
@@ -23,9 +35,115 @@ interface ExerciseProgress {
   changePct: number
 }
 
+interface ChartDataPoint {
+  label: string
+  kg: number
+}
+
+interface TooltipPayloadEntry {
+  value: number
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayloadEntry[]
+  label?: string
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null
+  return (
+    <div
+      style={{
+        background: '#111124',
+        border: '1px solid rgba(0,255,136,0.2)',
+        borderRadius: 8,
+        padding: '6px 10px',
+      }}
+    >
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, margin: 0 }}>{label}</p>
+      <p style={{ color: '#fff', fontSize: 12, fontWeight: 700, margin: 0 }}>
+        {payload[0].value} kg
+      </p>
+    </div>
+  )
+}
+
+
+const MUSCLE_ORDER: MuscleGroup[] = ['pecho', 'espalda', 'hombros', 'biceps', 'triceps', 'piernas', 'gluteos', 'core']
+
+function MuscleVolumeSection({ period }: { period: Period }) {
+  const { workouts } = useStore()
+  const exercises = useAllExercises()
+
+  const monthsBack = getMonthsBack(period)
+  const now = new Date()
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1).getTime()
+
+  // Count working sets per muscle group
+  const volumeMap: Record<string, number> = {}
+  for (const w of workouts) {
+    if (!w.finishedAt || w.startedAt < cutoff) continue
+    for (const wex of w.exercises) {
+      const ex = exercises.find(e => e.id === wex.exerciseId)
+      if (!ex) continue
+      volumeMap[ex.muscleGroup] = (volumeMap[ex.muscleGroup] ?? 0) + wex.sets.length
+    }
+  }
+
+  const chartData = MUSCLE_ORDER
+    .filter(mg => volumeMap[mg] > 0)
+    .map(mg => ({
+      name: muscleGroupConfig[mg].label,
+      sets: volumeMap[mg],
+      color: muscleGroupConfig[mg].color,
+      mg,
+    }))
+    .sort((a, b) => b.sets - a.sets)
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <p className="text-gray-600 text-sm">Sin datos en el período seleccionado</p>
+      </div>
+    )
+  }
+
+  const maxSets = Math.max(...chartData.map(d => d.sets))
+
+  return (
+    <div className="flex flex-col gap-3">
+      {chartData.map(item => (
+        <div key={item.mg} className="flex items-center gap-3">
+          <div className="w-20 flex-shrink-0 text-right">
+            <span className="text-xs font-medium" style={{ color: item.color }}>
+              {muscleGroupConfig[item.mg].emoji} {item.name}
+            </span>
+          </div>
+          <div className="flex-1 h-6 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(item.sets / maxSets) * 100}%`,
+                background: `linear-gradient(90deg, ${item.color}90, ${item.color})`,
+                minWidth: 4,
+              }}
+            />
+          </div>
+          <div className="w-10 flex-shrink-0">
+            <span className="text-xs font-bold text-white">{item.sets}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ProgresoScreen() {
-  const { workouts, exercises } = useStore()
+  const { workouts } = useStore()
+  const exercises = useAllExercises()
   const [period, setPeriod] = useState<Period>('6m')
+  const [tab, setTab] = useState<Tab>('fuerza')
 
   const monthsBack = getMonthsBack(period)
   const now = new Date()
@@ -78,15 +196,32 @@ export function ProgresoScreen() {
 
   progressList.sort((a, b) => b.change - a.change)
 
-  const barCount = Math.min(monthsBack, 6)
-  const barsToShow = months.slice(-barCount)
-
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex-shrink-0 px-4 pt-12 pb-4">
         <h1 className="text-2xl font-bold text-white">Progreso</h1>
 
-        <div className="flex bg-surface rounded-xl p-1 border border-border mt-4">
+        {/* Tabs */}
+        <div
+          className="flex mt-4 rounded-xl overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          {([['fuerza', '💪 Fuerza'], ['volumen', '📊 Volumen muscular']] as [Tab, string][]).map(([t, label]) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="flex-1 py-2.5 text-sm font-semibold transition-all"
+              style={tab === t ? {
+                background: 'rgba(0,255,136,0.12)',
+                color: 'var(--primary)',
+              } : { color: 'rgba(255,255,255,0.35)' }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex bg-surface rounded-xl p-1 border border-border mt-3">
           {(['3m', '6m', '1a', 'todo'] as Period[]).map((p) => (
             <button
               key={p}
@@ -101,8 +236,14 @@ export function ProgresoScreen() {
         </div>
       </div>
 
-      <div className="flex-1 scroll-area px-4 pb-4">
-        {progressList.length === 0 ? (
+      <div className="flex-1 min-h-0 scroll-area px-4 pb-4">
+        {tab === 'volumen' ? (
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <h3 className="font-bold text-white text-sm mb-1">Series por grupo muscular</h3>
+            <p className="text-[11px] text-gray-600 mb-4">Total de series completadas en el período</p>
+            <MuscleVolumeSection period={period} />
+          </div>
+        ) : progressList.length === 0 ? (
           <div className="flex items-center justify-center h-48">
             <div className="text-center">
               <p className="text-gray-400 text-sm">No hay datos de progreso aún</p>
@@ -115,18 +256,12 @@ export function ProgresoScreen() {
               const ex = exercises.find((e) => e.id === ep.exerciseId)
               if (!ex) return null
 
-              const maxKg = Math.max(...ep.months.map((m) => m.maxKg), 1)
-              const barsData = ep.months.slice(-barCount).map((m, i) => ({
-                ...m,
-                isLast: i === barCount - 1,
-                label: barsToShow[i]?.label ?? m.label,
-              }))
+              const chartData: ChartDataPoint[] = ep.months
+                .filter((m) => m.maxKg > 0)
+                .map((m) => ({ label: m.label, kg: m.maxKg }))
 
-              const firstMonthLabel = MONTH_NAMES_SHORT[new Date(
-                [...workouts]
-                  .filter((w) => w.exercises.some((e) => e.exerciseId === ep.exerciseId))
-                  .sort((a, b) => a.startedAt - b.startedAt)[0]?.startedAt ?? Date.now()
-              ).getMonth()]
+              // Use the first month with data inside the filtered period, not the global first workout
+              const firstMonthLabel = ep.months.find((m) => m.maxKg > 0)?.label ?? ''
 
               return (
                 <div key={ep.exerciseId} className="bg-card rounded-2xl border border-border p-4">
@@ -152,29 +287,44 @@ export function ProgresoScreen() {
                     )}
                   </div>
 
-                  <div className="flex items-end gap-2 h-20">
-                    {barsData.map((bar, i) => {
-                      const heightPct = bar.maxKg > 0 ? (bar.maxKg / maxKg) * 100 : 3
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                          <div className="w-full flex items-end" style={{ height: '64px' }}>
-                            <div
-                              className="w-full rounded-t-lg transition-all"
-                              style={{
-                                height: `${heightPct}%`,
-                                backgroundColor: bar.isLast
-                                  ? '#00ff88'
-                                  : bar.maxKg > 0
-                                  ? '#00ff8840'
-                                  : '#1e1e2a',
-                                minHeight: '4px',
-                              }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-600">{bar.label}</span>
-                        </div>
-                      )
-                    })}
+                  <div style={{ height: 80 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={chartData}
+                        margin={{ top: 4, right: 0, left: -32, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id={`grad-${ep.exerciseId}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(0,255,136,0.2)" />
+                            <stop offset="100%" stopColor="rgba(0,255,136,0)" />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.3)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          domain={['auto', 'auto']}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area
+                          type="monotone"
+                          dataKey="kg"
+                          stroke="#00ff88"
+                          strokeWidth={2}
+                          fill={`url(#grad-${ep.exerciseId})`}
+                          dot={false}
+                          activeDot={{ r: 4, fill: '#00ff88', stroke: 'none' }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )
