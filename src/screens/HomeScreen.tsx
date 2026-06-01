@@ -28,7 +28,7 @@ export function HomeScreen() {
 
   const lastRoutineEx = lastRoutine?.exercises.length ?? 1
   const lastWorkoutEx = lastWorkout?.exercises.length ?? 0
-  const completionPct = Math.round((lastWorkoutEx / Math.max(lastRoutineEx, 1)) * 100)
+  const completionPct = Math.min(100, Math.round((lastWorkoutEx / Math.max(lastRoutineEx, 1)) * 100))
 
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const monthWorkouts = workouts.filter((w) => w.startedAt >= startOfMonth && w.finishedAt)

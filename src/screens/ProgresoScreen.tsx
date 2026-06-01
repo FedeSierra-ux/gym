@@ -122,9 +122,11 @@ export function ProgresoScreen() {
                 label: barsToShow[i]?.label ?? m.label,
               }))
 
-              const firstMonthLabel = MONTH_NAMES_SHORT[new Date(workouts.find(
-                (w) => w.exercises.some((e) => e.exerciseId === ep.exerciseId)
-              )?.startedAt ?? Date.now()).getMonth()]
+              const firstMonthLabel = MONTH_NAMES_SHORT[new Date(
+                [...workouts]
+                  .filter((w) => w.exercises.some((e) => e.exerciseId === ep.exerciseId))
+                  .sort((a, b) => a.startedAt - b.startedAt)[0]?.startedAt ?? Date.now()
+              ).getMonth()]
 
               return (
                 <div key={ep.exerciseId} className="bg-card rounded-2xl border border-border p-4">

@@ -12,6 +12,7 @@ export function RoutineDetailScreen() {
     setActiveRoutineId,
     startWorkout,
     removeExerciseFromRoutine,
+    deleteRoutine,
     updateRoutine,
     showExercisePicker,
     setShowExercisePicker,
@@ -76,7 +77,13 @@ export function RoutineDetailScreen() {
 
       <div className="flex-shrink-0 px-4 py-3 flex gap-3 border-b border-border">
         <button
-          onClick={() => startWorkout(routine.id)}
+          onClick={() => {
+            if (routine.exercises.length === 0) {
+              alert('Agrega al menos un ejercicio antes de iniciar.')
+              return
+            }
+            startWorkout(routine.id)
+          }}
           className="flex-1 bg-primary text-black font-bold py-3 rounded-xl text-sm hover:bg-primary/90 active:scale-95 transition-transform"
         >
           ▶ Iniciar
@@ -91,6 +98,19 @@ export function RoutineDetailScreen() {
         >
           {editMode ? '✓ Listo' : '✏️ Editar'}
         </button>
+        {editMode && (
+          <button
+            onClick={() => {
+              if (confirm('¿Eliminar esta rutina? Esta acción no se puede deshacer.')) {
+                deleteRoutine(routine.id)
+                setActiveRoutineId(null)
+              }
+            }}
+            className="px-3 py-3 rounded-xl text-sm font-semibold border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            🗑
+          </button>
+        )}
       </div>
 
       <div className="flex-1 scroll-area px-4 py-3">

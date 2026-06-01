@@ -33,14 +33,16 @@ function CalendarioTab() {
 
   const totalDays = daysInMonth
   const gymDaysCount = gymDays.size
-  const restDays = totalDays - gymDaysCount
   const today = new Date()
   const todayInMonth = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
   const daysPassed = todayInMonth > 0 ? todayInMonth : totalDays
+  const restDays = daysPassed - gymDaysCount
   const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
 
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
   const nextMonth = () => {
+    if (isCurrentMonth) return
     const next = new Date(year, month + 1, 1)
     if (next <= new Date()) setViewDate(next)
   }
@@ -59,7 +61,13 @@ function CalendarioTab() {
         <h2 className="text-base font-bold text-white">
           {MONTH_NAMES[month]} {year}
         </h2>
-        <button onClick={nextMonth} className="w-9 h-9 rounded-full bg-surface border border-border text-gray-400 hover:text-white transition-colors">
+        <button
+          onClick={nextMonth}
+          disabled={isCurrentMonth}
+          className={`w-9 h-9 rounded-full bg-surface border border-border transition-colors ${
+            isCurrentMonth ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white'
+          }`}
+        >
           ›
         </button>
       </div>

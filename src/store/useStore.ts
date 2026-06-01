@@ -118,7 +118,7 @@ export const useStore = create<AppState>()(
         })),
 
       startWorkout: (routineId) => {
-        const { routines, workouts, exercises: exDb } = get()
+        const { routines, workouts } = get()
         const routine = routines.find((r) => r.id === routineId)
         if (!routine) return
 
@@ -128,9 +128,6 @@ export const useStore = create<AppState>()(
             .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
           const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
-
-          const ex = exDb.find((e) => e.id === re.exerciseId)
-          void ex
 
           return {
             exerciseId: re.exerciseId,
@@ -187,14 +184,16 @@ export const useStore = create<AppState>()(
               }
             : s.activeWorkout.lastCompletedSet
 
+          const restSeconds = s.activeWorkout.restTotalSeconds
+
           return {
             activeWorkout: {
               ...s.activeWorkout,
               exercises,
               lastCompletedSet,
               restTimerVisible: completedSet.completed,
-              restSecondsLeft: 120,
-              restTotalSeconds: 120,
+              restSecondsLeft: restSeconds,
+              restTotalSeconds: restSeconds,
             },
           }
         }),
@@ -214,22 +213,24 @@ export const useStore = create<AppState>()(
         }),
 
       finishWorkout: () => {
-        const { activeWorkout, routines, prs } = get()
+        const { activeWorkout, prs } = get()
         if (!activeWorkout) return
 
         const finishedAt = Date.now()
         const durationMin = Math.round((finishedAt - activeWorkout.startedAt) / 60000)
 
-        const workoutExercises = activeWorkout.exercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          sets: ex.sets
-            .filter((s) => s.completed)
-            .map((s) => ({
-              kg: parseFloat(s.kg) || 0,
-              reps: parseInt(s.reps) || 0,
-              completedAt: finishedAt,
-            })),
-        }))
+        const workoutExercises = activeWorkout.exercises
+          .map((ex) => ({
+            exerciseId: ex.exerciseId,
+            sets: ex.sets
+              .filter((s) => s.completed)
+              .map((s) => ({
+                kg: parseFloat(s.kg) || 0,
+                reps: parseInt(s.reps) || 0,
+                completedAt: finishedAt,
+              })),
+          }))
+          .filter((ex) => ex.sets.length > 0)
 
         const newWorkout: Workout = {
           id: `workout-${Date.now()}`,
@@ -240,11 +241,6 @@ export const useStore = create<AppState>()(
           kcal: Math.round(durationMin * 6.5),
           exercises: workoutExercises,
         }
-
-        const totalSets = workoutExercises.reduce((acc, ex) => acc + ex.sets.length, 0)
-        const routineExerciseCount = routines.find((r) => r.id === activeWorkout.routineId)?.exercises.length ?? 1
-        void totalSets
-        void routineExerciseCount
 
         const newPrs = [...prs]
         for (const ex of workoutExercises) {
