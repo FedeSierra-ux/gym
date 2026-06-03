@@ -2,6 +2,33 @@ import { useEffect, useState, useRef } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import type { Exercise } from '../types'
+
+function ExerciseImage({ exercise, color, size }: { exercise: Exercise; color: string; size: number }) {
+  const [failed, setFailed] = useState(false)
+  const cls = `w-${size} h-${size} rounded-xl flex-shrink-0`
+
+  if (exercise.image && !failed) {
+    return (
+      <div className={`${cls} overflow-hidden`} style={{ backgroundColor: color + '15' }}>
+        <img
+          src={exercise.image}
+          alt={exercise.nameEs}
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`${cls} flex items-center justify-center`}
+      style={{ backgroundColor: color + '15' }}
+      dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', `width="${size * 4}" height="${size * 4}" viewBox`) }}
+    />
+  )
+}
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
   const { exerciseTips, setExerciseTip } = useStore()
@@ -156,11 +183,7 @@ export function ActiveWorkoutScreen() {
             return (
               <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
                 <div className="p-3 border-b border-border flex items-center gap-3">
-                  <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="64" height="64" viewBox') }}
-                  />
+                  <ExerciseImage exercise={ex} color={config.color} size={16} />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
                     <span

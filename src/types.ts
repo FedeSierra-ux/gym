@@ -16,6 +16,7 @@ export interface Exercise {
   primaryMuscles: string[]
   equipment: string
   icon: string
+  image?: string
 }
 
 export interface RoutineExercise {

@@ -2,6 +2,33 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
+import type { Exercise } from '../types'
+
+function ExerciseImage({ exercise, color, size }: { exercise: Exercise; color: string; size: number }) {
+  const [failed, setFailed] = useState(false)
+  const cls = `w-${size} h-${size} rounded-lg flex-shrink-0`
+
+  if (exercise.image && !failed) {
+    return (
+      <div className={`${cls} overflow-hidden`} style={{ backgroundColor: color + '15' }}>
+        <img
+          src={exercise.image}
+          alt={exercise.nameEs}
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`${cls} flex items-center justify-center`}
+      style={{ backgroundColor: color + '15' }}
+      dangerouslySetInnerHTML={{ __html: exercise.icon.replace('viewBox', `width="${size * 4}" height="${size * 4}" viewBox`) }}
+    />
+  )
+}
 
 export function RoutineDetailScreen() {
   const {
@@ -111,11 +138,7 @@ export function RoutineDetailScreen() {
                     <span className="text-gray-600 text-lg cursor-grab select-none">⠷</span>
                   )}
 
-                  <div
-                    className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: config.color + '15' }}
-                    dangerouslySetInnerHTML={{ __html: ex.icon.replace('viewBox', 'width="48" height="48" viewBox') }}
-                  />
+                  <ExerciseImage exercise={ex} color={config.color} size={12} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
