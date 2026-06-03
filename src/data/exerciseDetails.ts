@@ -35,6 +35,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'pecho-03': {
     nameArg: 'Press de Mancuernas',
+    wgerId: 193,
     instructions: [
       'Acostado en banco plano, mancuernas a la altura del pecho.',
       'Empujá las mancuernas hacia arriba hasta extender los brazos.',
@@ -195,6 +196,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'triceps-01': {
     nameArg: 'Extensión Tríceps Polea',
+    wgerId: 84,
     instructions: [
       'De pie frente a la polea alta, cuerda o barra recta.',
       'Codos pegados al torso, extendé los antebrazos hacia abajo.',
@@ -255,6 +257,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-04': {
     nameArg: 'Extensión de Cuádriceps',
+    wgerId: 248,
     instructions: [
       'Sentado en la máquina, la almohadilla en el empeine.',
       'Extendé las piernas hasta que queden rectas.',
@@ -266,6 +269,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-05': {
     nameArg: 'Curl de Isquiotibiales',
+    wgerId: 24,
     instructions: [
       'Acostado en la máquina, la almohadilla detrás de los tobillos.',
       'Curvá las piernas hacia los glúteos.',
@@ -290,6 +294,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-07': {
     nameArg: 'Zancadas',
+    wgerId: 45,
     instructions: [
       'De pie, dá un paso largo hacia adelante.',
       'Bajá la rodilla trasera hasta casi tocar el piso.',
@@ -301,6 +306,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-08': {
     nameArg: 'Sentadilla Búlgara',
+    wgerId: 211,
     instructions: [
       'Pie trasero apoyado en el banco, pie delantero adelantado.',
       'Bajá la rodilla trasera hacia el piso manteniendo el torso erguido.',
@@ -312,6 +318,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'gluteos-01': {
     nameArg: 'Hip Thrust',
+    wgerId: 228,
     instructions: [
       'Espalda apoyada en el banco, barra sobre las caderas con protección.',
       'Pies apoyados en el piso a ancho de hombros.',
@@ -324,6 +331,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'gluteos-03': {
     nameArg: 'Patada de Glúteos en Cable',
+    wgerId: 209,
     instructions: [
       'De pie frente a la polea baja, tobillera en el tobillo.',
       'Extendé la pierna hacia atrás manteniendo el torso estable.',
@@ -346,6 +354,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-01': {
     nameArg: 'Rueda Abdominal',
+    wgerId: 38,
     instructions: [
       'Arrodillado, rueda en el piso, brazos extendidos.',
       'Rodá la rueda hacia adelante extendiendo el cuerpo.',
@@ -357,6 +366,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-02': {
     nameArg: 'Abdominales en Polea',
+    wgerId: 100,
     instructions: [
       'Arrodillado frente a la polea alta, cuerda detrás de la cabeza.',
       'Curvá el torso hacia abajo contrayendo el abdomen.',
@@ -368,6 +378,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-03': {
     nameArg: 'Plancha',
+    wgerId: 47,
     instructions: [
       'Apoyate en antebrazos y puntas de los pies.',
       'Cuerpo recto como una tabla, glúteos apretados.',
@@ -379,6 +390,7 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-10': {
     nameArg: 'Dead Bug',
+    wgerId: 113,
     instructions: [
       'Acostado boca arriba, brazos extendidos hacia el techo, caderas y rodillas a 90°.',
       'Extendé un brazo y la pierna contraria hacia el piso.',
