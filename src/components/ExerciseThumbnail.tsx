@@ -10,6 +10,15 @@ interface Props {
   rounded?: string
 }
 
+const LS = {
+  get(key: string) {
+    try { return localStorage.getItem(key) } catch { return null }
+  },
+  set(key: string, value: string) {
+    try { localStorage.setItem(key, value) } catch { /* quota exceeded */ }
+  },
+}
+
 async function resolveWgerId(exercise: Exercise): Promise<number | null> {
   const direct = exercise.wgerId ?? exerciseDetails[exercise.id]?.wgerId
   if (direct) return direct
@@ -17,13 +26,11 @@ async function resolveWgerId(exercise: Exercise): Promise<number | null> {
   if (!exercise.nameEn) return null
 
   const searchKey = `wger-search-${exercise.id}`
-  try {
-    const cached = sessionStorage.getItem(searchKey)
-    if (cached) {
-      const data = JSON.parse(cached)
-      return data.baseId ?? null
-    }
-  } catch { /* ignore */ }
+  const cached = LS.get(searchKey)
+  if (cached) {
+    const data = JSON.parse(cached)
+    return data.baseId ?? null
+  }
 
   try {
     const res = await fetch(
@@ -31,7 +38,7 @@ async function resolveWgerId(exercise: Exercise): Promise<number | null> {
     )
     const data = await res.json()
     const baseId: number | null = data.suggestions?.[0]?.data?.base_id ?? null
-    sessionStorage.setItem(searchKey, JSON.stringify({ baseId }))
+    LS.set(searchKey, JSON.stringify({ baseId }))
     return baseId
   } catch {
     return null
@@ -43,55 +50,50 @@ async function resolveImageUrl(exercise: Exercise): Promise<string | null> {
   if (!wgerId) return null
 
   const key = `wger-${wgerId}`
-  try {
-    const cached = sessionStorage.getItem(key)
-    if (cached) {
-      const data = JSON.parse(cached)
-      return data.imageUrl ?? null
-    }
-  } catch { /* ignore */ }
+  const cached = LS.get(key)
+  if (cached) {
+    const data = JSON.parse(cached)
+    return data.imageUrl ?? null
+  }
 
   try {
     const res = await fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
     const data = await res.json()
     const url: string | null = data.images?.[0]?.image ?? null
-    sessionStorage.setItem(key, JSON.stringify({ imageUrl: url }))
+    LS.set(key, JSON.stringify({ imageUrl: url }))
     return url
   } catch {
     return null
   }
 }
 
-export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' }: Props) {
+function readCachedUrl(exercise: Exercise): string | null {
   const wgerId = exercise.wgerId ?? exerciseDetails[exercise.id]?.wgerId
-
-  const [imageUrl, setImageUrl] = useState<string | null>(() => {
-    if (wgerId) {
-      try {
-        const cached = sessionStorage.getItem(`wger-${wgerId}`)
-        if (cached) {
-          const data = JSON.parse(cached)
+  if (wgerId) {
+    const cached = LS.get(`wger-${wgerId}`)
+    if (cached) {
+      const data = JSON.parse(cached)
+      return data.imageUrl ?? null
+    }
+  }
+  if (exercise.nameEn) {
+    const searchCached = LS.get(`wger-search-${exercise.id}`)
+    if (searchCached) {
+      const { baseId } = JSON.parse(searchCached)
+      if (baseId) {
+        const imgCached = LS.get(`wger-${baseId}`)
+        if (imgCached) {
+          const data = JSON.parse(imgCached)
           return data.imageUrl ?? null
         }
-      } catch { /* ignore */ }
-    } else if (exercise.nameEn) {
-      try {
-        const searchCached = sessionStorage.getItem(`wger-search-${exercise.id}`)
-        if (searchCached) {
-          const { baseId } = JSON.parse(searchCached)
-          if (baseId) {
-            const imgCached = sessionStorage.getItem(`wger-${baseId}`)
-            if (imgCached) {
-              const data = JSON.parse(imgCached)
-              return data.imageUrl ?? null
-            }
-          }
-        }
-      } catch { /* ignore */ }
+      }
     }
-    return null
-  })
+  }
+  return null
+}
 
+export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' }: Props) {
+  const [imageUrl, setImageUrl] = useState<string | null>(() => readCachedUrl(exercise))
   const [failed, setFailed] = useState(false)
   const config = muscleGroupConfig[exercise.muscleGroup]
 
