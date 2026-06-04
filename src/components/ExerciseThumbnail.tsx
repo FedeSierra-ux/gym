@@ -45,7 +45,7 @@ async function resolveWgerId(exercise: Exercise): Promise<number | null> {
   }
 }
 
-async function resolveImageUrl(exercise: Exercise): Promise<string | null> {
+async function resolveWgerImageUrl(exercise: Exercise): Promise<string | null> {
   const wgerId = await resolveWgerId(exercise)
   if (!wgerId) return null
 
@@ -67,39 +67,16 @@ async function resolveImageUrl(exercise: Exercise): Promise<string | null> {
   }
 }
 
-function readCachedUrl(exercise: Exercise): string | null {
-  const wgerId = exercise.wgerId ?? exerciseDetails[exercise.id]?.wgerId
-  if (wgerId) {
-    const cached = LS.get(`wger-${wgerId}`)
-    if (cached) {
-      const data = JSON.parse(cached)
-      return data.imageUrl ?? null
-    }
-  }
-  if (exercise.nameEn) {
-    const searchCached = LS.get(`wger-search-${exercise.id}`)
-    if (searchCached) {
-      const { baseId } = JSON.parse(searchCached)
-      if (baseId) {
-        const imgCached = LS.get(`wger-${baseId}`)
-        if (imgCached) {
-          const data = JSON.parse(imgCached)
-          return data.imageUrl ?? null
-        }
-      }
-    }
-  }
-  return null
-}
-
 export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' }: Props) {
-  const [imageUrl, setImageUrl] = useState<string | null>(() => readCachedUrl(exercise))
+  const initialUrl = exercise.image ?? null
+  const [imageUrl, setImageUrl] = useState<string | null>(initialUrl)
   const [failed, setFailed] = useState(false)
   const config = muscleGroupConfig[exercise.muscleGroup]
 
   useEffect(() => {
-    if (imageUrl || failed) return
-    resolveImageUrl(exercise)
+    // Base exercises have image hardcoded — no API call needed
+    if (exercise.image || imageUrl || failed) return
+    resolveWgerImageUrl(exercise)
       .then(url => {
         if (url) setImageUrl(url)
         else setFailed(true)
@@ -117,7 +94,7 @@ export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' 
           src={imageUrl}
           alt={exercise.nameEs}
           className="w-full h-full object-contain"
-          onError={() => setFailed(true)}
+          onError={() => { setImageUrl(null); setFailed(true) }}
         />
       </div>
     )

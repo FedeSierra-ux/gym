@@ -1,10 +1,13 @@
 import type { Exercise } from '../types'
 
+const IMG = (id: string) => `https://static.exercisedb.dev/media/${id}.gif`
+
 export const exercises: Exercise[] = [
   // PECHO (10)
   {
     id: 'pecho-01', nameEs: 'Press de Banca', nameEn: 'Barbell Bench Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral mayor'], equipment: 'Barra',
+    image: IMG('EIeI8Vf'),
     instructions: [
       'Acuéstate en el banco con los pies apoyados en el suelo.',
       'Agarra la barra con las manos a más de la anchura de los hombros.',
@@ -16,6 +19,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-02', nameEs: 'Press Inclinado DB', nameEn: 'Incline Dumbbell Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral superior'], equipment: 'Mancuernas',
+    image: IMG('rDAiRf9'),
     instructions: [
       'Ajusta el banco a 30-45° de inclinación.',
       'Coge las mancuernas a la altura del pecho con los codos a 45°.',
@@ -27,6 +31,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-03', nameEs: 'Press de Mancuernas', nameEn: 'Dumbbell Bench Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral mayor'], equipment: 'Mancuernas',
+    image: IMG('SpYC0Kp'),
     instructions: [
       'Acuéstate en banco plano con una mancuerna en cada mano.',
       'Sube las mancuernas hasta que casi se toquen arriba.',
@@ -38,6 +43,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-04', nameEs: 'Aperturas Cable', nameEn: 'Cable Crossover', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral'], equipment: 'Cable',
+    image: IMG('UKWTJWR'),
     instructions: [
       'Coloca las poleas en la posición más alta.',
       'De pie o inclinado, sujeta un cable en cada mano.',
@@ -49,6 +55,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-05', nameEs: 'Aperturas DB', nameEn: 'Dumbbell Flyes', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral'], equipment: 'Mancuernas',
+    image: IMG('yz9nUhF'),
     instructions: [
       'Acuéstate en banco plano con mancuernas extendidas sobre el pecho.',
       'Abre los brazos hacia los lados manteniendo una ligera flexión en el codo.',
@@ -60,6 +67,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-06', nameEs: 'Fondos en Paralelas', nameEn: 'Chest Dips', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral inferior'], equipment: 'Paralelas',
+    image: IMG('O2K9Vb5'),
     instructions: [
       'Sujétate en las paralelas con los brazos extendidos.',
       'Inclínate ligeramente hacia adelante para enfocar el pecho.',
@@ -71,6 +79,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-07', nameEs: 'Flexiones', nameEn: 'Push-Up', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral'], equipment: 'Peso corporal',
+    image: IMG('I4hDWkc'),
     instructions: [
       'Coloca las manos un poco más anchas que los hombros.',
       'Mantén el cuerpo en línea recta de cabeza a pies.',
@@ -82,6 +91,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-08', nameEs: 'Press Declinado', nameEn: 'Decline Bench Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral inferior'], equipment: 'Barra',
+    image: IMG('GrO65fd'),
     instructions: [
       'Ajusta el banco en declive y asegura los pies.',
       'Agarra la barra con los codos ligeramente más cerrados.',
@@ -93,6 +103,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-09', nameEs: 'Pec Deck', nameEn: 'Pec Deck Fly', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral'], equipment: 'Máquina',
+    image: IMG('v3xmPAR'),
     instructions: [
       'Siéntate en la máquina y ajusta el asiento a la altura adecuada.',
       'Coloca los antebrazos en los acolchados laterales.',
@@ -104,6 +115,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-10', nameEs: 'Press Inclinado Barra', nameEn: 'Incline Barbell Bench Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral superior'], equipment: 'Barra',
+    image: IMG('3TZduzM'),
     instructions: [
       'Ajusta el banco a 30-45° de inclinación.',
       'Agarra la barra a la misma anchura que el press de banca.',
@@ -117,6 +129,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-01', nameEs: 'Peso Muerto', nameEn: 'Deadlift', muscleGroup: 'espalda',
     primaryMuscles: ['Erector espinal', 'Trapecios'], equipment: 'Barra',
+    image: IMG('ila4NZS'),
     instructions: [
       'Párate con los pies a la anchura de caderas y la barra sobre los pies.',
       'Agáchate manteniendo la espalda recta y agarra la barra.',
@@ -128,6 +141,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-02', nameEs: 'Remo con Barra', nameEn: 'Bent Over Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Romboides'], equipment: 'Barra',
+    image: IMG('eZyBC3j'),
     instructions: [
       'Párate con los pies a la anchura de hombros.',
       'Inclínate hacia adelante manteniendo la espalda recta.',
@@ -139,6 +153,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-03', nameEs: 'Remo Mancuerna', nameEn: 'One Arm Dumbbell Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal'], equipment: 'Mancuerna',
+    image: IMG('C0MA9bC'),
     instructions: [
       'Apoya una rodilla y mano en el banco.',
       'Con la mano libre sujeta la mancuerna.',
@@ -150,6 +165,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-04', nameEs: 'Dominadas', nameEn: 'Pull-Up', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Bíceps'], equipment: 'Barra fija',
+    image: IMG('lBDjFxJ'),
     instructions: [
       'Cuelga de la barra con agarre prono a la anchura de hombros.',
       'Inicia el movimiento retrayendo los omóplatos.',
@@ -161,6 +177,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-05', nameEn: 'Lat Pulldown', nameEs: 'Jalón Frontal', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal'], equipment: 'Cable',
+    image: IMG('LEprlgG'),
     instructions: [
       'Siéntate en la máquina y agarra la barra con las manos más anchas que los hombros.',
       'Inclínate ligeramente hacia atrás.',
@@ -172,6 +189,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-06', nameEs: 'Remo Cable', nameEn: 'Seated Cable Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Romboides'], equipment: 'Cable',
+    image: IMG('fUBheHs'),
     instructions: [
       'Siéntate en la máquina con las rodillas ligeramente flexionadas.',
       'Agarra el accesorio y saca el pecho.',
@@ -183,6 +201,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-07', nameEs: 'Remo T', nameEn: 'T-Bar Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal medio'], equipment: 'Barra T',
+    image: IMG('FVM1AUZ'),
     instructions: [
       'Sitúate sobre la barra T con las piernas semiflexionadas.',
       'Agarra las asas y mantén la espalda a unos 45°.',
@@ -194,6 +213,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-08', nameEs: 'Chin-ups', nameEn: 'Chin-Up', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Bíceps'], equipment: 'Barra fija',
+    image: IMG('T2mxWqc'),
     instructions: [
       'Cuelga de la barra con agarre supino (palmas hacia ti).',
       'Activa el core y retrae los omóplatos.',
@@ -205,6 +225,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-09', nameEs: 'Face Pulls', nameEn: 'Face Pull', muscleGroup: 'espalda',
     primaryMuscles: ['Deltoides posterior'], equipment: 'Cable',
+    image: IMG('wqNPGCg'),
     instructions: [
       'Coloca la cuerda en polea alta.',
       'Agarra la cuerda con ambas manos y da un paso atrás.',
@@ -216,6 +237,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-10', nameEs: 'Pullover', nameEn: 'Dumbbell Pullover', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Pectoral'], equipment: 'Mancuerna',
+    image: IMG('9XjtHvS'),
     instructions: [
       'Acuéstate perpendicular al banco, con la cabeza y cuello en el borde.',
       'Sujeta la mancuerna con ambas manos sobre el pecho.',
@@ -229,6 +251,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-01', nameEs: 'Press Militar', nameEn: 'Military Press', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides frontal'], equipment: 'Barra',
+    image: IMG('Kyd9Rz5'),
     instructions: [
       'Párate con los pies a la anchura de hombros.',
       'Agarra la barra a la anchura de los hombros frente al cuello.',
@@ -240,6 +263,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-02', nameEs: 'Press DB Hombro', nameEn: 'Dumbbell Shoulder Press', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides'], equipment: 'Mancuernas',
+    image: IMG('znQUdHY'),
     instructions: [
       'Siéntate en banco con respaldo vertical.',
       'Sujeta las mancuernas a la altura de las orejas con los codos a 90°.',
@@ -251,6 +275,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-03', nameEs: 'Arnold Press', nameEn: 'Arnold Press', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides completo'], equipment: 'Mancuernas',
+    image: IMG('Xy4jlWA'),
     instructions: [
       'Siéntate sosteniendo las mancuernas frente a ti con las palmas mirando hacia ti.',
       'Al empujar hacia arriba, rota las muñecas hasta que las palmas miren al frente.',
@@ -262,6 +287,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-04', nameEs: 'Elevación Lateral', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides lateral'], equipment: 'Mancuernas',
+    image: IMG('DsgkuIt'),
     instructions: [
       'Párate con una mancuerna en cada mano a los lados.',
       'Con los codos ligeramente flexionados, eleva los brazos hacia los lados.',
@@ -273,6 +299,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-05', nameEs: 'Elevación Frontal', nameEn: 'Front Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides frontal'], equipment: 'Mancuernas',
+    image: IMG('3eGE2JC'),
     instructions: [
       'Sujeta las mancuernas frente a los muslos.',
       'Con los codos casi extendidos, eleva un brazo hacia el frente.',
@@ -284,6 +311,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-06', nameEs: 'Pájaros', nameEn: 'Reverse Fly', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides posterior'], equipment: 'Mancuernas',
+    image: IMG('mu5Guxt'),
     instructions: [
       'Inclínate hacia adelante hasta que el torso quede paralelo al suelo.',
       'Sujeta mancuernas ligeras con los brazos colgando.',
@@ -295,6 +323,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-07', nameEs: 'Remo Vertical', nameEn: 'Upright Row', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides', 'Trapecios'], equipment: 'Barra',
+    image: IMG('UDlhcO8'),
     instructions: [
       'Párate con la barra frente a los muslos.',
       'Tira de la barra verticalmente hasta la altura del mentón.',
@@ -306,6 +335,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-08', nameEs: 'Elevación Lateral Cable', nameEn: 'Cable Lateral Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides lateral'], equipment: 'Cable',
+    image: IMG('goJ6ezq'),
     instructions: [
       'Coloca la polea baja y sujeta el cable con la mano opuesta.',
       'Eleva el brazo hacia el lado hasta la altura del hombro.',
@@ -317,6 +347,7 @@ export const exercises: Exercise[] = [
   {
     id: 'hombros-09', nameEs: 'Press Máquina', nameEn: 'Machine Shoulder Press', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides'], equipment: 'Máquina',
+    image: IMG('67n3r98'),
     instructions: [
       'Ajusta el asiento para que las asas queden a la altura de los hombros.',
       'Empuja las asas hacia arriba hasta casi extender los brazos.',
@@ -330,6 +361,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-01', nameEs: 'Curl Barra', nameEn: 'Barbell Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps braquial'], equipment: 'Barra',
+    image: IMG('25GPyDY'),
     instructions: [
       'Párate con la barra sujeta con agarre supino.',
       'Mantén los codos pegados a los costados.',
@@ -341,6 +373,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-02', nameEs: 'Curl Mancuerna', nameEn: 'Dumbbell Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Mancuernas',
+    image: IMG('BU15nH4'),
     instructions: [
       'Sujeta una mancuerna en cada mano con el agarre supino.',
       'Flexiona un brazo mientras el otro baja.',
@@ -352,6 +385,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-03', nameEs: 'Curl Martillo', nameEn: 'Hammer Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Braquial', 'Braquiorradial'], equipment: 'Mancuernas',
+    image: IMG('slDvUAU'),
     instructions: [
       'Sujeta las mancuernas con el pulgar apuntando arriba.',
       'Flexiona los codos manteniendo la muñeca neutra.',
@@ -363,6 +397,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-04', nameEs: 'Curl EZ', nameEn: 'EZ Bar Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Barra EZ',
+    image: IMG('6TG6x2w'),
     instructions: [
       'Sujeta la barra EZ por los ángulos exteriores.',
       'El agarre EZ reduce el estrés en las muñecas.',
@@ -374,6 +409,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-05', nameEs: 'Curl Predicador', nameEn: 'Preacher Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Banco predicador',
+    image: IMG('b6hQYMb'),
     instructions: [
       'Apoya la parte posterior de los brazos en el banco predicador.',
       'Sujeta la barra o mancuernas con agarre supino.',
@@ -385,6 +421,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-06', nameEs: 'Curl Concentrado', nameEn: 'Concentration Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps pico'], equipment: 'Mancuerna',
+    image: IMG('gvsWLQw'),
     instructions: [
       'Siéntate en el banco con las piernas abiertas.',
       'Apoya el codo en la cara interna del muslo.',
@@ -396,6 +433,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-07', nameEs: 'Curl Cable', nameEn: 'Cable Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Cable',
+    image: IMG('G08RZcQ'),
     instructions: [
       'Ajusta la polea baja y sujeta el accesorio.',
       'Párate derecho y flexiona los codos.',
@@ -407,6 +445,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-08', nameEs: 'Curl Inclinado', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps largo'], equipment: 'Mancuernas',
+    image: IMG('ae9UoXQ'),
     instructions: [
       'Ajusta el banco a unos 45-60° de inclinación.',
       'Acuéstate hacia atrás con los brazos colgando.',
@@ -420,6 +459,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-01', nameEs: 'Extensión Cuerda', nameEn: 'Triceps Rope Pushdown', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps'], equipment: 'Cable',
+    image: IMG('dU605di'),
     instructions: [
       'Sujeta la cuerda en polea alta.',
       'Mantén los codos pegados a los costados.',
@@ -431,6 +471,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-02', nameEs: 'Press Cerrado', nameEn: 'Close Grip Bench Press', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps'], equipment: 'Barra',
+    image: IMG('da4cXST'),
     instructions: [
       'Acuéstate en banco con la barra a la anchura de los hombros.',
       'Baja la barra al pecho manteniendo los codos cerca del cuerpo.',
@@ -442,6 +483,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-03', nameEs: 'Press Francés', nameEn: 'Skull Crushers', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps largo'], equipment: 'Barra EZ',
+    image: IMG('h8LFzo9'),
     instructions: [
       'Acuéstate en banco con la barra EZ sobre el pecho.',
       'Mantén los codos apuntando al techo.',
@@ -453,6 +495,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-04', nameEs: 'Extensión Overhead DB', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps largo'], equipment: 'Mancuerna',
+    image: IMG('5fKX7wi'),
     instructions: [
       'Siéntate sosteniendo la mancuerna con ambas manos sobre la cabeza.',
       'Los codos deben apuntar hacia arriba.',
@@ -464,6 +507,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-05', nameEs: 'Fondos Tríceps', nameEn: 'Triceps Dips', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps'], equipment: 'Banco',
+    image: IMG('X6C6i5Y'),
     instructions: [
       'Apoya las manos en el banco con los dedos hacia adelante.',
       'Extiende las piernas frente a ti.',
@@ -475,6 +519,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-06', nameEs: 'Kickback', nameEn: 'Triceps Kickback', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps lateral'], equipment: 'Mancuerna',
+    image: IMG('W6PxUkg'),
     instructions: [
       'Inclínate hacia adelante apoyando una mano en el banco.',
       'Lleva el codo al nivel de la cadera con el brazo flexionado.',
@@ -486,6 +531,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-07', nameEs: 'Extensión V-Bar', nameEn: 'Triceps Pushdown', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps'], equipment: 'Cable',
+    image: IMG('gAwDzB3'),
     instructions: [
       'Sujeta el accesorio en V en polea alta.',
       'Mantén los codos pegados al cuerpo.',
@@ -497,6 +543,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-08', nameEs: 'Máquina Tríceps', nameEn: 'Triceps Machine', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps'], equipment: 'Máquina',
+    image: IMG('Ser9eQp'),
     instructions: [
       'Ajusta el asiento para que los codos queden en el acolchado.',
       'Sujeta las asas y extiende los brazos hacia abajo.',
@@ -510,6 +557,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-01', nameEs: 'Sentadilla', nameEn: 'Barbell Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Barra',
+    image: IMG('qXTaZnJ'),
     instructions: [
       'Coloca la barra en los trapecios y da un paso atrás.',
       'Abre los pies a la anchura de los hombros con las puntas ligeramente hacia afuera.',
@@ -521,6 +569,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-02', nameEs: 'Sentadilla Frontal', nameEn: 'Front Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps'], equipment: 'Barra',
+    image: IMG('zG0zs85'),
     instructions: [
       'Coloca la barra sobre los deltoides frontales.',
       'Los codos deben apuntar hacia adelante para mantener la barra.',
@@ -532,6 +581,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-03', nameEs: 'Prensa Piernas', nameEn: 'Leg Press', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Máquina',
+    image: IMG('10Z2DXU'),
     instructions: [
       'Ajusta el asiento y coloca los pies en la plataforma.',
       'Pies a la anchura de hombros, puntas ligeramente abiertas.',
@@ -543,6 +593,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-04', nameEs: 'Extensión Cuádriceps', nameEn: 'Leg Extension', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps'], equipment: 'Máquina',
+    image: IMG('my33uHU'),
     instructions: [
       'Siéntate en la máquina con el respaldo cómodo.',
       'Coloca los pies bajo el acolchado.',
@@ -554,6 +605,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-05', nameEs: 'Curl Isquiotibiales', nameEn: 'Lying Leg Curl', muscleGroup: 'piernas',
     primaryMuscles: ['Isquiotibiales'], equipment: 'Máquina',
+    image: IMG('17lJ1kr'),
     instructions: [
       'Túmbate boca abajo en la máquina.',
       'Coloca los tobillos bajo el acolchado.',
@@ -565,6 +617,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-06', nameEs: 'Peso Muerto Rumano', nameEn: 'Romanian Deadlift', muscleGroup: 'piernas',
     primaryMuscles: ['Isquiotibiales', 'Glúteos'], equipment: 'Barra',
+    image: IMG('wQ2c4XD'),
     instructions: [
       'Párate con la barra frente a los muslos.',
       'Con las rodillas levemente flexionadas, desliza la barra por las piernas.',
@@ -576,6 +629,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-07', nameEs: 'Zancadas', nameEn: 'Lunge', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Peso corporal',
+    image: IMG('IZVHb27'),
     instructions: [
       'Párate derecho con los pies juntos.',
       'Da un paso largo hacia adelante.',
@@ -587,6 +641,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-08', nameEs: 'Sentadilla Búlgara', nameEn: 'Bulgarian Split Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas',
+    image: IMG('gGNQmVt'),
     instructions: [
       'Coloca el pie trasero en un banco.',
       'Da un paso largo hacia adelante con el pie de apoyo.',
@@ -598,6 +653,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-09', nameEs: 'Hack Squat', nameEn: 'Hack Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps'], equipment: 'Máquina',
+    image: IMG('5VCj6iH'),
     instructions: [
       'Coloca los hombros bajo los acolchados.',
       'Pies en el centro de la plataforma a la anchura de hombros.',
@@ -609,6 +665,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-10', nameEs: 'Hip Thrust', nameEn: 'Barbell Hip Thrust', muscleGroup: 'piernas',
     primaryMuscles: ['Glúteos', 'Isquiotibiales'], equipment: 'Barra',
+    image: IMG('SNFfUff'),
     instructions: [
       'Apoya la espalda alta en el banco con la barra sobre las caderas.',
       'Pies apoyados en el suelo a la anchura de caderas.',
@@ -620,6 +677,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-11', nameEs: 'Elevación Pantorrilla', nameEn: 'Calf Raise', muscleGroup: 'piernas',
     primaryMuscles: ['Gemelos'], equipment: 'Máquina',
+    image: IMG('bJYHBIN'),
     instructions: [
       'Coloca los antepies en el borde de la plataforma.',
       'Baja los talones hasta sentir el estiramiento.',
@@ -631,6 +689,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-12', nameEs: 'Curl Sentado', nameEn: 'Seated Leg Curl', muscleGroup: 'piernas',
     primaryMuscles: ['Isquiotibiales'], equipment: 'Máquina',
+    image: IMG('Zg3XY7P'),
     instructions: [
       'Siéntate en la máquina con los muslos bajo el acolchado.',
       'Coloca los talones sobre el rodillo inferior.',
@@ -644,6 +703,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-01', nameEs: 'Hip Thrust Glúteo', nameEn: 'Hip Thrust', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteo mayor'], equipment: 'Barra',
+    image: IMG('SNFfUff'),
     instructions: [
       'Apoya la espalda alta en el banco con la barra sobre las caderas.',
       'Usa un pad acolchado para proteger las caderas.',
@@ -655,6 +715,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-02', nameEs: 'Glute Bridge', nameEn: 'Glute Bridge', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteos'], equipment: 'Peso corporal',
+    image: IMG('u0cNiij'),
     instructions: [
       'Túmbate boca arriba con las rodillas flexionadas.',
       'Pies apoyados en el suelo a la anchura de caderas.',
@@ -666,6 +727,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-03', nameEs: 'Cable Kickback', nameEn: 'Cable Glute Kickback', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteo mayor'], equipment: 'Cable',
+    image: IMG('Kpajagk'),
     instructions: [
       'Coloca el tobillo en el accesorio de la polea baja.',
       'Inclínate ligeramente hacia adelante apoyándote.',
@@ -677,6 +739,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-04', nameEs: 'Abductor Máquina', nameEn: 'Hip Abduction Machine', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteo medio'], equipment: 'Máquina',
+    image: IMG('CHpahtl'),
     instructions: [
       'Siéntate en la máquina con las rodillas contra los acolchados.',
       'Abre las piernas hacia los lados.',
@@ -688,6 +751,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-05', nameEs: 'Peso Muerto Sumo', nameEn: 'Sumo Deadlift', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteos', 'Isquiotibiales'], equipment: 'Barra',
+    image: IMG('KgI0tqW'),
     instructions: [
       'Abre los pies más de lo normal con los pies rotados hacia afuera.',
       'Agarra la barra entre las piernas.',
@@ -699,6 +763,7 @@ export const exercises: Exercise[] = [
   {
     id: 'gluteos-06', nameEs: 'Subida Escalón', nameEn: 'Step-Up', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteos', 'Cuádriceps'], equipment: 'Cajón',
+    image: IMG('Kxquu2E'),
     instructions: [
       'Párate frente a un cajón o escalón.',
       'Sube un pie sobre el cajón.',
@@ -712,6 +777,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-01', nameEs: 'Rueda Abdominal', nameEn: 'Ab Wheel Rollout', muscleGroup: 'core',
     primaryMuscles: ['Core completo'], equipment: 'Rueda',
+    image: IMG('NAgVB3t'),
     instructions: [
       'Arrodíllate con la rueda frente a ti.',
       'Rueda hacia adelante extendiendo el cuerpo.',
@@ -723,6 +789,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-02', nameEs: 'Crunch Cable', nameEn: 'Cable Crunch', muscleGroup: 'core',
     primaryMuscles: ['Recto abdominal'], equipment: 'Cable',
+    image: IMG('WW95auq'),
     instructions: [
       'Arrodíllate frente a la polea alta con la cuerda sobre la cabeza.',
       'Flexiona el torso hacia abajo.',
@@ -734,6 +801,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-03', nameEs: 'Plancha', nameEn: 'Plank', muscleGroup: 'core',
     primaryMuscles: ['Core', 'Transverso'], equipment: 'Peso corporal',
+    image: IMG('VBAWRPG'),
     instructions: [
       'Apoya los antebrazos y los pies en el suelo.',
       'El cuerpo debe formar una línea recta.',
@@ -745,6 +813,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-04', nameEs: 'Elevación Piernas Colgante', nameEn: 'Hanging Leg Raise', muscleGroup: 'core',
     primaryMuscles: ['Recto abdominal inferior'], equipment: 'Barra fija',
+    image: IMG('I3tsCnC'),
     instructions: [
       'Cuelga de la barra con los brazos extendidos.',
       'Eleva las piernas rectas (o con rodillas flexionadas) hasta la horizontal.',
@@ -756,6 +825,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-05', nameEs: 'Russian Twist', nameEn: 'Russian Twist', muscleGroup: 'core',
     primaryMuscles: ['Oblicuos'], equipment: 'Peso corporal',
+    image: IMG('XVDdcoj'),
     instructions: [
       'Siéntate con las rodillas flexionadas.',
       'Inclínate ligeramente hacia atrás.',
@@ -767,6 +837,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-06', nameEs: 'Crunch Declinado', nameEn: 'Decline Crunch', muscleGroup: 'core',
     primaryMuscles: ['Recto abdominal'], equipment: 'Banco',
+    image: IMG('9Ap7miY'),
     instructions: [
       'Ajusta el banco en declive y asegura los pies.',
       'Con las manos en la sien, flexiona el torso hacia las rodillas.',
@@ -778,6 +849,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-07', nameEs: 'Press Pallof', nameEn: 'Pallof Press', muscleGroup: 'core',
     primaryMuscles: ['Core anti-rotacional'], equipment: 'Cable',
+    image: IMG('9pa4H5m'),
     instructions: [
       'Coloca la polea a la altura del pecho.',
       'Párate de lado a la polea.',
@@ -789,6 +861,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-08', nameEs: 'Flexión Lateral DB', nameEn: 'Dumbbell Side Bend', muscleGroup: 'core',
     primaryMuscles: ['Oblicuos'], equipment: 'Mancuerna',
+    image: IMG('IpONWYv'),
     instructions: [
       'Párate con una mancuerna en una mano.',
       'Inclínate hacia el lado de la mancuerna controlando el movimiento.',
@@ -800,6 +873,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-09', nameEs: 'Mountain Climbers', nameEn: 'Mountain Climbers', muscleGroup: 'core',
     primaryMuscles: ['Core', 'Cardio'], equipment: 'Peso corporal',
+    image: IMG('RJgzwny'),
     instructions: [
       'Adopta la posición de plancha con los brazos extendidos.',
       'Lleva una rodilla hacia el pecho.',
@@ -811,6 +885,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-10', nameEs: 'Dead Bug', nameEn: 'Dead Bug', muscleGroup: 'core',
     primaryMuscles: ['Core profundo'], equipment: 'Peso corporal',
+    image: IMG('iny3m5y'),
     instructions: [
       'Túmbate boca arriba con los brazos al techo y las rodillas a 90°.',
       'Baja simultáneamente el brazo derecho y la pierna izquierda.',
@@ -822,6 +897,7 @@ export const exercises: Exercise[] = [
   {
     id: 'core-11', nameEs: 'Crunch Máquina', nameEn: 'Machine Crunch', muscleGroup: 'core',
     primaryMuscles: ['Recto abdominal'], equipment: 'Máquina',
+    image: IMG('Wgaz7pm'),
     instructions: [
       'Siéntate en la máquina y sujeta las asas.',
       'Flexiona el torso hacia adelante.',
@@ -835,6 +911,7 @@ export const exercises: Exercise[] = [
   {
     id: 'cardio-01', nameEs: 'Cinta Correr', nameEn: 'Running', muscleGroup: 'cardio',
     primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Cinta',
+    image: IMG('oLrKqDH'),
     instructions: [
       'Comienza caminando para calentar durante 2-3 minutos.',
       'Aumenta la velocidad gradualmente.',
@@ -846,6 +923,7 @@ export const exercises: Exercise[] = [
   {
     id: 'cardio-02', nameEs: 'Bicicleta Estática', nameEn: 'Stationary Bike', muscleGroup: 'cardio',
     primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Bicicleta',
+    image: IMG('H1PESYI'),
     instructions: [
       'Ajusta el asiento para que la rodilla quede levemente flexionada en la bajada.',
       'Pedalea a un ritmo constante durante el calentamiento.',
@@ -857,6 +935,7 @@ export const exercises: Exercise[] = [
   {
     id: 'cardio-03', nameEs: 'Remo Máquina', nameEn: 'Rowing Machine', muscleGroup: 'cardio',
     primaryMuscles: ['Full body', 'Cardio'], equipment: 'Remo',
+    image: IMG('XSCHmiI'),
     instructions: [
       'Siéntate y sujeta los remos con los pies asegurados.',
       'Inicia el movimiento empujando con las piernas.',
@@ -868,6 +947,7 @@ export const exercises: Exercise[] = [
   {
     id: 'cardio-04', nameEs: 'Elíptica', nameEn: 'Elliptical', muscleGroup: 'cardio',
     primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Elíptica',
+    image: IMG('rjtuP6X'),
     instructions: [
       'Ajusta el nivel de resistencia según tu condición.',
       'Mantén el torso erguido durante el movimiento.',
@@ -879,6 +959,7 @@ export const exercises: Exercise[] = [
   {
     id: 'cardio-05', nameEs: 'Saltar Cuerda', nameEn: 'Jump Rope', muscleGroup: 'cardio',
     primaryMuscles: ['Gemelos', 'Cardio'], equipment: 'Cuerda',
+    image: IMG('e1e76I2'),
     instructions: [
       'Agarra las asas con ambas manos.',
       'Salta con ambos pies a la vez al inicio.',

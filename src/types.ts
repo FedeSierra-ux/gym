@@ -15,7 +15,8 @@ export interface Exercise {
   primaryMuscles: string[]
   equipment: string
   equipmentType?: ExerciseEquipment
-  wgerId?: number    // ID en wger.de API para imágenes
+  wgerId?: number
+  image?: string     // GIF URL de ExerciseDB (hardcodeado para los 79 ejercicios base)
   instructions?: string[]
 }
 
