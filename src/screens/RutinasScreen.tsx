@@ -10,19 +10,11 @@ function getRoutineMuscleGroups(exerciseIds: string[], exercises: { id: string; 
     const ex = exercises.find((e) => e.id === id)
     if (ex) groups.add(ex.muscleGroup)
   }
-  return Array.from(groups).slice(0, 3)
+  return Array.from(groups).slice(0, 4)
 }
 
 function getApproxDuration(sets: number[]) {
   return Math.round(sets.reduce((a, s) => a + s * 2.5, 0))
-}
-
-function PlusIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M12 5v14M5 12h14"/>
-    </svg>
-  )
 }
 
 export function RutinasScreen() {
@@ -52,20 +44,18 @@ export function RutinasScreen() {
   }
 
   return (
-    <div className="flex-1 min-h-0 scroll-area pb-4">
+    <div className="flex-1 min-h-0 scroll-area" style={{ paddingBottom: 16 }}>
+
       {/* Header */}
-      <div className="px-5 pt-14 pb-5 relative overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(0,212,255,0.05) 0%, transparent 70%)' }}
-        />
-        <h1 className="text-2xl font-bold text-white relative">Mis Rutinas</h1>
-        <p className="text-sm mt-1 relative" style={{ color: 'rgba(255,255,255,0.3)' }}>
+      <div style={{ padding: '60px 22px 0' }}>
+        <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>Mis Rutinas</div>
+        <div style={{ fontSize: 13, color: '#737A8C', marginTop: 4 }}>
           {routines.length} rutinas guardadas
-        </p>
+        </div>
       </div>
 
-      <div className="px-4 flex flex-col gap-3">
+      {/* Routine cards */}
+      <div style={{ padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {routines.map((routine) => {
           const muscleGroups = getRoutineMuscleGroups(
             routine.exercises.map((e) => e.exerciseId),
@@ -74,61 +64,55 @@ export function RutinasScreen() {
           const totalSets = routine.exercises.map((e) => e.sets)
           const duration = getApproxDuration(totalSets)
           const isLast = routine.id === lastRoutineId
-          const primaryGroup = muscleGroups[0]
-          const primaryConfig = primaryGroup ? muscleGroupConfig[primaryGroup] : null
+          const primaryColor = muscleGroups[0] ? muscleGroupConfig[muscleGroups[0]].color : '#E8634A'
 
           return (
             <button
               key={routine.id}
               onClick={() => setActiveRoutineId(routine.id)}
-              className="rounded-2xl p-4 text-left w-full active:scale-[0.98] transition-all"
               style={{
-                background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
-                border: `1px solid ${isLast ? 'rgba(0,255,136,0.18)' : 'rgba(255,255,255,0.06)'}`,
-                boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.45)',
+                background: '#161821', borderRadius: 18, padding: 16, textAlign: 'left', width: '100%',
+                border: '1px solid rgba(236,238,244,0.12)',
+                transition: 'all 0.15s',
               }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                    style={{
-                      backgroundColor: primaryConfig ? primaryConfig.color + '15' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${primaryConfig ? primaryConfig.color + '25' : 'rgba(255,255,255,0.08)'}`,
-                    }}
-                  >
-                    {routine.emoji}
+              <div className="flex items-start gap-3">
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                  background: primaryColor + '20',
+                  border: `1px solid ${primaryColor}40`,
+                }}>
+                  {routine.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 16, fontWeight: 700, color: '#ECEEF4' }}>{routine.name}</span>
+                    {isLast && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, color: '#E8634A',
+                        background: 'rgba(232,99,74,0.15)', padding: '2px 7px', borderRadius: 6, flexShrink: 0,
+                      }}>
+                        ÚLTIMO
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-white text-base">{routine.name}</h3>
-                      {isLast && (
-                        <span
-                          className="text-[9px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase"
-                          style={{ background: 'rgba(0,255,136,0.12)', color: 'var(--primary)', border: '1px solid rgba(0,255,136,0.2)' }}
-                        >
-                          Último
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {routine.exercises.length} ejercicios · ~{duration} min
-                    </p>
+                  <div style={{ fontSize: 12, color: '#737A8C', marginTop: 3 }}>
+                    {routine.exercises.length} ejercicios · ~{duration} min
                   </div>
                 </div>
-                <span style={{ color: 'rgba(255,255,255,0.2)' }} className="text-xl mt-1">›</span>
+                <div style={{ color: '#3B3F4E', fontSize: 20, alignSelf: 'center', lineHeight: 1 }}>›</div>
               </div>
 
               {muscleGroups.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {muscleGroups.map((mg) => {
+                <div className="flex flex-wrap gap-[6px]" style={{ marginTop: 12 }}>
+                  {muscleGroups.map(mg => {
                     const cfg = muscleGroupConfig[mg]
                     return (
-                      <span
-                        key={mg}
-                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                        style={{ color: cfg.color, backgroundColor: cfg.color + '15', border: `1px solid ${cfg.color}20` }}
-                      >
+                      <span key={mg} style={{
+                        fontSize: 11, fontWeight: 600, color: cfg.color,
+                        background: cfg.color + '22', padding: '4px 10px', borderRadius: 20,
+                      }}>
                         {cfg.emoji} {cfg.label}
                       </span>
                     )
@@ -141,38 +125,41 @@ export function RutinasScreen() {
       </div>
 
       {/* Create button */}
-      <div className="px-4 mt-4">
+      <div style={{ padding: '14px 22px 0' }}>
         <button
           onClick={handleCreateRoutine}
-          className="w-full rounded-2xl py-4 flex items-center justify-center gap-2 transition-colors"
           style={{
-            border: '1.5px dashed rgba(255,255,255,0.1)',
-            color: 'rgba(255,255,255,0.3)',
+            width: '100%', border: '1.5px dashed rgba(236,238,244,0.12)', borderRadius: 18,
+            background: 'none', color: '#737A8C',
+            fontFamily: 'DM Sans, system-ui, sans-serif',
+            fontSize: 14, fontWeight: 600, padding: '16px 0', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          <PlusIcon />
-          <span className="font-semibold text-sm">Crear nueva rutina</span>
+          <span style={{ fontSize: 20, lineHeight: 1 }}>+</span> Crear nueva rutina
         </button>
       </div>
 
-      {/* Custom exercises button */}
-      <div className="px-4 mt-2 mb-2">
+      {/* Custom exercises */}
+      <div style={{ padding: '10px 22px 0' }}>
         <button
           onClick={() => setShowCustomExercises(true)}
-          className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-colors"
           style={{
-            border: '1px solid rgba(0,212,255,0.15)',
-            background: 'rgba(0,212,255,0.04)',
-            color: 'rgba(0,212,255,0.6)',
+            width: '100%', borderRadius: 18, padding: '14px 0',
+            border: '1px solid rgba(56,189,248,0.15)',
+            background: 'rgba(56,189,248,0.04)',
+            color: 'rgba(56,189,248,0.7)',
+            fontFamily: 'DM Sans, system-ui, sans-serif',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          <span className="text-base leading-none">💪</span>
-          <span className="font-semibold text-sm">Mis ejercicios</span>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>💪</span> Mis ejercicios
           {customExercises.length > 0 && (
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{ background: 'rgba(0,212,255,0.15)', color: 'rgba(0,212,255,0.8)' }}
-            >
+            <span style={{
+              fontSize: 10, padding: '2px 6px', borderRadius: 20, fontWeight: 700,
+              background: 'rgba(56,189,248,0.15)', color: 'rgba(56,189,248,0.8)',
+            }}>
               {customExercises.length}
             </span>
           )}
