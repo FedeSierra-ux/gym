@@ -7,18 +7,35 @@ interface Props {
 }
 
 const muscleColors: Record<MuscleGroup, string> = {
-  pecho: '#00ff88',
-  espalda: '#00d4ff',
-  hombros: '#ff9500',
-  biceps: '#ff4488',
-  triceps: '#aa44ff',
-  piernas: '#ffdd00',
-  gluteos: '#ff7744',
-  core: '#44ffdd',
-  cardio: '#88aaff',
+  pecho: '#FF6B6B',
+  espalda: '#38BDF8',
+  hombros: '#FB923C',
+  biceps: '#F472B6',
+  triceps: '#A78BFA',
+  piernas: '#34D399',
+  gluteos: '#EC4899',
+  core: '#FCD34D',
+  cardio: '#60A5FA',
 }
 
 const frontGroups: MuscleGroup[] = ['pecho', 'hombros', 'biceps', 'core', 'piernas', 'cardio']
+
+interface ActiveRegionProps { children: React.ReactNode; color: string; glowId: string }
+function ActiveRegion({ children, color, glowId }: ActiveRegionProps) {
+  return (
+    <g filter={`url(#${glowId})`} fill={color} opacity={0.9}>
+      {children}
+    </g>
+  )
+}
+
+function InactiveRegion({ children }: { children: React.ReactNode }) {
+  return (
+    <g fill="#1C1F2A" stroke="#3B3F4E" opacity={0.7}>
+      {children}
+    </g>
+  )
+}
 
 export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
   const color = muscleColors[muscleGroup]
@@ -26,24 +43,6 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
   const width = size
   const height = Math.round(size * 1.95)
   const glowId = `glow-${muscleGroup}-${size}`
-
-  const inactive = { fill: '#1e1e2c', stroke: '#2a2a3e', opacity: 0.7 }
-
-  function ActiveRegion({ children }: { children: React.ReactNode }) {
-    return (
-      <g filter={`url(#${glowId})`} fill={color} opacity={0.9}>
-        {children}
-      </g>
-    )
-  }
-
-  function InactiveRegion({ children }: { children: React.ReactNode }) {
-    return (
-      <g fill={inactive.fill} stroke={inactive.stroke} opacity={inactive.opacity}>
-        {children}
-      </g>
-    )
-  }
 
   const is = (g: MuscleGroup) => muscleGroup === g
 
@@ -98,7 +97,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Deltoides izquierdo */}
           {is('hombros') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="26" cy="35" rx="10" ry="7" />
               <ellipse cx="74" cy="35" rx="10" ry="7" />
             </ActiveRegion>
@@ -111,7 +110,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Pectorales */}
           {is('pecho') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="40" cy="50" rx="10" ry="11" />
               <ellipse cx="60" cy="50" rx="10" ry="11" />
             </ActiveRegion>
@@ -124,7 +123,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Bíceps */}
           {is('biceps') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="18" cy="57" rx="5" ry="11" />
               <ellipse cx="82" cy="57" rx="5" ry="11" />
             </ActiveRegion>
@@ -137,7 +136,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Abs (6-pack) + oblicuos */}
           {is('core') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <rect x="40" y="66" width="8" height="7" rx="1.5" />
               <rect x="52" y="66" width="8" height="7" rx="1.5" />
               <rect x="40" y="75" width="8" height="7" rx="1.5" />
@@ -163,7 +162,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Cuádriceps */}
           {is('piernas') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="37" cy="133" rx="9" ry="22" />
               <ellipse cx="63" cy="133" rx="9" ry="22" />
               {/* Pantorrillas (más tenues) */}
@@ -181,7 +180,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Cardio: corazón estilizado */}
           {is('cardio') && (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <path d="M50,78 C50,78 38,68 38,60 C38,55 42,52 46,54 C48,55 50,57 50,57 C50,57 52,55 54,54 C58,52 62,55 62,60 C62,68 50,78 50,78 Z" />
             </ActiveRegion>
           )}
@@ -192,7 +191,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Trapecios */}
           {is('espalda') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <path d="M46,22 L54,22 L66,50 L34,50 Z" />
               {/* Dorsales */}
               <path d="M28,34 L26,72 L38,78 L34,50 Z" />
@@ -211,7 +210,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Deltoides posterior */}
           {is('hombros') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="26" cy="35" rx="10" ry="7" />
               <ellipse cx="74" cy="35" rx="10" ry="7" />
             </ActiveRegion>
@@ -224,7 +223,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Tríceps */}
           {is('triceps') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="17" cy="60" rx="5" ry="13" />
               <ellipse cx="83" cy="60" rx="5" ry="13" />
             </ActiveRegion>
@@ -237,7 +236,7 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
 
           {/* Glúteos + isquiotibiales */}
           {is('gluteos') ? (
-            <ActiveRegion>
+            <ActiveRegion color={color} glowId={glowId}>
               <ellipse cx="40" cy="108" rx="9" ry="9" />
               <ellipse cx="60" cy="108" rx="9" ry="9" />
               {/* Isquiotibiales (más tenues) */}
