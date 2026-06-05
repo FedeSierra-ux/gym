@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useMemo } from 'react'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast, BodyWeightEntry } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 
@@ -26,6 +26,7 @@ interface AppState {
   weekPlan: Record<number, string | null>
   customExercises: Exercise[]
   archivedRoutineNames: Record<string, { name: string; emoji: string }>
+  bodyWeights: BodyWeightEntry[]
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -47,6 +48,9 @@ interface AppState {
 
   // Tips
   setExerciseTip: (exerciseId: string, tip: string) => void
+
+  // Body weight
+  addBodyWeight: (entry: BodyWeightEntry) => void
 
   // Profile
   updateUserName: (name: string) => void
@@ -91,6 +95,7 @@ export const useStore = create<AppState>()(
       weekPlan: {},
       customExercises: [],
       archivedRoutineNames: {},
+      bodyWeights: [],
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -147,6 +152,9 @@ export const useStore = create<AppState>()(
 
       setExerciseTip: (exerciseId, tip) =>
         set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
+
+      addBodyWeight: (entry) =>
+        set((s) => ({ bodyWeights: [...s.bodyWeights, entry].sort((a, b) => a.date - b.date) })),
 
       updateUserName: (name) => set({ userName: name }),
       setOnboarded: () => set({ onboarded: true }),
@@ -205,6 +213,7 @@ export const useStore = create<AppState>()(
         weekPlan: state.weekPlan,
         customExercises: state.customExercises,
         archivedRoutineNames: state.archivedRoutineNames,
+        bodyWeights: state.bodyWeights,
       }),
     }
   )

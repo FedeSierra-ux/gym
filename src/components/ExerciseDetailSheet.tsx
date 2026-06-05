@@ -27,15 +27,15 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
-    // Reset on every exercise change so stale images never show
+    // Batch both resets together so React renders them in one pass
     setImgError(false)
+    setWgerInfo(null)
 
     if (wgerId) {
       try {
         const cached = sessionStorage.getItem(`wger-${wgerId}`)
         if (cached) { setWgerInfo(JSON.parse(cached) as WgerInfo); return }
       } catch { /* ignore */ }
-      setWgerInfo(null)
       fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
         .then(r => r.json())
         .then(data => {
@@ -48,7 +48,7 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
       return
     }
 
-    if (!exercise.nameEn) { setWgerInfo(null); return }
+    if (!exercise.nameEn) return
 
     const searchAndFetch = async () => {
       try {
@@ -78,7 +78,6 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
       } catch { setWgerInfo(null) }
     }
 
-    setWgerInfo(null)
     void searchAndFetch()
   }, [exercise.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -88,6 +88,11 @@ export interface ActiveWorkoutExercise {
 
 export type ExerciseTips = Record<string, string>
 
+export interface BodyWeightEntry {
+  date: number
+  kg: number
+}
+
 export interface AppSettings {
   anthropicApiKey: string
   openAiApiKey: string

@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
-
-interface BodyWeightEntry {
-  date: number
-  kg: number
-}
+import type { BodyWeightEntry } from '../types'
 
 function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
   if (entries.length < 2) return null
@@ -27,14 +23,14 @@ function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
     <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} className="overflow-visible">
       <defs>
         <linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#00ff88" stopOpacity="0" />
+          <stop offset="0%" stopColor="#E8634A" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#E8634A" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={areaD} fill="url(#wgrad)" />
-      <path d={pathD} fill="none" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={pathD} fill="none" stroke="#E8634A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {pts.length <= 10 && pts.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3" fill="#00ff88" />
+        <circle key={i} cx={p.x} cy={p.y} r="3" fill="#E8634A" />
       ))}
     </svg>
   )
@@ -43,13 +39,12 @@ function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
 export function ProfileScreen() {
   const {
     userName, updateUserName,
-    workouts, prs,
+    workouts, prs, bodyWeights, addBodyWeight,
   } = useStore()
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(userName)
   const [weightInput, setWeightInput] = useState('')
-  const [bodyWeights] = useState<BodyWeightEntry[]>([])
   const [showAllWeights, setShowAllWeights] = useState(false)
 
   const totalWorkouts = workouts.filter((w) => w.finishedAt).length
@@ -68,6 +63,7 @@ export function ProfileScreen() {
   const handleAddWeight = () => {
     const kg = parseFloat(weightInput)
     if (!isNaN(kg) && kg > 0 && kg < 500) {
+      addBodyWeight({ date: Date.now(), kg })
       setWeightInput('')
     }
   }
