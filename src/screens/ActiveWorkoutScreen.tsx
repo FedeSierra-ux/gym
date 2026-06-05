@@ -3,18 +3,24 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
+import { CircularRing } from '../components/CircularRing'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate } from '../utils/haptics'
 import type { Exercise } from '../types'
 
-// Epley 1RM formula
+const S = {
+  bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
+  ink: '#ECEEF4', dim: '#737A8C', faint: '#3B3F4E',
+  acc: '#E8634A', acc2: '#F2A93B',
+  line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
+}
+
 function estimate1RM(kg: number, reps: number): number {
   if (reps === 1) return kg
   return Math.round(kg * (1 + reps / 30))
 }
 
-// Plate calculator (assumes 20kg Olympic bar)
 const BAR_KG = 20
 const PLATES = [20, 15, 10, 5, 2.5, 1.25]
 
@@ -25,10 +31,7 @@ function getPlates(totalKg: number): string {
   let remaining = perSide
   for (const p of PLATES) {
     const count = Math.floor(remaining / p + 0.001)
-    if (count > 0) {
-      result.push(`${count}×${p}kg`)
-      remaining -= count * p
-    }
+    if (count > 0) { result.push(`${count}×${p}kg`); remaining -= count * p }
   }
   return result.length ? result.join(' + ') + ' / lado' : `${perSide}kg / lado`
 }
@@ -38,48 +41,27 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(exerciseTips[exerciseId] ?? '')
   const tip = exerciseTips[exerciseId]
-
-  const handleSave = () => {
-    setExerciseTip(exerciseId, draft.trim())
-    setOpen(false)
-  }
-
+  const handleSave = () => { setExerciseTip(exerciseId, draft.trim()); setOpen(false) }
   return (
-    <div className="border-t border-border">
+    <div style={{ borderTop: `1px solid ${S.line}` }}>
       {!open ? (
-        <button
-          onClick={() => { setDraft(tip ?? ''); setOpen(true) }}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors"
-        >
-          <span className="text-sm">📝</span>
-          <span className={`flex-1 text-xs ${tip ? 'text-gray-300' : 'text-gray-600'}`}>
-            {tip || 'Agregar tip / recordatorio de técnica...'}
-          </span>
-          <span className="text-[10px] text-gray-600">{tip ? '✏️' : '＋'}</span>
+        <button onClick={() => { setDraft(tip ?? ''); setOpen(true) }}
+          className="w-full flex items-center gap-2 px-3 py-2 text-left"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+          <span style={{ fontSize: 13 }}>📝</span>
+          <span style={{ flex: 1, fontSize: 11, color: tip ? S.dim : S.faint }}>{tip || 'Agregar tip / recordatorio de técnica...'}</span>
+          <span style={{ fontSize: 10, color: S.faint }}>{tip ? '✏️' : '+'}</span>
         </button>
       ) : (
-        <div className="px-3 py-2 flex flex-col gap-2">
-          <textarea
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ej: Escápulas retraídas, bajar lento 3s, codos a 45°..."
+        <div style={{ padding: '8px 12px 12px' }} className="flex flex-col gap-2">
+          <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
+            placeholder="Ej: Escápulas retraídas, bajar lento 3s..."
             rows={3}
-            className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary resize-none"
+            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 11, color: S.ink, fontFamily: 'DM Sans, system-ui, sans-serif', outline: 'none', resize: 'none' }}
           />
           <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => setOpen(false)}
-              className="text-xs text-gray-500 px-3 py-1 rounded-lg border border-border hover:border-gray-500 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              className="text-xs font-bold text-black bg-primary px-3 py-1 rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Guardar
-            </button>
+            <button onClick={() => setOpen(false)} style={{ fontSize: 11, color: S.dim, padding: '4px 12px', borderRadius: 8, border: `1px solid ${S.line2}`, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Cancelar</button>
+            <button onClick={handleSave} style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: S.acc, padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Guardar</button>
           </div>
         </div>
       )}
@@ -89,15 +71,8 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
 
 function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
   return (
-    <button
-      onClick={onPress}
-      aria-label={ariaLabel}
-      className="w-6 h-7 rounded flex items-center justify-center flex-shrink-0 text-[9px] font-bold transition-all active:scale-90"
-      style={{
-        background: 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        color: 'rgba(255,255,255,0.45)',
-      }}
+    <button onClick={onPress} aria-label={ariaLabel}
+      style={{ width: 22, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 10, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
     >
       {label}
     </button>
@@ -117,44 +92,23 @@ function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
 }) {
   const allExercises = useAllExercises()
   const ex = allExercises.find(e => e.id === exerciseId)
-
   useEffect(() => {
     const t = setTimeout(onDismiss, 4000)
     return () => clearTimeout(t)
   }, [onDismiss])
-
   return (
-    <div
-      className="absolute top-0 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2"
-      style={{ pointerEvents: 'none' }}
-    >
-      <div
-        className="flex items-center gap-3 px-4 py-3 rounded-2xl w-full max-w-sm screen-enter"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,215,0,0.18) 0%, rgba(255,165,0,0.12) 100%)',
-          border: '1px solid rgba(255,215,0,0.4)',
-          boxShadow: '0 4px 24px rgba(255,215,0,0.2)',
-          backdropFilter: 'blur(8px)',
-          pointerEvents: 'auto',
-        }}
-      >
-        <span className="text-2xl">🏆</span>
+    <div className="absolute top-0 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2" style={{ pointerEvents: 'none' }}>
+      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl w-full max-w-sm screen-enter"
+        style={{ background: 'rgba(242,169,59,0.15)', border: `1px solid rgba(242,169,59,0.4)`, pointerEvents: 'auto' }}>
+        <span style={{ fontSize: 24 }}>🏆</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#FFD700' }}>
-            ¡Nuevo PR!
-          </p>
-          <p className="text-white text-sm font-semibold truncate">
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: S.acc2 }}>¡Nuevo PR!</p>
+          <p style={{ fontSize: 13, fontWeight: 600, color: S.ink, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {ex?.nameEs ?? ''} — {kg}kg × {reps} reps
           </p>
-          {reps > 1 && (
-            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,215,0,0.7)' }}>
-              ~1RM estimado: {estimate1RM(kg, reps)}kg
-            </p>
-          )}
+          {reps > 1 && <p style={{ fontSize: 10, color: S.acc2, opacity: 0.75, marginTop: 2 }}>~1RM estimado: {estimate1RM(kg, reps)}kg</p>}
         </div>
-        <button onClick={onDismiss} style={{ color: 'rgba(255,255,255,0.4)', pointerEvents: 'auto' }}>
-          <span className="text-xs">✕</span>
-        </button>
+        <button onClick={onDismiss} style={{ color: S.dim, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>✕</button>
       </div>
     </div>
   )
@@ -164,15 +118,8 @@ export function ActiveWorkoutScreen() {
   const { routines, workouts, prs } = useStore()
   const exercises = useAllExercises()
   const {
-    activeWorkout,
-    updateSetValue,
-    completeSet,
-    addSetToExercise,
-    removeSetFromExercise,
-    toggleWarmup,
-    dismissLivePr,
-    finishWorkout,
-    cancelWorkout,
+    activeWorkout, updateSetValue, completeSet, addSetToExercise, removeSetFromExercise,
+    toggleWarmup, dismissLivePr, finishWorkout, cancelWorkout,
   } = useWorkoutStore()
 
   const [elapsed, setElapsed] = useState(0)
@@ -185,22 +132,15 @@ export function ActiveWorkoutScreen() {
   const realStartedAt = activeWorkout?.realStartedAt
   useEffect(() => {
     if (!realStartedAt) return
-    intervalRef.current = setInterval(() => {
-      setElapsed(Date.now() - realStartedAt)
-    }, 1000)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
+    intervalRef.current = setInterval(() => setElapsed(Date.now() - realStartedAt), 1000)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [realStartedAt])
 
   if (!activeWorkout) return null
 
   const routine = routines.find((r) => r.id === activeWorkout.routineId)
-
   const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => !s.isWarmup).length, 0)
   const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed && !s.isWarmup).length, 0)
-  const totalVolume = activeWorkout.exercises.reduce((a, ex) =>
-    a + ex.sets.filter(s => s.completed && !s.isWarmup).reduce((b, s) => b + (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0), 0), 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
   const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
@@ -210,331 +150,253 @@ export function ActiveWorkoutScreen() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-background screen-enter relative">
+    <div className="flex-1 min-h-0 flex flex-col screen-enter relative" style={{ background: S.bg }}>
+
       {/* Live PR banner */}
       {activeWorkout.livePr && (
-        <LivePrBanner
-          exerciseId={activeWorkout.livePr.exerciseId}
-          kg={activeWorkout.livePr.kg}
-          reps={activeWorkout.livePr.reps}
-          onDismiss={dismissLivePr}
-        />
+        <LivePrBanner exerciseId={activeWorkout.livePr.exerciseId} kg={activeWorkout.livePr.kg} reps={activeWorkout.livePr.reps} onDismiss={dismissLivePr} />
       )}
 
-      <div className="flex-shrink-0 px-4 pt-12 pb-3 bg-surface border-b border-border">
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '54px 22px 16px', borderBottom: `1px solid ${S.line2}` }}>
         <div className="flex items-center justify-between">
+          <div style={{ fontSize: 13, color: S.dim, fontWeight: 500 }}>
+            {routine?.emoji} {routine?.name} · En curso
+          </div>
+          <div style={{ fontSize: 12, color: S.acc, fontWeight: 600, background: 'rgba(232,99,74,0.12)', padding: '4px 10px', borderRadius: 20 }}>
+            ● {formatElapsed(elapsed)}
+          </div>
+        </div>
+        <div className="flex items-center gap-4" style={{ marginTop: 12 }}>
+          <CircularRing value={progressPct} size={50} strokeWidth={5} color={S.acc} trackColor={S.line2}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: S.ink }}>{progressPct}%</span>
+          </CircularRing>
           <div>
-            <h1 className="text-lg font-bold text-white">
-              {routine?.emoji} {routine?.name}
-            </h1>
-            <p className="text-info font-mono text-sm font-semibold">{formatElapsed(elapsed)}</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setConfirmAction('cancel')}
-              className="px-3 py-1.5 rounded-lg text-gray-400 text-sm border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => setConfirmAction('finish')}
-              className="px-4 py-1.5 rounded-lg bg-primary text-black font-bold text-sm hover:bg-primary/90 active:scale-95 transition-transform"
-            >
-              Terminar
-            </button>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>
+              {completedSets} <span style={{ color: S.dim, fontSize: 16 }}>/ {totalSets} series</span>
+            </div>
+            <div style={{ fontSize: 12, color: S.dim, marginTop: 2 }}>{progressPct}% completado</div>
           </div>
         </div>
       </div>
 
-      <div
-        className="flex-shrink-0 px-4 py-2 flex items-center gap-3"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)' }}
-      >
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="text-xs font-bold text-white">{completedSets}</span>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>/ {totalSets} series</span>
-        </div>
-        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${progressPct}%`, background: 'var(--primary)', boxShadow: progressPct > 0 ? '0 0 8px rgba(0,255,136,0.5)' : undefined }}
-          />
-        </div>
-        {totalVolume > 0 && (
-          <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'rgba(0,255,136,0.7)' }}>
-            {totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}t` : `${totalVolume}kg`}
-          </span>
-        )}
-      </div>
+      {/* Exercise list */}
+      <div className="flex-1 min-h-0 scroll-area">
+        {activeWorkout.exercises.map((activeEx, exIdx) => {
+          const ex = exercises.find((e) => e.id === activeEx.exerciseId)
+          if (!ex) return null
+          const config = muscleGroupConfig[ex.muscleGroup]
+          const pr = prs.find((p) => p.exerciseId === ex.id)
+          const isBarbellLike = ex.equipmentType === 'barra'
+          const prevWorkout = [...workouts].filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt).sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
+          const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === ex.id)?.sets ?? []
+          const completedCount = activeEx.sets.filter((s) => s.completed).length
 
-      <div className="flex-1 min-h-0 scroll-area px-4 py-3">
-        <div className="flex flex-col gap-4">
-          {activeWorkout.exercises.map((activeEx, exIdx) => {
-            const ex = exercises.find((e) => e.id === activeEx.exerciseId)
-            if (!ex) return null
-            const config = muscleGroupConfig[ex.muscleGroup]
-            const pr = prs.find((p) => p.exerciseId === ex.id)
-            const isBarbellLike = ex.equipmentType === 'barra'
+          return (
+            <div key={activeEx.exerciseId} style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px solid ${S.line2}` }}>
 
-            const prevWorkout = [...workouts]
-              .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
-              .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
-            const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === ex.id)?.sets ?? []
+              {/* Exercise header */}
+              <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
+                  {exIdx + 1}
+                </div>
+                <button onClick={() => setModalExercise(ex)} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <ExerciseThumbnail exercise={ex} size={36} />
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: S.ink }}>{ex.nameEs}</div>
+                  <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
+                    <span style={{ color: config.color }}>{config.label}</span>
+                    {pr && <span style={{ color: S.acc2 }}> · 🏆 {pr.kg}×{pr.reps}</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: completedCount === activeEx.sets.length && activeEx.sets.length > 0 ? S.acc : S.dim }}>
+                  {completedCount}/{activeEx.sets.length}
+                </div>
+              </div>
 
-            const completedCount = activeEx.sets.filter((s) => s.completed).length
-            const totalSets = activeEx.sets.length
+              {/* Table header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 1fr 32px 22px', padding: '0 16px 6px', gap: 4 }}>
+                {['Set', 'KG', 'Reps', '✓', ''].map((h, i) => (
+                  <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i >= 1 ? 'center' : 'left' }}>{h}</div>
+                ))}
+              </div>
 
-            return (
-              <div key={activeEx.exerciseId} className="bg-card rounded-2xl border border-border overflow-hidden">
-                {/* Exercise header */}
-                <div className="p-3 border-b border-border flex items-center gap-3">
-                  <button onClick={() => setModalExercise(ex)} className="flex-shrink-0">
-                    <ExerciseThumbnail exercise={ex} size={56} />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white text-base">{ex.nameEs}</h3>
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{ color: config.color, backgroundColor: config.color + '20' }}
+              {/* Sets */}
+              {activeEx.sets.map((set, setIdx) => {
+                const isCompleted = set.completed
+                const isWarmup = !!set.isWarmup
+                const flashKey = `${exIdx}-${setIdx}`
+                const kg = parseFloat(set.kg) || 0
+                const reps = parseInt(set.reps) || 0
+                const orm = isCompleted && !isWarmup && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+                const plateKey = `${exIdx}-${setIdx}`
+                const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
+                return (
+                  <div key={setIdx}>
+                    <div
+                      className={flashingSet === flashKey ? 'set-complete-flash' : ''}
+                      style={{
+                        display: 'grid', gridTemplateColumns: '36px 1fr 1fr 32px 22px',
+                        alignItems: 'center', padding: '6px 16px', gap: 4,
+                        background: isCompleted ? (isWarmup ? 'rgba(56,189,248,0.05)' : 'rgba(232,99,74,0.05)') : 'transparent',
+                        borderTop: `1px solid ${S.line}`,
+                      }}
                     >
-                      {config.label}
-                    </span>
-                    {pr && (
-                      <p className="text-xs text-gold mt-1">
-                        🏆 PR: {pr.kg}kg × {pr.reps} reps
-                        {pr.reps > 1 ? ` · ~${estimate1RM(pr.kg, pr.reps)}kg 1RM` : ''}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-white">{completedCount}/{totalSets}</p>
-                    <p className="text-[10px] text-gray-500">series</p>
-                  </div>
-                </div>
-
-                {/* Column headers */}
-                <div className="flex items-center px-3 py-1.5 border-b border-border gap-2">
-                  <span className="w-5 text-[10px] text-gray-600 font-medium flex-shrink-0">#</span>
-                  <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">KG</span>
-                  <span className="flex-1 text-[10px] text-gray-600 font-medium text-center">REPS</span>
-                  <span className="w-8 text-[10px] text-gray-600 font-medium text-center flex-shrink-0">✓</span>
-                  <span className="w-6 flex-shrink-0" />
-                </div>
-
-                {/* Sets */}
-                {activeEx.sets.map((set, setIdx) => {
-                  const isCompleted = set.completed
-                  const isWarmup = !!set.isWarmup
-                  const flashKey = `${exIdx}-${setIdx}`
-                  const kg = parseFloat(set.kg) || 0
-                  const reps = parseInt(set.reps) || 0
-                  const orm = isCompleted && !isWarmup && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
-                  const plateKey = `${exIdx}-${setIdx}`
-                  const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
-
-                  return (
-                    <div key={setIdx}>
-                      <div
-                        className={`flex items-center px-3 py-2 gap-2 transition-colors ${
-                          isCompleted ? (isWarmup ? 'bg-blue-500/5' : 'bg-primary/5') : ''
-                        } ${flashingSet === flashKey ? 'set-complete-flash' : ''}`}
-                      >
-                        {/* Set number + warmup indicator */}
-                        <div className="w-5 flex flex-col items-center gap-0.5 flex-shrink-0">
-                          <button
-                            onClick={() => !isCompleted && toggleWarmup(exIdx, setIdx)}
-                            className="flex flex-col items-center"
-                            title={isWarmup ? 'Serie de calentamiento (toca para cambiar)' : 'Serie de trabajo (toca para marcar calent.)'}
-                          >
-                            <span className={`text-sm font-bold leading-none ${isCompleted ? (isWarmup ? 'text-blue-400' : 'text-primary') : 'text-gray-500'}`}>
-                              {setIdx + 1}
-                            </span>
-                            {isWarmup && (
-                              <span className="text-[7px] font-bold uppercase leading-none mt-0.5" style={{ color: 'rgba(96,165,250,0.8)' }}>
-                                W
-                              </span>
-                            )}
-                          </button>
-                        </div>
-
-                        {/* KG */}
-                        <div className="flex-1 flex items-center gap-1 min-w-0">
-                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
-                          <div className="flex-1 min-w-0">
-                            <input
-                              type="number"
-                              inputMode="decimal"
-                              value={set.kg}
-                              onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
-                              onFocus={() => {
-                                if (isBarbellLike) setPlateHintFor(plateKey)
-                              }}
-                              onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
-                              placeholder="kg"
-                              disabled={isCompleted}
-                              className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                                isCompleted
-                                  ? isWarmup
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                                    : 'bg-primary/10 border-primary/20 text-primary'
-                                  : 'bg-surface border-border text-white'
-                              }`}
-                            />
-                          </div>
-                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar kg" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
-                        </div>
-
-                        {/* REPS */}
-                        <div className="flex-1 flex items-center gap-1 min-w-0">
-                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
-                          <div className="flex-1 min-w-0">
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              value={set.reps}
-                              onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                              placeholder="reps"
-                              disabled={isCompleted}
-                              className={`w-full text-center text-sm font-semibold rounded-lg py-1.5 border focus:outline-none focus:border-primary transition-colors ${
-                                isCompleted
-                                  ? isWarmup
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-300'
-                                    : 'bg-primary/10 border-primary/20 text-primary'
-                                  : 'bg-surface border-border text-white'
-                              }`}
-                            />
-                          </div>
-                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar reps" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
-                        </div>
-
-                        {/* Complete button */}
-                        <button
-                          aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
-                          onClick={() => {
-                            completeSet(exIdx, setIdx)
-                            if (!isCompleted) {
-                              vibrate([40, 20, 40])
-                              setFlashingSet(flashKey)
-                              setTimeout(() => setFlashingSet(null), 600)
-                            }
-                          }}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                            isCompleted
-                              ? isWarmup
-                                ? 'border border-blue-400/40 text-blue-400'
-                                : 'bg-primary text-black'
-                              : 'bg-surface border border-border text-gray-600 hover:border-primary hover:text-primary'
-                          }`}
-                        >
-                          <span className="text-sm font-bold">✓</span>
-                        </button>
-
-                        {/* Delete set */}
-                        <button
-                          onClick={() => removeSetFromExercise(exIdx, setIdx)}
-                          disabled={isCompleted || activeEx.sets.length <= 1}
-                          aria-label="Eliminar serie"
-                          className="w-6 h-6 flex items-center justify-center flex-shrink-0 transition-colors"
-                          style={{
-                            color: isCompleted || activeEx.sets.length <= 1
-                              ? 'rgba(255,255,255,0.08)'
-                              : 'rgba(255,255,255,0.2)',
-                          }}
-                        >
-                          <span className="text-xs">✕</span>
+                      {/* Set # */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <button onClick={() => !isCompleted && toggleWarmup(exIdx, setIdx)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.dim }}>{setIdx + 1}</span>
+                          {isWarmup && <span style={{ fontSize: 7, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(96,165,250,0.8)', lineHeight: 1 }}>W</span>}
                         </button>
                       </div>
 
-                      {/* Plate calculator hint */}
-                      {showPlate && (
-                        <div
-                          className="px-3 py-1.5 text-[11px] font-medium"
-                          style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.04)' }}
-                        >
-                          🏋️ {getPlates(kg)}
-                        </div>
-                      )}
+                      {/* KG */}
+                      <div className="flex items-center gap-1">
+                        {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
+                        <input type="number" inputMode="decimal" value={set.kg}
+                          onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
+                          onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
+                          onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
+                          placeholder="kg" disabled={isCompleted}
+                          style={{
+                            flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 600,
+                            borderRadius: 8, padding: '6px 2px',
+                            background: isCompleted ? (isWarmup ? 'rgba(96,165,250,0.1)' : 'rgba(232,99,74,0.1)') : S.surf2,
+                            border: `1px solid ${isCompleted ? (isWarmup ? 'rgba(96,165,250,0.2)' : 'rgba(232,99,74,0.2)') : S.line2}`,
+                            color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.ink,
+                            fontFamily: 'DM Sans, system-ui, sans-serif',
+                            outline: 'none', minWidth: 0,
+                          }}
+                        />
+                        {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar kg" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
+                      </div>
 
-                      {/* 1RM estimate for completed working sets */}
-                      {orm !== null && (
-                        <div className="px-3 pb-1" style={{ marginTop: -2 }}>
-                          <span className="text-[10px] font-medium" style={{ color: 'rgba(0,255,136,0.45)' }}>
-                            ~1RM: {orm}kg
-                          </span>
-                        </div>
-                      )}
+                      {/* Reps */}
+                      <div className="flex items-center gap-1">
+                        {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
+                        <input type="number" inputMode="numeric" value={set.reps}
+                          onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
+                          placeholder="reps" disabled={isCompleted}
+                          style={{
+                            flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 600,
+                            borderRadius: 8, padding: '6px 2px',
+                            background: isCompleted ? (isWarmup ? 'rgba(96,165,250,0.1)' : 'rgba(232,99,74,0.1)') : S.surf2,
+                            border: `1px solid ${isCompleted ? (isWarmup ? 'rgba(96,165,250,0.2)' : 'rgba(232,99,74,0.2)') : S.line2}`,
+                            color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.ink,
+                            fontFamily: 'DM Sans, system-ui, sans-serif',
+                            outline: 'none', minWidth: 0,
+                          }}
+                        />
+                        {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar reps" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
+                      </div>
+
+                      {/* Checkbox */}
+                      <button
+                        aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
+                        onClick={() => {
+                          completeSet(exIdx, setIdx)
+                          if (!isCompleted) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
+                        }}
+                        style={{
+                          width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : 'transparent',
+                          border: `1.5px solid ${isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.faint}`,
+                          color: isCompleted ? '#fff' : S.faint,
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          transition: 'all 0.15s',
+                        }}
+                      >✓</button>
+
+                      {/* Delete */}
+                      <button onClick={() => removeSetFromExercise(exIdx, setIdx)}
+                        disabled={isCompleted || activeEx.sets.length <= 1}
+                        style={{ width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: isCompleted || activeEx.sets.length <= 1 ? 'default' : 'pointer', color: isCompleted || activeEx.sets.length <= 1 ? S.faint + '30' : S.faint, fontSize: 10, fontFamily: 'inherit' }}>
+                        ✕
+                      </button>
                     </div>
-                  )
-                })}
 
-                {prevSets.length > 0 && (
-                  <div className="px-3 py-2 bg-surface/50 border-t border-border">
-                    <p className="text-[10px] text-gray-600">
-                      💡 Última vez: {prevSets[0]?.kg}kg × {prevSets[0]?.reps} reps
-                    </p>
+                    {/* Plate hint */}
+                    {showPlate && (
+                      <div style={{ padding: '6px 16px', fontSize: 10, color: S.dim, background: 'rgba(236,238,244,0.02)', borderTop: `1px solid ${S.line}` }}>
+                        🏋️ {getPlates(kg)}
+                      </div>
+                    )}
+
+                    {/* 1RM hint */}
+                    {orm !== null && (
+                      <div style={{ paddingLeft: 16, paddingBottom: 4, marginTop: -2 }}>
+                        <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(52,211,153,0.5)' }}>~1RM: {orm}kg</span>
+                      </div>
+                    )}
                   </div>
-                )}
+                )
+              })}
 
-                <TipsRow exerciseId={ex.id} />
-
-                <div className="px-3 py-2 border-t border-border flex items-center justify-between">
-                  <button
-                    onClick={() => addSetToExercise(exIdx)}
-                    className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1"
-                  >
-                    <span>+</span>
-                    <span>Agregar serie</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      const newIdx = activeEx.sets.length
-                      addSetToExercise(exIdx)
-                      setTimeout(() => toggleWarmup(exIdx, newIdx), 0)
-                    }}
-                    className="text-xs text-gray-600 hover:text-blue-400 transition-colors flex items-center gap-1"
-                  >
-                    <span>+</span>
-                    <span>Calent.</span>
-                  </button>
+              {/* Previous session hint */}
+              {prevSets.length > 0 && (
+                <div style={{ padding: '8px 16px', borderTop: `1px solid ${S.line}` }}>
+                  <p style={{ fontSize: 10, color: S.faint }}>💡 Última vez: {prevSets[0]?.kg}kg × {prevSets[0]?.reps} reps</p>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )}
 
-        <div className="h-8" />
+              <TipsRow exerciseId={ex.id} />
+
+              {/* Add set buttons */}
+              <div style={{ padding: '10px 16px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => addSetToExercise(exIdx)}
+                  style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, color: S.dim, fontSize: 12, fontWeight: 600, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  + Serie
+                </button>
+                <button
+                  onClick={() => { const newIdx = activeEx.sets.length; addSetToExercise(exIdx); setTimeout(() => toggleWarmup(exIdx, newIdx), 0) }}
+                  style={{ background: 'transparent', border: `1px solid rgba(96,165,250,0.2)`, borderRadius: 10, color: 'rgba(96,165,250,0.6)', fontSize: 12, fontWeight: 600, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  + Calent.
+                </button>
+              </div>
+            </div>
+          )
+        })}
+        <div style={{ height: 16 }} />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: 'flex', gap: 10, padding: '12px 16px', paddingBottom: 36, borderTop: `1px solid ${S.line2}`, background: S.bg }}>
+        <button onClick={() => setConfirmAction('cancel')}
+          style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, color: S.dim, fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 600, fontSize: 14, padding: '14px 0', cursor: 'pointer' }}>
+          Cancelar
+        </button>
+        <button onClick={() => setConfirmAction('finish')}
+          style={{ flex: 2, background: S.acc, border: 'none', borderRadius: 14, color: '#fff', fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 700, fontSize: 15, padding: '14px 0', cursor: 'pointer' }}>
+          Terminar entreno
+        </button>
       </div>
 
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
 
+      {/* Confirm modal */}
       {confirmAction && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-white font-bold text-lg mb-2">
+        <div className="absolute inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <div style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 20, padding: 24, width: '100%', maxWidth: 360 }}>
+            <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
               {confirmAction === 'finish' ? '¿Terminar entreno?' : '¿Cancelar entreno?'}
             </h3>
             {confirmAction === 'cancel' && (
-              <p className="text-gray-400 text-sm mb-4">Se perderá todo el progreso de esta sesión.</p>
+              <p style={{ color: S.dim, fontSize: 13, marginBottom: 16 }}>Se perderá todo el progreso de esta sesión.</p>
             )}
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => setConfirmAction(null)}
-                className="flex-1 py-3 rounded-xl border border-border text-gray-400 text-sm font-medium hover:border-gray-500 transition-colors"
-              >
+            <div className="flex gap-3" style={{ marginTop: 16 }}>
+              <button onClick={() => setConfirmAction(null)}
+                style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Volver
               </button>
               <button
-                onClick={() => {
-                  setConfirmAction(null)
-                  if (confirmAction === 'finish') finishWorkout()
-                  else cancelWorkout()
-                }}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${
-                  confirmAction === 'finish'
-                    ? 'bg-primary text-black hover:bg-primary/90'
-                    : 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
-                }`}
-              >
+                onClick={() => { setConfirmAction(null); if (confirmAction === 'finish') finishWorkout(); else cancelWorkout() }}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+                  background: confirmAction === 'finish' ? S.acc : 'rgba(239,68,68,0.15)',
+                  color: confirmAction === 'finish' ? '#fff' : '#f87171',
+                }}>
                 {confirmAction === 'finish' ? '✓ Terminar' : '✕ Cancelar'}
               </button>
             </div>
@@ -542,9 +404,7 @@ export function ActiveWorkoutScreen() {
         </div>
       )}
 
-      {modalExercise && (
-        <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
-      )}
+      {modalExercise && <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />}
     </div>
   )
 }
