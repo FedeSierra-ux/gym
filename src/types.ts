@@ -40,6 +40,7 @@ export interface WorkoutSet {
   kg: number
   reps: number
   completedAt: number
+  isWarmup?: boolean
 }
 
 export interface WorkoutExercise {

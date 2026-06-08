@@ -47,7 +47,7 @@ function MuscleVolumeSection({ period }: { period: Period }) {
     for (const wex of w.exercises) {
       const ex = exercises.find(e => e.id === wex.exerciseId)
       if (!ex) continue
-      volumeMap[ex.muscleGroup] = (volumeMap[ex.muscleGroup] ?? 0) + wex.sets.length
+      volumeMap[ex.muscleGroup] = (volumeMap[ex.muscleGroup] ?? 0) + wex.sets.filter(s => !s.isWarmup).length
     }
   }
   const chartData = MUSCLE_ORDER

@@ -208,7 +208,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         // backdated workouts land on the correct date instead of today.
         const finishedAt = activeWorkout.startedAt + (realFinishedAt - activeWorkout.realStartedAt)
 
-        // Warmup sets are saved to history but excluded from PR tracking
+        // Warmup sets are saved to history (with isWarmup flag) but excluded from PR tracking
         const workoutExercises = activeWorkout.exercises.map((ex) => ({
           exerciseId: ex.exerciseId,
           sets: ex.sets
@@ -217,6 +217,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               kg: parseFloat(s.kg) || 0,
               reps: parseInt(s.reps) || 0,
               completedAt: finishedAt,
+              ...(s.isWarmup ? { isWarmup: true } : {}),
             })),
         }))
 
@@ -278,7 +279,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         const successToast: AppToast = {
           id: `toast-${Date.now()}`,
-          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
+          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)} series`,
           type: 'success',
         }
         const prToast: AppToast | null = newPrCount > 0
