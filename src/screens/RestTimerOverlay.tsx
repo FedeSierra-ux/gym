@@ -78,6 +78,7 @@ export function RestTimerOverlay() {
   const nextExercise = (() => {
     if (!lastCompletedSet) return null
     const exIdx = activeWorkout.exercises.findIndex((e) => e.exerciseId === lastCompletedSet.exerciseId)
+    if (exIdx < 0) return null
     const currentEx = activeWorkout.exercises[exIdx]
     if (!currentEx) return null
     const nextSetInSame = currentEx.sets.findIndex((s, i) => i > lastCompletedSet.setIdx && !s.completed)

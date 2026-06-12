@@ -2,7 +2,19 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleBodyMap } from '../components/MuscleBodyMap'
-import type { MuscleGroup, Exercise } from '../types'
+import type { MuscleGroup, Exercise, ExerciseEquipment } from '../types'
+
+function inferEquipmentType(equipment: string): ExerciseEquipment {
+  const lower = equipment.toLowerCase()
+  if (lower.includes('barra') || lower.includes('bar')) return 'barra'
+  if (lower.includes('cable') || lower.includes('polea')) return 'cable'
+  if (lower.includes('maquin')) return 'maquina'
+  if (lower.includes('kettlebell') || lower.includes('pesa rusa')) return 'kettlebell'
+  if (lower.includes('banda') || lower.includes('elast')) return 'banda'
+  if (lower.includes('cardio') || lower.includes('cinta') || lower.includes('bici')) return 'cardio_maquina'
+  if (lower.includes('corporal') || lower.includes('libre') || lower.includes('sin')) return 'peso_corporal'
+  return 'mancuernas'
+}
 
 const muscleGroups: MuscleGroup[] = [
   'pecho', 'espalda', 'hombros', 'biceps',
@@ -24,13 +36,14 @@ export function CustomExercisesScreen({ onClose }: Props) {
   const handleCreate = () => {
     const trimmed = nameEs.trim()
     if (!trimmed) return
+    const equipmentStr = equipment.trim() || 'Libre'
     const ex: Exercise = {
       id: `custom-${Date.now()}`,
       nameEs: trimmed,
       muscleGroup,
       primaryMuscles: [muscleGroupConfig[muscleGroup].label],
-      equipment: equipment.trim() || 'Libre',
-      equipmentType: 'mancuernas',
+      equipment: equipmentStr,
+      equipmentType: inferEquipmentType(equipmentStr),
     }
     addCustomExercise(ex)
     setNameEs('')

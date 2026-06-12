@@ -54,12 +54,15 @@ export const useWorkoutStore = create<WorkoutState>()(
         const routine = routines.find((r) => r.id === routineId)
         if (!routine) return
 
-        const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          const prevWorkout = [...workouts]
-            .filter((w) => w.routineId === routineId && w.finishedAt)
-            .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
+        // Find previous workout once, outside the exercise map
+        const prevWorkout = [...workouts]
+          .filter((w) => w.routineId === routineId && w.finishedAt)
+          .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
-          const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
+        const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
+          // Only use previous working sets (not warmups) to pre-fill new session
+          const prevSets = (prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? [])
+            .filter(s => !s.isWarmup)
 
           return {
             exerciseId: re.exerciseId,
@@ -264,10 +267,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           for (const re of routine.exercises) {
             if (progressionToasts.length >= 2) break
             const exSets = workoutExercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
-            if (exSets.length === 0) continue
-            const allHitMax = exSets.every((s) => s.reps >= re.repsMax)
+            const workingSets = exSets.filter(s => !s.isWarmup)
+            if (workingSets.length === 0) continue
+            const allHitMax = workingSets.every((s) => s.reps >= re.repsMax)
             if (!allHitMax) continue
-            const maxKg = Math.max(...exSets.map((s) => s.kg))
+            const maxKg = Math.max(...workingSets.map((s) => s.kg))
             const exName = allExercises.find((e) => e.id === re.exerciseId)?.nameEs ?? re.exerciseId
             progressionToasts.push({
               id: `toast-prog-${Date.now()}-${re.exerciseId}`,
