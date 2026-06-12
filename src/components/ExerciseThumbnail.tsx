@@ -8,6 +8,8 @@ interface Props {
   exercise: Exercise
   size?: number
   rounded?: string
+  /** Skip the GIF and force wger.de static image lookup */
+  forceStatic?: boolean
 }
 
 const LS = {
@@ -67,22 +69,21 @@ async function resolveWgerImageUrl(exercise: Exercise): Promise<string | null> {
   }
 }
 
-export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl' }: Props) {
-  const initialUrl = exercise.image ?? null
+export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl', forceStatic = false }: Props) {
+  const initialUrl = (!forceStatic && exercise.image) ? exercise.image : null
   const [imageUrl, setImageUrl] = useState<string | null>(initialUrl)
   const [failed, setFailed] = useState(false)
   const config = muscleGroupConfig[exercise.muscleGroup]
 
   useEffect(() => {
-    // Base exercises have image hardcoded — no API call needed
-    if (exercise.image || imageUrl || failed) return
+    if (imageUrl || failed) return
     resolveWgerImageUrl(exercise)
       .then(url => {
         if (url) setImageUrl(url)
         else setFailed(true)
       })
       .catch(() => setFailed(true))
-  }, [exercise.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exercise.id, forceStatic]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (imageUrl && !failed) {
     return (
