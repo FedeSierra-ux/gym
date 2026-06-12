@@ -1,0 +1,80 @@
+id,nombre_espanol,nombre_argentino,grupo_muscular,equipamiento,musculos_principales
+pecho-01,Press de Banca,,pecho,Barra,Pectoral mayor
+pecho-02,Press Inclinado DB,,pecho,Mancuernas,Pectoral superior
+pecho-03,Press de Mancuernas,,pecho,Mancuernas,Pectoral mayor
+pecho-04,Aperturas Cable,,pecho,Cable,Pectoral
+pecho-05,Aperturas DB,,pecho,Mancuernas,Pectoral
+pecho-06,Fondos en Paralelas,,pecho,Paralelas,Pectoral inferior
+pecho-07,Flexiones,,pecho,Peso corporal,Pectoral
+pecho-08,Press Declinado,,pecho,Barra,Pectoral inferior
+pecho-09,Pec Deck,,pecho,Máquina,Pectoral
+pecho-10,Press Inclinado Barra,,pecho,Barra,Pectoral superior
+espalda-01,Peso Muerto,,espalda,Barra,"Erector espinal, Trapecios"
+espalda-02,Remo con Barra,,espalda,Barra,"Dorsal, Romboides"
+espalda-03,Remo Mancuerna,,espalda,Mancuerna,Dorsal
+espalda-04,Dominadas,,espalda,Barra fija,"Dorsal, Bíceps"
+espalda-05,Jalón Frontal,,espalda,Cable,Dorsal
+espalda-06,Remo Cable,,espalda,Cable,"Dorsal, Romboides"
+espalda-07,Remo T,,espalda,Barra T,Dorsal medio
+espalda-08,Chin-ups,,espalda,Barra fija,"Dorsal, Bíceps"
+espalda-09,Face Pulls,,espalda,Cable,Deltoides posterior
+espalda-10,Pullover,,espalda,Mancuerna,"Dorsal, Pectoral"
+hombros-01,Press Militar,,hombros,Barra,Deltoides frontal
+hombros-02,Press DB Hombro,,hombros,Mancuernas,Deltoides
+hombros-03,Arnold Press,,hombros,Mancuernas,Deltoides completo
+hombros-04,Elevación Lateral,,hombros,Mancuernas,Deltoides lateral
+hombros-05,Elevación Frontal,,hombros,Mancuernas,Deltoides frontal
+hombros-06,Pájaros,,hombros,Mancuernas,Deltoides posterior
+hombros-07,Remo Vertical,,hombros,Barra,"Deltoides, Trapecios"
+hombros-08,Elevación Lateral Cable,,hombros,Cable,Deltoides lateral
+hombros-09,Press Máquina,,hombros,Máquina,Deltoides
+biceps-01,Curl Barra,,biceps,Barra,Bíceps braquial
+biceps-02,Curl Mancuerna,,biceps,Mancuernas,Bíceps
+biceps-03,Curl Martillo,,biceps,Mancuernas,"Braquial, Braquiorradial"
+biceps-04,Curl EZ,,biceps,Barra EZ,Bíceps
+biceps-05,Curl Predicador,,biceps,Banco predicador,Bíceps
+biceps-06,Curl Concentrado,,biceps,Mancuerna,Bíceps pico
+biceps-07,Curl Cable,,biceps,Cable,Bíceps
+biceps-08,Curl Inclinado,,biceps,Mancuernas,Bíceps largo
+triceps-01,Extensión Cuerda,,triceps,Cable,Tríceps
+triceps-02,Press Cerrado,,triceps,Barra,Tríceps
+triceps-03,Press Francés,,triceps,Barra EZ,Tríceps largo
+triceps-04,Extensión Overhead DB,,triceps,Mancuerna,Tríceps largo
+triceps-05,Fondos Tríceps,,triceps,Banco,Tríceps
+triceps-06,Kickback,,triceps,Mancuerna,Tríceps lateral
+triceps-07,Extensión V-Bar,,triceps,Cable,Tríceps
+triceps-08,Máquina Tríceps,,triceps,Máquina,Tríceps
+piernas-01,Sentadilla,,piernas,Barra,"Cuádriceps, Glúteos"
+piernas-02,Sentadilla Frontal,,piernas,Barra,Cuádriceps
+piernas-03,Prensa Piernas,,piernas,Máquina,"Cuádriceps, Glúteos"
+piernas-04,Extensión Cuádriceps,,piernas,Máquina,Cuádriceps
+piernas-05,Curl Isquiotibiales,,piernas,Máquina,Isquiotibiales
+piernas-06,Peso Muerto Rumano,,piernas,Barra,"Isquiotibiales, Glúteos"
+piernas-07,Zancadas,,piernas,Peso corporal,"Cuádriceps, Glúteos"
+piernas-08,Sentadilla Búlgara,,piernas,Mancuernas,"Cuádriceps, Glúteos"
+piernas-09,Hack Squat,,piernas,Máquina,Cuádriceps
+piernas-10,Hip Thrust,,piernas,Barra,"Glúteos, Isquiotibiales"
+piernas-11,Elevación Pantorrilla,,piernas,Máquina,Gemelos
+piernas-12,Curl Sentado,,piernas,Máquina,Isquiotibiales
+gluteos-01,Hip Thrust Glúteo,,gluteos,Barra,Glúteo mayor
+gluteos-02,Glute Bridge,,gluteos,Peso corporal,Glúteos
+gluteos-03,Cable Kickback,,gluteos,Cable,Glúteo mayor
+gluteos-04,Abductor Máquina,,gluteos,Máquina,Glúteo medio
+gluteos-05,Peso Muerto Sumo,,gluteos,Barra,"Glúteos, Isquiotibiales"
+gluteos-06,Subida Escalón,,gluteos,Cajón,"Glúteos, Cuádriceps"
+core-01,Rueda Abdominal,,core,Rueda,Core completo
+core-02,Crunch Cable,,core,Cable,Recto abdominal
+core-03,Plancha,,core,Peso corporal,"Core, Transverso"
+core-04,Elevación Piernas Colgante,,core,Barra fija,Recto abdominal inferior
+core-05,Russian Twist,,core,Peso corporal,Oblicuos
+core-06,Crunch Declinado,,core,Banco,Recto abdominal
+core-07,Press Pallof,,core,Cable,Core anti-rotacional
+core-08,Flexión Lateral DB,,core,Mancuerna,Oblicuos
+core-09,Mountain Climbers,,core,Peso corporal,"Core, Cardio"
+core-10,Dead Bug,,core,Peso corporal,Core profundo
+core-11,Crunch Máquina,,core,Máquina,Recto abdominal
+cardio-01,Cinta Correr,,cardio,Cinta,"Piernas, Cardio"
+cardio-02,Bicicleta Estática,,cardio,Bicicleta,"Piernas, Cardio"
+cardio-03,Remo Máquina,,cardio,Remo,"Full body, Cardio"
+cardio-04,Elíptica,,cardio,Elíptica,"Piernas, Cardio"
+cardio-05,Saltar Cuerda,,cardio,Cuerda,"Gemelos, Cardio"

@@ -1,0 +1,27 @@
+INSTRUCCIONES:
+"- nombre_rutina: nombre de la rutina (todas las filas de la misma rutina deben tener el mismo nombre)"
+"- emoji: un emoji para identificar la rutina (ej: 💪 🦵 🏋️)"
+"- ejercicio_id: el ID del ejercicio de la columna 'id' del archivo ejercicios_actuales.csv"
+"- series: cantidad de series (número entero, ej: 4)"
+"- reps_min: mínimo de repeticiones (ej: 8)"
+"- reps_max: máximo de repeticiones (ej: 12)"
+"- orden: posición en la rutina (1, 2, 3...)"
+"IMPORTANTE: No modificar la fila de encabezados. Reemplazar los ejemplos con tus datos."
+,,,,,,
+nombre_rutina,emoji,ejercicio_id,series,reps_min,reps_max,orden
+Push Day,💪,pecho-01,4,6,8,1
+Push Day,💪,pecho-02,3,8,12,2
+Push Day,💪,hombros-02,3,8,12,3
+Push Day,💪,hombros-04,3,12,15,4
+Push Day,💪,triceps-01,3,10,15,5
+Push Day,💪,triceps-03,3,8,12,6
+Pull Day,🔙,espalda-01,4,5,6,1
+Pull Day,🔙,espalda-05,4,8,12,2
+Pull Day,🔙,espalda-06,3,10,12,3
+Pull Day,🔙,biceps-01,3,8,12,4
+Pull Day,🔙,biceps-03,3,10,15,5
+Leg Day,🦵,piernas-01,4,6,8,1
+Leg Day,🦵,piernas-03,3,10,12,2
+Leg Day,🦵,piernas-06,3,10,12,3
+Leg Day,🦵,piernas-04,3,12,15,4
+Leg Day,🦵,piernas-11,4,12,20,5

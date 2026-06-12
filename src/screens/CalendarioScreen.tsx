@@ -25,7 +25,7 @@ function DaySheet({
   selectedDay: SelectedDay; allWorkouts: Workout[]; routines: Routine[]
   onClose: () => void; onStartWorkout: (routineId: string, dateOverride?: number) => void
 }) {
-  const { deleteWorkout } = useStore()
+  const { deleteWorkout, getArchivedRoutineName } = useStore()
   const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
   const { day, month, year } = selectedDay
@@ -86,13 +86,13 @@ function DaySheet({
               ) : (
                 <div className="flex flex-col gap-2 pb-2">
                   {dayWorkouts.map((w) => {
-                    const routine = routines.find((r) => r.id === w.routineId)
-                    const totalSets = w.exercises.reduce((a, e) => a + e.sets.length, 0)
+                    const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
+                    const totalSets = w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
                     return (
                       <div key={w.id} style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: 12 }}>
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex-1 min-w-0">
-                            <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{routine?.emoji} {routine?.name}</p>
+                            <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
                             <p style={{ fontSize: 11, color: S.dim }}>{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
                           </div>
                           <button onClick={() => deleteWorkout(w.id)} style={{ padding: 6, color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
@@ -354,7 +354,7 @@ function CalendarioTab() {
           {recentWorkouts.map((w) => {
             const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
             const date = new Date(w.startedAt)
-            const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
+            const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.filter(s => !s.isWarmup).length, 0)
             return (
               <div key={w.id}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, background: S.surf, borderRadius: 14, padding: 12, border: `1px solid ${S.line2}`, cursor: 'pointer' }}
@@ -410,7 +410,7 @@ function RecordsTab() {
           const ex = exercises.find((e) => e.id === pr.exerciseId)
           if (!ex) return null
           const isNew = pr.date >= startOfMonth
-          const prDate = new Date(pr.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+          const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
           const isExpanded = expandedPr === pr.exerciseId
           const hasHistory = pr.history && pr.history.length > 0
           return (
@@ -445,7 +445,7 @@ function RecordsTab() {
                   <div className="flex flex-col gap-1.5">
                     {[...pr.history!].reverse().map((h, hi) => (
                       <div key={hi} className="flex items-center justify-between">
-                        <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                        <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
                         <span style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{h.kg}kg × {h.reps}</span>
                       </div>
                     ))}

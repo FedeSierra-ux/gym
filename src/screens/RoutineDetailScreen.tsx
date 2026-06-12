@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
@@ -54,7 +54,6 @@ export function RoutineDetailScreen() {
   const {
     activeRoutineId,
     routines,
-    exercises,
     workouts,
     setActiveRoutineId,
     removeExerciseFromRoutine,
@@ -65,6 +64,7 @@ export function RoutineDetailScreen() {
     setShowExercisePicker,
     addToast,
   } = useStore()
+  const exercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
   const [editMode, setEditMode] = useState(false)
