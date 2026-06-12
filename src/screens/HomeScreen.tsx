@@ -57,9 +57,9 @@ export function HomeScreen() {
   // Last session stats
   const daysAgo = lastWorkout ? Math.floor((Date.now() - lastWorkout.startedAt) / 86400000) : null
   const daysAgoStr = daysAgo === null ? '' : daysAgo === 0 ? 'hoy' : daysAgo === 1 ? 'hace 1 día' : `hace ${daysAgo} días`
-  const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0) ?? 0
+  const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.length, 0) ?? 0
   const lastVolume = lastWorkout?.exercises.reduce((a, e) =>
-    a + e.sets.filter(s => !s.isWarmup).reduce((b, s) => b + (s.kg || 0) * (s.reps || 0), 0), 0) ?? 0
+    a + e.sets.reduce((b, s) => b + (s.kg || 0) * (s.reps || 0), 0), 0) ?? 0
   const volumeStr = lastVolume >= 1000 ? `${(lastVolume / 1000).toFixed(1)}K kg` : `${lastVolume} kg`
   const lastKcal = lastWorkout?.kcal ?? Math.round((lastWorkout?.durationMin ?? 0) * 6.5)
 

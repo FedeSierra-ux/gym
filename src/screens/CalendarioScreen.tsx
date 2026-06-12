@@ -87,7 +87,7 @@ function DaySheet({
                 <div className="flex flex-col gap-2 pb-2">
                   {dayWorkouts.map((w) => {
                     const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
-                    const totalSets = w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
+                    const totalSets = w.exercises.reduce((a, e) => a + e.sets.length, 0)
                     return (
                       <div key={w.id} style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: 12 }}>
                         <div className="flex items-center gap-3 mb-2">
@@ -354,7 +354,7 @@ function CalendarioTab() {
           {recentWorkouts.map((w) => {
             const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
             const date = new Date(w.startedAt)
-            const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.filter(s => !s.isWarmup).length, 0)
+            const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
             return (
               <div key={w.id}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, background: S.surf, borderRadius: 14, padding: 12, border: `1px solid ${S.line2}`, cursor: 'pointer' }}
