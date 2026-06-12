@@ -25,13 +25,21 @@ export function BottomNav() {
                 if (id !== 'rutinas') setActiveRoutineId(null)
               }}
               className="flex-1 flex flex-col items-center gap-1 py-[11px]"
+              style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}
             >
-              <span style={{ fontSize: 18, opacity: isActive ? 1 : 0.35 }}>{emoji}</span>
+              {/* Active indicator bar */}
+              <div style={{
+                position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                width: isActive ? 24 : 0, height: 2, borderRadius: 1,
+                background: '#E8634A', transition: 'width 0.2s ease',
+              }} />
+              <span style={{ fontSize: 18, opacity: isActive ? 1 : 0.35, transition: 'opacity 0.15s' }}>{emoji}</span>
               <span
-                className="text-[10px]"
                 style={{
+                  fontSize: 10,
                   fontWeight: isActive ? 700 : 500,
                   color: isActive ? '#E8634A' : '#737A8C',
+                  transition: 'color 0.15s',
                 }}
               >
                 {label}

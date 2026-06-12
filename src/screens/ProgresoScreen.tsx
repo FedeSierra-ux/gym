@@ -63,14 +63,17 @@ function MuscleVolumeSection({ period }: { period: Period }) {
     <div className="flex flex-col gap-3">
       {chartData.map(item => (
         <div key={item.mg} className="flex items-center gap-3">
-          <div style={{ width: 76, flexShrink: 0, textAlign: 'right' }}>
+          <div style={{ width: 80, flexShrink: 0, textAlign: 'right' }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: item.color }}>{muscleGroupConfig[item.mg].emoji} {item.name}</span>
           </div>
-          <div className="flex-1 h-5 rounded-full overflow-hidden" style={{ background: S.surf2 }}>
-            <div className="h-full rounded-full" style={{ width: `${(item.sets / maxSets) * 100}%`, background: item.color + 'cc', minWidth: 4, transition: 'width 0.4s ease' }} />
+          <div className="flex-1 h-5 rounded-full overflow-hidden relative" style={{ background: S.surf2 }}>
+            <div className="h-full rounded-full flex items-center justify-end pr-2" style={{ width: `${(item.sets / maxSets) * 100}%`, background: item.color + 'cc', minWidth: 4, transition: 'width 0.4s ease' }}>
+              {(item.sets / maxSets) > 0.35 && <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', opacity: 0.85 }}>{Math.round((item.sets / maxSets) * 100)}%</span>}
+            </div>
           </div>
-          <div style={{ width: 28, flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: S.ink }}>{item.sets}</span>
+          <div style={{ width: 32, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: S.ink }}>{item.sets}</span>
+            <span style={{ fontSize: 9, color: S.faint }}> s</span>
           </div>
         </div>
       ))}
@@ -122,7 +125,7 @@ export function ProgresoScreen() {
     ep.changePct = ep.firstMax > 0 ? Math.round((ep.change / ep.firstMax) * 100) : 0
     progressList.push(ep)
   }
-  progressList.sort((a, b) => b.change - a.change)
+  progressList.sort((a, b) => b.changePct - a.changePct || b.change - a.change)
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -173,15 +176,17 @@ export function ProgresoScreen() {
               const bars = ep.months
               const maxBar = Math.max(...bars.map(m => m.maxKg), 1)
               const firstMonthLabel = bars.find(m => m.maxKg > 0)?.label ?? ''
+              const exConfig = muscleGroupConfig[ex.muscleGroup]
               return (
-                <div key={ep.exerciseId} style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}` }}>
+                <div key={ep.exerciseId} style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}`, borderLeft: `3px solid ${exConfig.color}` }}>
                   {/* Top row */}
                   <div className="flex items-start justify-between" style={{ marginBottom: 18 }}>
                     <div>
-                      <div style={{ fontSize: 13, color: S.dim, fontWeight: 500 }}>{ex.nameEs}</div>
-                      <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: -1, marginTop: 4, lineHeight: 1, color: S.ink }}>
+                      <div style={{ fontSize: 15, color: S.ink, fontWeight: 700 }}>{ex.nameEs}</div>
+                      <div style={{ fontSize: 11, color: exConfig.color, fontWeight: 600, marginTop: 3 }}>{exConfig.emoji} {exConfig.label}</div>
+                      <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, marginTop: 8, lineHeight: 1, color: S.ink }}>
                         {ep.currentMax}
-                        <span style={{ fontSize: 16, color: S.dim, fontWeight: 500, letterSpacing: 0 }}> kg</span>
+                        <span style={{ fontSize: 15, color: S.dim, fontWeight: 500, letterSpacing: 0 }}> kg</span>
                       </div>
                     </div>
                     {ep.change > 0 && (

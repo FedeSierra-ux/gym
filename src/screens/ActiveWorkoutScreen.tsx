@@ -344,8 +344,13 @@ export function ActiveWorkoutScreen() {
 
               {/* Previous session hint */}
               {prevSets.length > 0 && (
-                <div style={{ padding: '8px 16px', borderTop: `1px solid ${S.line}` }}>
-                  <p style={{ fontSize: 10, color: S.faint }}>💡 Última vez: {prevSets[0]?.kg}kg × {prevSets[0]?.reps} reps</p>
+                <div style={{ padding: '8px 16px 6px', borderTop: `1px solid ${S.line}`, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
+                  {prevSets.filter(s => !s.isWarmup).slice(0, 4).map((s, i) => (
+                    <span key={i} style={{ fontSize: 10, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
+                      {s.kg}×{s.reps}
+                    </span>
+                  ))}
                 </div>
               )}
 

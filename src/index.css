@@ -61,6 +61,13 @@ html, body {
 }
 .scroll-area::-webkit-scrollbar { display: none; }
 
+/* Global button press feedback */
+button {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+button:active { transform: scale(0.97); }
+
 /* Primary button — coral solid */
 .btn-primary-glow {
   background: var(--acc);
