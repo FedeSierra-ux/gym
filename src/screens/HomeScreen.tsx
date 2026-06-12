@@ -195,16 +195,16 @@ export function HomeScreen() {
               <button
                 onClick={() => startWorkout(suggestedRoutine.id)}
                 style={{
-                  width: '100%', background: '#E8634A', border: 'none',
+                  width: '100%', background: 'linear-gradient(135deg, #E8634A 0%, #d4553e 100%)', border: 'none',
                   color: '#fff', fontSize: 15, fontWeight: 700,
-                  padding: '16px 0', cursor: 'pointer',
+                  padding: '17px 0', cursor: 'pointer',
                   fontFamily: 'DM Sans, system-ui, sans-serif',
                   letterSpacing: 0.3,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: 'background 0.15s',
+                  transition: 'opacity 0.15s',
                 }}
               >
-                <span>▶</span> Iniciar entreno
+                <span style={{ fontSize: 14 }}>▶</span> Iniciar entreno
               </button>
             </div>
           ) : (

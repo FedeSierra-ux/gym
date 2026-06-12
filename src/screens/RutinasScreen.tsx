@@ -72,8 +72,10 @@ export function RutinasScreen() {
               onClick={() => setActiveRoutineId(routine.id)}
               style={{
                 background: '#161821', borderRadius: 18, padding: 16, textAlign: 'left', width: '100%',
-                border: '1px solid rgba(236,238,244,0.12)',
+                border: `1px solid ${isLast ? 'rgba(232,99,74,0.22)' : 'rgba(236,238,244,0.12)'}`,
+                borderLeft: `3px solid ${primaryColor}`,
                 transition: 'all 0.15s',
+                cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
               }}
             >
               <div className="flex items-start gap-3">
@@ -129,14 +131,15 @@ export function RutinasScreen() {
         <button
           onClick={handleCreateRoutine}
           style={{
-            width: '100%', border: '1.5px dashed rgba(236,238,244,0.12)', borderRadius: 18,
-            background: 'none', color: '#737A8C',
+            width: '100%', border: '1px solid rgba(232,99,74,0.25)', borderRadius: 18,
+            background: 'rgba(232,99,74,0.07)', color: '#E8634A',
             fontFamily: 'DM Sans, system-ui, sans-serif',
-            fontSize: 14, fontWeight: 600, padding: '16px 0', cursor: 'pointer',
+            fontSize: 14, fontWeight: 700, padding: '16px 0', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all 0.15s',
           }}
         >
-          <span style={{ fontSize: 20, lineHeight: 1 }}>+</span> Crear nueva rutina
+          <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 700 }}>+</span> Crear nueva rutina
         </button>
       </div>
 
@@ -146,19 +149,20 @@ export function RutinasScreen() {
           onClick={() => setShowCustomExercises(true)}
           style={{
             width: '100%', borderRadius: 18, padding: '14px 0',
-            border: '1px solid rgba(56,189,248,0.15)',
-            background: 'rgba(56,189,248,0.04)',
-            color: 'rgba(56,189,248,0.7)',
+            border: '1px solid rgba(236,238,244,0.12)',
+            background: '#161821',
+            color: '#737A8C',
             fontFamily: 'DM Sans, system-ui, sans-serif',
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all 0.15s',
           }}
         >
           <span style={{ fontSize: 16, lineHeight: 1 }}>💪</span> Mis ejercicios
           {customExercises.length > 0 && (
             <span style={{
               fontSize: 10, padding: '2px 6px', borderRadius: 20, fontWeight: 700,
-              background: 'rgba(56,189,248,0.15)', color: 'rgba(56,189,248,0.8)',
+              background: 'rgba(236,238,244,0.08)', color: '#ECEEF4',
             }}>
               {customExercises.length}
             </span>
