@@ -28,7 +28,6 @@ interface WorkoutState {
   dismissRestTimer: () => void
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
-  toggleWarmup: (exerciseIdx: number, setIdx: number) => void
   dismissLivePr: () => void
 }
 
@@ -54,13 +53,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         const routine = routines.find((r) => r.id === routineId)
         if (!routine) return
 
+        // Find previous workout once, outside the exercise map
+        const prevWorkout = [...workouts]
+          .filter((w) => w.routineId === routineId && w.finishedAt)
+          .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
+
         const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          const prevWorkout = [...workouts]
-            .filter((w) => w.routineId === routineId && w.finishedAt)
-            .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
-
           const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
-
           return {
             exerciseId: re.exerciseId,
             sets: Array.from({ length: re.sets }, (_, i) => ({
@@ -126,9 +125,9 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : s.activeWorkout.lastCompletedSet
 
-          // Detect live PR (skip warmup sets)
+          // Detect live PR
           let livePr = s.activeWorkout.livePr
-          if (completedSet.completed && !completedSet.isWarmup) {
+          if (completedSet.completed) {
             const { prs } = useStore.getState()
             const exerciseId = exercises[exerciseIdx].exerciseId
             const kg = parseFloat(completedSet.kg) || 0
@@ -138,7 +137,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               const isPr = !existing || kg > existing.kg || (kg === existing.kg && reps > existing.reps)
               livePr = isPr ? { exerciseId, kg, reps } : null
             }
-          } else if (!completedSet.completed) {
+          } else {
             livePr = null
           }
 
@@ -148,7 +147,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               exercises,
               lastCompletedSet,
               livePr,
-              restTimerVisible: completedSet.completed && !completedSet.isWarmup,
+              restTimerVisible: completedSet.completed,
               restSecondsLeft: s.activeWorkout.restTotalSeconds,
               restTotalSeconds: s.activeWorkout.restTotalSeconds,
             },
@@ -186,7 +185,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         if (!activeWorkout) return
 
         const hasWorkingSets = activeWorkout.exercises.some(ex =>
-          ex.sets.some(s => s.completed && !s.isWarmup)
+          ex.sets.some(s => s.completed)
         )
         if (!hasWorkingSets) {
           useStore.setState(s => ({
@@ -208,7 +207,6 @@ export const useWorkoutStore = create<WorkoutState>()(
         // backdated workouts land on the correct date instead of today.
         const finishedAt = activeWorkout.startedAt + (realFinishedAt - activeWorkout.realStartedAt)
 
-        // Warmup sets are saved to history (with isWarmup flag) but excluded from PR tracking
         const workoutExercises = activeWorkout.exercises.map((ex) => ({
           exerciseId: ex.exerciseId,
           sets: ex.sets
@@ -217,7 +215,6 @@ export const useWorkoutStore = create<WorkoutState>()(
               kg: parseFloat(s.kg) || 0,
               reps: parseInt(s.reps) || 0,
               completedAt: finishedAt,
-              ...(s.isWarmup ? { isWarmup: true } : {}),
             })),
         }))
 
@@ -234,7 +231,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         const newPrs = [...prs]
         for (const ex of activeWorkout.exercises) {
           for (const s of ex.sets) {
-            if (!s.completed || s.isWarmup) continue  // skip incomplete and warmup sets
+            if (!s.completed) continue
             const kg = parseFloat(s.kg) || 0
             const reps = parseInt(s.reps) || 0
             if (kg <= 0) continue
@@ -279,7 +276,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         const successToast: AppToast = {
           id: `toast-${Date.now()}`,
-          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)} series`,
+          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
           type: 'success',
         }
         const prToast: AppToast | null = newPrCount > 0
@@ -329,21 +326,6 @@ export const useWorkoutStore = create<WorkoutState>()(
               restTotalSeconds: seconds,
             },
           }
-        }),
-
-      toggleWarmup: (exerciseIdx, setIdx) =>
-        set((s) => {
-          if (!s.activeWorkout) return {}
-          const exercises = s.activeWorkout.exercises.map((ex, ei) => {
-            if (ei !== exerciseIdx) return ex
-            return {
-              ...ex,
-              sets: ex.sets.map((st, si) =>
-                si === setIdx ? { ...st, isWarmup: !st.isWarmup, completed: false } : st
-              ),
-            }
-          })
-          return { activeWorkout: { ...s.activeWorkout, exercises } }
         }),
 
       dismissLivePr: () =>

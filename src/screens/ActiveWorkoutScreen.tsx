@@ -119,7 +119,7 @@ export function ActiveWorkoutScreen() {
   const exercises = useAllExercises()
   const {
     activeWorkout, updateSetValue, completeSet, addSetToExercise, removeSetFromExercise,
-    toggleWarmup, dismissLivePr, finishWorkout, cancelWorkout,
+    dismissLivePr, finishWorkout, cancelWorkout,
   } = useWorkoutStore()
 
   const [elapsed, setElapsed] = useState(0)
@@ -139,8 +139,8 @@ export function ActiveWorkoutScreen() {
   if (!activeWorkout) return null
 
   const routine = routines.find((r) => r.id === activeWorkout.routineId)
-  const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => !s.isWarmup).length, 0)
-  const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed && !s.isWarmup).length, 0)
+  const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.length, 0)
+  const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
   const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
@@ -225,11 +225,10 @@ export function ActiveWorkoutScreen() {
               {/* Sets */}
               {activeEx.sets.map((set, setIdx) => {
                 const isCompleted = set.completed
-                const isWarmup = !!set.isWarmup
                 const flashKey = `${exIdx}-${setIdx}`
                 const kg = parseFloat(set.kg) || 0
                 const reps = parseInt(set.reps) || 0
-                const orm = isCompleted && !isWarmup && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+                const orm = isCompleted && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
                 const plateKey = `${exIdx}-${setIdx}`
                 const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
                 const canDelete = !isCompleted && activeEx.sets.length > 1
@@ -240,18 +239,14 @@ export function ActiveWorkoutScreen() {
                       style={{
                         display: 'grid', gridTemplateColumns: '44px 1fr 1fr 56px',
                         alignItems: 'stretch', padding: '0 12px', gap: 6,
-                        background: isCompleted ? (isWarmup ? 'rgba(56,189,248,0.05)' : 'rgba(232,99,74,0.05)') : 'transparent',
+                        background: isCompleted ? 'rgba(232,99,74,0.05)' : 'transparent',
                         borderTop: `1px solid ${S.line}`,
                         minHeight: 52,
                       }}
                     >
                       {/* Set # + delete */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <button onClick={() => !isCompleted && toggleWarmup(exIdx, setIdx)}
-                          style={{ background: 'none', border: 'none', cursor: isCompleted ? 'default' : 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.dim }}>{setIdx + 1}</span>
-                          {isWarmup && <span style={{ fontSize: 7, fontWeight: 700, textTransform: 'uppercase', color: 'rgba(96,165,250,0.8)', lineHeight: 1 }}>W</span>}
-                        </button>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? S.acc : S.dim }}>{setIdx + 1}</span>
                         {canDelete && (
                           <button onClick={() => removeSetFromExercise(exIdx, setIdx)}
                             style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: S.faint, fontSize: 9, fontFamily: 'inherit', lineHeight: 1 }}>
@@ -271,9 +266,9 @@ export function ActiveWorkoutScreen() {
                           style={{
                             flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
-                            background: isCompleted ? (isWarmup ? 'rgba(96,165,250,0.1)' : 'rgba(232,99,74,0.1)') : S.surf2,
-                            border: `1px solid ${isCompleted ? (isWarmup ? 'rgba(96,165,250,0.2)' : 'rgba(232,99,74,0.2)') : S.line2}`,
-                            color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.ink,
+                            background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
+                            border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
+                            color: isCompleted ? S.acc : S.ink,
                             fontFamily: 'DM Sans, system-ui, sans-serif',
                             outline: 'none', minWidth: 0,
                           }}
@@ -290,9 +285,9 @@ export function ActiveWorkoutScreen() {
                           style={{
                             flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
-                            background: isCompleted ? (isWarmup ? 'rgba(96,165,250,0.1)' : 'rgba(232,99,74,0.1)') : S.surf2,
-                            border: `1px solid ${isCompleted ? (isWarmup ? 'rgba(96,165,250,0.2)' : 'rgba(232,99,74,0.2)') : S.line2}`,
-                            color: isCompleted ? (isWarmup ? '#60A5FA' : S.acc) : S.ink,
+                            background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
+                            border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
+                            color: isCompleted ? S.acc : S.ink,
                             fontFamily: 'DM Sans, system-ui, sans-serif',
                             outline: 'none', minWidth: 0,
                           }}
@@ -310,12 +305,8 @@ export function ActiveWorkoutScreen() {
                         style={{
                           width: '100%', minHeight: 52, borderRadius: 10,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isCompleted
-                            ? (isWarmup ? '#60A5FA' : S.acc)
-                            : 'rgba(232,99,74,0.08)',
-                          border: `2px solid ${isCompleted
-                            ? (isWarmup ? '#60A5FA' : S.acc)
-                            : 'rgba(232,99,74,0.35)'}`,
+                          background: isCompleted ? S.acc : 'rgba(232,99,74,0.08)',
+                          border: `2px solid ${isCompleted ? S.acc : 'rgba(232,99,74,0.35)'}`,
                           color: isCompleted ? '#fff' : S.acc,
                           fontSize: 20, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           transition: 'all 0.15s',
@@ -346,7 +337,7 @@ export function ActiveWorkoutScreen() {
               {prevSets.length > 0 && (
                 <div style={{ padding: '8px 16px 6px', borderTop: `1px solid ${S.line}`, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 10, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
-                  {prevSets.filter(s => !s.isWarmup).slice(0, 4).map((s, i) => (
+                  {prevSets.slice(0, 4).map((s, i) => (
                     <span key={i} style={{ fontSize: 10, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
                       {s.kg}×{s.reps}
                     </span>
@@ -356,16 +347,11 @@ export function ActiveWorkoutScreen() {
 
               <TipsRow exerciseId={ex.id} />
 
-              {/* Add set buttons */}
-              <div style={{ padding: '10px 16px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Add set button */}
+              <div style={{ padding: '10px 16px 14px' }}>
                 <button onClick={() => addSetToExercise(exIdx)}
                   style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, color: S.dim, fontSize: 12, fontWeight: 600, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
                   + Serie
-                </button>
-                <button
-                  onClick={() => { const newIdx = activeEx.sets.length; addSetToExercise(exIdx); setTimeout(() => toggleWarmup(exIdx, newIdx), 0) }}
-                  style={{ background: 'transparent', border: `1px solid rgba(96,165,250,0.2)`, borderRadius: 10, color: 'rgba(96,165,250,0.6)', fontSize: 12, fontWeight: 600, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  + Calent.
                 </button>
               </div>
             </div>

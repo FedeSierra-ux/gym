@@ -172,7 +172,14 @@ export const useStore = create<AppState>()(
         set((s) => ({ customExercises: [...s.customExercises, ex] })),
 
       deleteCustomExercise: (id) =>
-        set((s) => ({ customExercises: s.customExercises.filter((e) => e.id !== id) })),
+        set((s) => ({
+          customExercises: s.customExercises.filter((e) => e.id !== id),
+          // Remove deleted exercise from all routines to avoid orphaned refs
+          routines: s.routines.map(r => ({
+            ...r,
+            exercises: r.exercises.filter(re => re.exerciseId !== id),
+          })),
+        })),
 
       getArchivedRoutineName: (routineId) => {
         const { archivedRoutineNames } = get()
