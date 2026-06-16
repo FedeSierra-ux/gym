@@ -216,7 +216,7 @@ export function ActiveWorkoutScreen() {
               </div>
 
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr 1fr 56px', padding: '0 12px 6px', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px', padding: '0 12px 6px', gap: 6 }}>
                 {['Set', 'KG', 'Reps', ''].map((h, i) => (
                   <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i === 0 ? 'center' : i < 3 ? 'center' : 'center' }}>{h}</div>
                 ))}
@@ -238,7 +238,7 @@ export function ActiveWorkoutScreen() {
                     <div
                       className={flashingSet === flashKey ? 'set-complete-flash' : ''}
                       style={{
-                        display: 'grid', gridTemplateColumns: '44px 1fr 1fr 56px',
+                        display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px',
                         alignItems: 'stretch', padding: '0 12px', gap: 6,
                         background: isCompleted ? 'rgba(232,99,74,0.05)' : 'transparent',
                         borderTop: `1px solid ${S.line}`,
@@ -257,7 +257,7 @@ export function ActiveWorkoutScreen() {
                       </div>
 
                       {/* KG */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8 }}>
+                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
                         <input type="number" inputMode="decimal" value={set.kg}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
@@ -278,7 +278,7 @@ export function ActiveWorkoutScreen() {
                       </div>
 
                       {/* Reps */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8 }}>
+                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
                         <input type="number" inputMode="numeric" value={set.reps}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
