@@ -232,6 +232,7 @@ export function ActiveWorkoutScreen() {
                 const plateKey = `${exIdx}-${setIdx}`
                 const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
                 const canDelete = !isCompleted && activeEx.sets.length > 1
+                const canComplete = isCompleted || reps > 0
                 return (
                   <div key={setIdx}>
                     <div
@@ -300,18 +301,19 @@ export function ActiveWorkoutScreen() {
                         aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
                         onClick={() => {
                           completeSet(exIdx, setIdx)
-                          if (!isCompleted) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
+                          if (!isCompleted && canComplete) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
                         }}
                         style={{
                           width: '100%', minHeight: 52, borderRadius: 10,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isCompleted ? S.acc : 'rgba(232,99,74,0.08)',
-                          border: `2px solid ${isCompleted ? S.acc : 'rgba(232,99,74,0.35)'}`,
-                          color: isCompleted ? '#fff' : S.acc,
-                          fontSize: 20, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          background: isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.08)' : S.surf2,
+                          border: `2px solid ${isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.35)' : S.line2}`,
+                          color: isCompleted ? '#fff' : canComplete ? S.acc : S.faint,
+                          fontSize: 20, fontWeight: 700, cursor: canComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
                           transition: 'all 0.15s',
                           alignSelf: 'stretch',
                           marginTop: 6, marginBottom: 6,
+                          opacity: canComplete ? 1 : 0.4,
                         }}
                       >✓</button>
                     </div>
