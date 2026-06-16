@@ -72,7 +72,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
 function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
   return (
     <button onClick={onPress} aria-label={ariaLabel}
-      style={{ width: 22, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 10, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+      style={{ width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
     >
       {label}
     </button>

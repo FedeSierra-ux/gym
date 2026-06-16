@@ -79,7 +79,11 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
             className="flex items-center gap-4 mb-5 rounded-2xl p-4"
             style={{ background: S.surf2, border: `1px solid ${S.line2}` }}
           >
-            <MuscleBodyMap muscleGroup={exercise.muscleGroup} size={80} />
+            <MuscleBodyMap
+              muscleGroup={exercise.muscleGroup}
+              size={80}
+              showBack={['piernas-05', 'piernas-06', 'piernas-10', 'piernas-12'].includes(exercise.id)}
+            />
             <div className="flex-1 min-w-0">
               {primaryMuscles.length > 0 && (
                 <div className="mb-2">

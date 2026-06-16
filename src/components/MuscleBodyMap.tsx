@@ -4,6 +4,7 @@ interface Props {
   muscleGroup: MuscleGroup
   size?: number
   className?: string
+  showBack?: boolean
 }
 
 const muscleColors: Record<MuscleGroup, string> = {
@@ -37,9 +38,9 @@ function InactiveRegion({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
+export function MuscleBodyMap({ muscleGroup, size = 80, className, showBack }: Props) {
   const color = muscleColors[muscleGroup]
-  const isFront = frontGroups.includes(muscleGroup)
+  const isFront = showBack ? false : frontGroups.includes(muscleGroup)
   const width = size
   const height = Math.round(size * 1.95)
   const glowId = `glow-${muscleGroup}-${size}`
@@ -249,6 +250,24 @@ export function MuscleBodyMap({ muscleGroup, size = 80, className }: Props) {
               <ellipse cx="60" cy="108" rx="9" ry="9" />
               <ellipse cx="37" cy="138" rx="8" ry="20" />
               <ellipse cx="63" cy="138" rx="8" ry="20" />
+            </InactiveRegion>
+          )}
+
+          {/* Isquiotibiales / Piernas (back view) */}
+          {is('piernas') ? (
+            <ActiveRegion color={color} glowId={glowId}>
+              <ellipse cx="37" cy="138" rx="8" ry="22" />
+              <ellipse cx="63" cy="138" rx="8" ry="22" />
+              {/* Pantorrillas */}
+              <ellipse cx="36" cy="175" rx="6" ry="9" opacity={0.6} />
+              <ellipse cx="64" cy="175" rx="6" ry="9" opacity={0.6} />
+            </ActiveRegion>
+          ) : (
+            <InactiveRegion>
+              <ellipse cx="37" cy="138" rx="8" ry="22" />
+              <ellipse cx="63" cy="138" rx="8" ry="22" />
+              <ellipse cx="36" cy="175" rx="6" ry="9" />
+              <ellipse cx="64" cy="175" rx="6" ry="9" />
             </InactiveRegion>
           )}
         </>

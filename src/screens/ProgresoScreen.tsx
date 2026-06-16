@@ -86,6 +86,7 @@ export function ProgresoScreen() {
   const exercises = useAllExercises()
   const [period, setPeriod] = useState<Period>('6m')
   const [tab, setTab] = useState<Tab>('fuerza')
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
 
   const monthsBack = getMonthsBack(period)
   const now = new Date()
@@ -127,6 +128,14 @@ export function ProgresoScreen() {
   }
   progressList.sort((a, b) => b.changePct - a.changePct || b.change - a.change)
 
+  const muscleGroupsWithData = [...new Set(
+    progressList.map(ep => exercises.find(e => e.id === ep.exerciseId)?.muscleGroup).filter(Boolean)
+  )] as string[]
+
+  const filteredList = selectedMuscle
+    ? progressList.filter(ep => exercises.find(e => e.id === ep.exerciseId)?.muscleGroup === selectedMuscle)
+    : progressList
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Fixed header */}
@@ -161,73 +170,116 @@ export function ProgresoScreen() {
             <p style={{ fontSize: 11, color: S.dim, marginTop: 2, marginBottom: 16 }}>Total de series completadas en el período</p>
             <MuscleVolumeSection period={period} />
           </div>
-        ) : progressList.length === 0 ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="text-center">
-              <p style={{ color: S.dim, fontSize: 13 }}>No hay datos de progreso aún</p>
-              <p style={{ color: S.faint, fontSize: 11, marginTop: 4 }}>Completá algunos entrenamientos para ver tu progreso</p>
-            </div>
-          </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {progressList.map((ep) => {
-              const ex = exercises.find(e => e.id === ep.exerciseId)
-              if (!ex) return null
-              const bars = ep.months
-              const maxBar = Math.max(...bars.map(m => m.maxKg), 1)
-              const firstMonthLabel = bars.find(m => m.maxKg > 0)?.label ?? ''
-              const exConfig = muscleGroupConfig[ex.muscleGroup]
-              return (
-                <div key={ep.exerciseId} style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}`, borderLeft: `3px solid ${exConfig.color}` }}>
-                  {/* Top row */}
-                  <div className="flex items-start justify-between" style={{ marginBottom: 18 }}>
-                    <div>
-                      <div style={{ fontSize: 15, color: S.ink, fontWeight: 700 }}>{ex.nameEs}</div>
-                      <div style={{ fontSize: 11, color: exConfig.color, fontWeight: 600, marginTop: 3 }}>{exConfig.emoji} {exConfig.label}</div>
-                      <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, marginTop: 8, lineHeight: 1, color: S.ink }}>
-                        {ep.currentMax}
-                        <span style={{ fontSize: 15, color: S.dim, fontWeight: 500, letterSpacing: 0 }}> kg</span>
+          <>
+            {tab === 'fuerza' && muscleGroupsWithData.length > 1 && (
+              <div style={{ marginBottom: 14, overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: 4, msOverflowStyle: 'none', scrollbarWidth: 'none' }} className="flex gap-2">
+                <button
+                  onClick={() => setSelectedMuscle(null)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 20, flexShrink: 0,
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'DM Sans, system-ui, sans-serif',
+                    background: selectedMuscle === null ? S.acc : S.surf2,
+                    border: `1px solid ${selectedMuscle === null ? S.acc : S.line2}`,
+                    color: selectedMuscle === null ? '#fff' : S.dim,
+                  }}
+                >Todos</button>
+                {muscleGroupsWithData.map(mg => {
+                  const cfg = muscleGroupConfig[mg as keyof typeof muscleGroupConfig]
+                  if (!cfg) return null
+                  const isSelected = selectedMuscle === mg
+                  return (
+                    <button
+                      key={mg}
+                      onClick={() => setSelectedMuscle(isSelected ? null : mg)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 20, flexShrink: 0,
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        fontFamily: 'DM Sans, system-ui, sans-serif',
+                        background: isSelected ? cfg.color + '33' : S.surf2,
+                        border: `1px solid ${isSelected ? cfg.color : S.line2}`,
+                        color: isSelected ? cfg.color : S.dim,
+                        display: 'inline-block',
+                      }}
+                    >{cfg.emoji} {cfg.label}</button>
+                  )
+                })}
+              </div>
+            )}
+            {filteredList.length === 0 && progressList.length > 0 ? (
+              <div className="flex items-center justify-center h-32">
+                <p style={{ color: S.faint, fontSize: 13 }}>Sin datos para este grupo muscular</p>
+              </div>
+            ) : filteredList.length === 0 ? (
+              <div className="flex items-center justify-center h-48">
+                <div className="text-center">
+                  <p style={{ color: S.dim, fontSize: 13 }}>No hay datos de progreso aún</p>
+                  <p style={{ color: S.faint, fontSize: 11, marginTop: 4 }}>Completá algunos entrenamientos para ver tu progreso</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {filteredList.map((ep) => {
+                  const ex = exercises.find(e => e.id === ep.exerciseId)
+                  if (!ex) return null
+                  const bars = ep.months
+                  const maxBar = Math.max(...bars.map(m => m.maxKg), 1)
+                  const firstMonthLabel = bars.find(m => m.maxKg > 0)?.label ?? ''
+                  const exConfig = muscleGroupConfig[ex.muscleGroup]
+                  return (
+                    <div key={ep.exerciseId} style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}`, borderLeft: `3px solid ${exConfig.color}` }}>
+                      {/* Top row */}
+                      <div className="flex items-start justify-between" style={{ marginBottom: 18 }}>
+                        <div>
+                          <div style={{ fontSize: 15, color: S.ink, fontWeight: 700 }}>{ex.nameEs}</div>
+                          <div style={{ fontSize: 11, color: exConfig.color, fontWeight: 600, marginTop: 3 }}>{exConfig.emoji} {exConfig.label}</div>
+                          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, marginTop: 8, lineHeight: 1, color: S.ink }}>
+                            {ep.currentMax}
+                            <span style={{ fontSize: 15, color: S.dim, fontWeight: 500, letterSpacing: 0 }}> kg</span>
+                          </div>
+                        </div>
+                        {ep.change > 0 && (
+                          <div style={{ background: 'rgba(52,211,153,0.10)', border: `1px solid rgba(52,211,153,0.22)`, borderRadius: 12, padding: '8px 12px', textAlign: 'right' }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: S.good }}>↑ +{ep.change}kg</div>
+                            <div style={{ fontSize: 10, color: S.good, opacity: 0.75, marginTop: 2 }}>+{ep.changePct}% desde {firstMonthLabel}</div>
+                          </div>
+                        )}
+                        {ep.change < 0 && (
+                          <div style={{ background: 'rgba(239,68,68,0.10)', border: `1px solid rgba(239,68,68,0.22)`, borderRadius: 12, padding: '8px 12px' }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>↓ {ep.change}kg</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bar chart */}
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 56 }}>
+                        {bars.map((m, i) => {
+                          const isLast = i === bars.length - 1
+                          const h = m.maxKg > 0 ? Math.max(Math.round((m.maxKg / maxBar) * 100), 7) : 0
+                          return (
+                            <div key={i} style={{
+                              flex: 1, height: h > 0 ? `${h}%` : 0, minHeight: h > 0 ? 4 : 0,
+                              borderRadius: '4px 4px 0 0',
+                              background: isLast ? S.acc : 'rgba(232,99,74,0.25)',
+                              alignSelf: 'flex-end',
+                              transition: 'height 0.4s ease',
+                            }} />
+                          )
+                        })}
+                      </div>
+                      {/* Month labels */}
+                      <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+                        {bars.map((m, i) => (
+                          <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: S.faint }}>{m.label}</div>
+                        ))}
                       </div>
                     </div>
-                    {ep.change > 0 && (
-                      <div style={{ background: 'rgba(52,211,153,0.10)', border: `1px solid rgba(52,211,153,0.22)`, borderRadius: 12, padding: '8px 12px', textAlign: 'right' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: S.good }}>↑ +{ep.change}kg</div>
-                        <div style={{ fontSize: 10, color: S.good, opacity: 0.75, marginTop: 2 }}>+{ep.changePct}% desde {firstMonthLabel}</div>
-                      </div>
-                    )}
-                    {ep.change < 0 && (
-                      <div style={{ background: 'rgba(239,68,68,0.10)', border: `1px solid rgba(239,68,68,0.22)`, borderRadius: 12, padding: '8px 12px' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>↓ {ep.change}kg</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bar chart */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 56 }}>
-                    {bars.map((m, i) => {
-                      const isLast = i === bars.length - 1
-                      const h = m.maxKg > 0 ? Math.max(Math.round((m.maxKg / maxBar) * 100), 7) : 0
-                      return (
-                        <div key={i} style={{
-                          flex: 1, height: h > 0 ? `${h}%` : 0, minHeight: h > 0 ? 4 : 0,
-                          borderRadius: '4px 4px 0 0',
-                          background: isLast ? S.acc : 'rgba(232,99,74,0.25)',
-                          alignSelf: 'flex-end',
-                          transition: 'height 0.4s ease',
-                        }} />
-                      )
-                    })}
-                  </div>
-                  {/* Month labels */}
-                  <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-                    {bars.map((m, i) => (
-                      <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: S.faint }}>{m.label}</div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
