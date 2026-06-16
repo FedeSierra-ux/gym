@@ -106,7 +106,17 @@ export const useWorkoutStore = create<WorkoutState>()(
           if (!targetSet.completed) {
             const kg = parseFloat(targetSet.kg)
             const reps = parseInt(targetSet.reps)
-            if (isNaN(kg) || kg <= 0 || isNaN(reps) || reps <= 0) return {}
+            if (isNaN(reps) || reps <= 0) {
+              useStore.setState(st => ({
+                toasts: [...st.toasts, {
+                  id: `toast-${Date.now()}`,
+                  message: 'Ingresá la cantidad de reps antes de completar',
+                  type: 'info' as const,
+                }],
+              }))
+              return {}
+            }
+            if (isNaN(kg)) return {}
           }
           const exercises = s.activeWorkout.exercises.map((ex, ei) => {
             if (ei !== exerciseIdx) return ex

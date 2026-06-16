@@ -216,7 +216,7 @@ export function ActiveWorkoutScreen() {
               </div>
 
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr 1fr 56px', padding: '0 12px 6px', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px', padding: '0 12px 6px', gap: 6 }}>
                 {['Set', 'KG', 'Reps', ''].map((h, i) => (
                   <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i === 0 ? 'center' : i < 3 ? 'center' : 'center' }}>{h}</div>
                 ))}
@@ -232,12 +232,13 @@ export function ActiveWorkoutScreen() {
                 const plateKey = `${exIdx}-${setIdx}`
                 const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
                 const canDelete = !isCompleted && activeEx.sets.length > 1
+                const canComplete = isCompleted || reps > 0
                 return (
                   <div key={setIdx}>
                     <div
                       className={flashingSet === flashKey ? 'set-complete-flash' : ''}
                       style={{
-                        display: 'grid', gridTemplateColumns: '44px 1fr 1fr 56px',
+                        display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px',
                         alignItems: 'stretch', padding: '0 12px', gap: 6,
                         background: isCompleted ? 'rgba(232,99,74,0.05)' : 'transparent',
                         borderTop: `1px solid ${S.line}`,
@@ -256,7 +257,7 @@ export function ActiveWorkoutScreen() {
                       </div>
 
                       {/* KG */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8 }}>
+                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
                         <input type="number" inputMode="decimal" value={set.kg}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
@@ -277,7 +278,7 @@ export function ActiveWorkoutScreen() {
                       </div>
 
                       {/* Reps */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8 }}>
+                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
                         <input type="number" inputMode="numeric" value={set.reps}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
@@ -300,18 +301,19 @@ export function ActiveWorkoutScreen() {
                         aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
                         onClick={() => {
                           completeSet(exIdx, setIdx)
-                          if (!isCompleted) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
+                          if (!isCompleted && canComplete) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
                         }}
                         style={{
                           width: '100%', minHeight: 52, borderRadius: 10,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isCompleted ? S.acc : 'rgba(232,99,74,0.08)',
-                          border: `2px solid ${isCompleted ? S.acc : 'rgba(232,99,74,0.35)'}`,
-                          color: isCompleted ? '#fff' : S.acc,
-                          fontSize: 20, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                          background: isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.08)' : S.surf2,
+                          border: `2px solid ${isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.35)' : S.line2}`,
+                          color: isCompleted ? '#fff' : canComplete ? S.acc : S.faint,
+                          fontSize: 20, fontWeight: 700, cursor: canComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
                           transition: 'all 0.15s',
                           alignSelf: 'stretch',
                           marginTop: 6, marginBottom: 6,
+                          opacity: canComplete ? 1 : 0.4,
                         }}
                       >✓</button>
                     </div>
