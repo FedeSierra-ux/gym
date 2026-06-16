@@ -32,10 +32,12 @@ function getWeekStreak(workouts: Array<{ startedAt: number; finishedAt?: number 
 }
 
 export function HomeScreen() {
-  const { userName, workouts, routines, prs, setActiveTab, getArchivedRoutineName } = useStore()
+  const { userName, workouts, routines, prs, setActiveTab, getArchivedRoutineName, bodyWeights, addBodyWeight } = useStore()
   const allExercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [showSettings, setShowSettings] = useState(false)
+  const [showWeightInput, setShowWeightInput] = useState(false)
+  const [weightDraft, setWeightDraft] = useState('')
 
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const sortedWorkouts = [...finishedWorkouts].sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
@@ -79,6 +81,21 @@ export function HomeScreen() {
   )] as string[]
 
   const userInitial = userName?.charAt(0)?.toUpperCase() ?? '?'
+
+  // Body weight
+  const sortedWeights = [...bodyWeights].sort((a, b) => b.date - a.date)
+  const latestWeight = sortedWeights[0] ?? null
+  const prevWeight = sortedWeights[1] ?? null
+  const weightDiff = latestWeight && prevWeight ? parseFloat((latestWeight.kg - prevWeight.kg).toFixed(1)) : 0
+
+  const handleSaveWeight = () => {
+    const kg = parseFloat(weightDraft)
+    if (!isNaN(kg) && kg > 0 && kg < 300) {
+      addBodyWeight({ date: Date.now(), kg })
+      setWeightDraft('')
+      setShowWeightInput(false)
+    }
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
@@ -140,6 +157,70 @@ export function HomeScreen() {
               <span style={{ fontSize: 18, fontWeight: 700, color: '#F2A93B' }}>{streak}</span>
               <span style={{ fontSize: 9, color: '#737A8C' }}>días</span>
             </div>
+          </div>
+        </div>
+
+        {/* Body weight widget */}
+        <div style={{ padding: '16px 22px 0' }}>
+          <div style={{
+            background: '#161821', borderRadius: 18, padding: '14px 18px',
+            border: '1px solid rgba(236,238,244,0.12)',
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: '#737A8C', fontWeight: 600, letterSpacing: 0.3 }}>PESO CORPORAL</div>
+              {latestWeight ? (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 3 }}>
+                  <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>{latestWeight.kg}</span>
+                  <span style={{ fontSize: 13, color: '#737A8C' }}>kg</span>
+                  {weightDiff !== 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: weightDiff < 0 ? '#34D399' : '#F2A93B' }}>
+                      {weightDiff > 0 ? '↑' : '↓'} {Math.abs(weightDiff)}kg
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: '#3B3F4E', marginTop: 3 }}>Sin registros aún</div>
+              )}
+            </div>
+            {!showWeightInput ? (
+              <button
+                onClick={() => setShowWeightInput(true)}
+                style={{
+                  width: 38, height: 38, borderRadius: 19, flexShrink: 0,
+                  background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.25)',
+                  color: '#E8634A', fontSize: 22, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >+</button>
+            ) : (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                <input
+                  type="number" inputMode="decimal" value={weightDraft}
+                  onChange={e => setWeightDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveWeight() }}
+                  placeholder="kg" autoFocus
+                  style={{
+                    width: 72, textAlign: 'center', fontSize: 15, fontWeight: 700,
+                    padding: '7px 8px', borderRadius: 10,
+                    background: '#1C1F2A', border: '1px solid rgba(236,238,244,0.2)',
+                    color: '#ECEEF4', outline: 'none',
+                    fontFamily: 'DM Sans, system-ui, sans-serif',
+                  }}
+                />
+                <button onClick={handleSaveWeight} style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: '#E8634A', border: 'none', color: '#fff',
+                  fontWeight: 700, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>✓</button>
+                <button onClick={() => { setShowWeightInput(false); setWeightDraft('') }} style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: '#1C1F2A', border: '1px solid rgba(236,238,244,0.12)',
+                  color: '#737A8C', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>✕</button>
+              </div>
+            )}
           </div>
         </div>
 

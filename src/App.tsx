@@ -10,10 +10,11 @@ import { CalendarioScreen } from './screens/CalendarioScreen'
 import { ProgresoScreen } from './screens/ProgresoScreen'
 import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
+import { WorkoutSummaryModal } from './components/WorkoutSummaryModal'
 
 function App() {
   const { activeTab, activeRoutineId, onboarded, routines } = useStore()
-  const { activeWorkout, cancelWorkout } = useWorkoutStore()
+  const { activeWorkout, cancelWorkout, summaryWorkout, summaryPrCount, dismissSummary } = useWorkoutStore()
   const [resumeAnswered, setResumeAnswered] = useState(false)
 
   if (!onboarded) {
@@ -66,6 +67,19 @@ function App() {
     return (
       <div className="flex flex-col h-full relative">
         <ActiveWorkoutScreen />
+        <ToastContainer />
+      </div>
+    )
+  }
+
+  if (summaryWorkout) {
+    return (
+      <div className="flex flex-col h-full relative">
+        <WorkoutSummaryModal
+          workout={summaryWorkout}
+          prCount={summaryPrCount}
+          onDismiss={dismissSummary}
+        />
         <ToastContainer />
       </div>
     )

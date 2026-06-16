@@ -17,6 +17,8 @@ export interface ActiveWorkout {
 
 interface WorkoutState {
   activeWorkout: ActiveWorkout | null
+  summaryWorkout: import('../types').Workout | null
+  summaryPrCount: number
 
   startWorkout: (routineId: string, dateOverride?: number) => void
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
@@ -29,6 +31,7 @@ interface WorkoutState {
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
   dismissLivePr: () => void
+  dismissSummary: () => void
 }
 
 function clampValue(field: 'kg' | 'reps', value: string): string {
@@ -46,6 +49,8 @@ export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
       activeWorkout: null,
+      summaryWorkout: null,
+      summaryPrCount: 0,
 
       startWorkout: (routineId, dateOverride) => {
         const { routines, workouts } = useStore.getState()
@@ -297,8 +302,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         useStore.setState((s) => ({
           workouts: [...s.workouts, newWorkout],
           prs: newPrs,
-          activeTab: 'home',
           toasts: [...s.toasts, successToast, ...(prToast ? [prToast] : []), ...progressionToasts],
+        }))
+
+        set((s) => ({
+          summaryWorkout: newWorkout,
+          summaryPrCount: newPrCount,
+          activeWorkout: s.activeWorkout,
         }))
 
         // Clear active workout
@@ -343,6 +353,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           if (!s.activeWorkout) return {}
           return { activeWorkout: { ...s.activeWorkout, livePr: null } }
         }),
+
+      dismissSummary: () => {
+        useStore.setState({ activeTab: 'home' })
+        set({ summaryWorkout: null, summaryPrCount: 0 })
+      },
     }),
     { name: 'gympro-active-workout', partialize: (s) => ({ activeWorkout: s.activeWorkout }) }
   )

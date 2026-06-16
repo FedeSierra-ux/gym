@@ -186,6 +186,14 @@ function ActivityHeatmap({ workouts }: { workouts: Array<{ startedAt: number; fi
   return (
     <div>
       <div className="flex gap-0.5">
+        {/* Day of week labels */}
+        <div className="flex flex-col gap-0.5" style={{ width: 14, flexShrink: 0, marginRight: 2 }}>
+          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
+            <div key={d} className="flex-1 flex items-center" style={{ minHeight: 0, minWidth: 0 }}>
+              <span style={{ fontSize: 7, color: S.faint, lineHeight: 1 }}>{d}</span>
+            </div>
+          ))}
+        </div>
         {weeks.map((week, wi) => (
           <div key={wi} className="flex flex-col gap-0.5 flex-1">
             {week.map((cell, di) => (
@@ -390,6 +398,7 @@ function RecordsTab() {
   const { prs, deletePr } = useStore()
   const exercises = useAllExercises()
   const [expandedPr, setExpandedPr] = useState<string | null>(null)
+  const [confirmDeletePrId, setConfirmDeletePrId] = useState<string | null>(null)
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
   const sortedPrs = [...prs].sort((a, b) => b.kg * b.reps - a.kg * a.reps)
@@ -436,7 +445,7 @@ function RecordsTab() {
                     {isExpanded ? '▲' : '▼'}
                   </button>
                 )}
-                <button onClick={() => { if (window.confirm(`¿Eliminar el PR de ${ex.nameEs}?`)) deletePr(pr.exerciseId) }}
+                <button onClick={() => setConfirmDeletePrId(pr.exerciseId)}
                   style={{ padding: 6, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
               </div>
               {isExpanded && hasHistory && (
@@ -457,6 +466,30 @@ function RecordsTab() {
         })}
         {prs.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No hay récords aún. ¡A entrenar!</p>}
       </div>
+
+      {confirmDeletePrId && (() => {
+        const prEx = exercises.find(e => e.id === confirmDeletePrId)
+        return (
+          <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
+            <div style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }}>
+              <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Eliminar este PR?</h3>
+              <p style={{ color: S.dim, fontSize: 13, marginBottom: 20 }}>
+                Se eliminará el récord de <strong style={{ color: S.ink }}>{prEx?.nameEs}</strong>. Esta acción no se puede deshacer.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDeletePrId(null)}
+                  style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancelar
+                </button>
+                <button onClick={() => { deletePr(confirmDeletePrId); setConfirmDeletePrId(null) }}
+                  style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
