@@ -285,7 +285,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'hombros-04', nameEs: 'Elevación Lateral', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
+    id: 'hombros-04', nameEs: 'Elevación Lateral DB', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides lateral'], equipment: 'Mancuernas',
     image: IMG('DsgkuIt'),
     instructions: [
@@ -297,7 +297,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'hombros-05', nameEs: 'Elevación Frontal', nameEn: 'Front Raise', muscleGroup: 'hombros',
+    id: 'hombros-05', nameEs: 'Elevación Frontal DB', nameEn: 'Front Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides frontal'], equipment: 'Mancuernas',
     image: IMG('3eGE2JC'),
     instructions: [
@@ -443,7 +443,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'biceps-08', nameEs: 'Curl Inclinado', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
+    id: 'biceps-08', nameEs: 'Curl Inclinado (Mancuernas)', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps largo'], equipment: 'Mancuernas',
     image: IMG('ae9UoXQ'),
     instructions: [
@@ -493,7 +493,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'triceps-04', nameEs: 'Extensión Overhead DB', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
+    id: 'triceps-04', nameEs: 'Extensión Overhead Unilateral', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps largo'], equipment: 'Mancuerna',
     image: IMG('5fKX7wi'),
     instructions: [
