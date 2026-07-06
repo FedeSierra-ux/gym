@@ -34,6 +34,12 @@ interface WorkoutState {
   dismissSummary: () => void
 }
 
+// A real workout rarely exceeds ~2h; if more than 3h elapse before the user
+// hits "finish" (app left open/backgrounded), treat the session as if it had
+// been closed at the 2h mark instead of recording the raw elapsed time.
+const AUTO_CLOSE_THRESHOLD_MIN = 180
+const MAX_WORKOUT_DURATION_MIN = 120
+
 function clampValue(field: 'kg' | 'reps', value: string): string {
   if (value === '') return ''
   const num = parseFloat(value)
@@ -217,10 +223,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         const allExercises = [...allExDb, ...customExercises]
 
         const realFinishedAt = Date.now()
-        const durationMin = Math.round((realFinishedAt - activeWorkout.realStartedAt) / 60000)
-        // Use startedAt (which respects dateOverride) plus the real duration so that
-        // backdated workouts land on the correct date instead of today.
-        const finishedAt = activeWorkout.startedAt + (realFinishedAt - activeWorkout.realStartedAt)
+        const rawDurationMin = Math.round((realFinishedAt - activeWorkout.realStartedAt) / 60000)
+        // If the app was left open/backgrounded for a long time (e.g. the user
+        // forgot to close it), don't record the raw elapsed time as the workout
+        // duration — cap it at a realistic session length instead.
+        const durationMin = rawDurationMin > AUTO_CLOSE_THRESHOLD_MIN ? MAX_WORKOUT_DURATION_MIN : rawDurationMin
+        // Use startedAt (which respects dateOverride) plus the (possibly capped)
+        // duration so that backdated workouts land on the correct date instead of today.
+        const finishedAt = activeWorkout.startedAt + durationMin * 60000
 
         const workoutExercises = activeWorkout.exercises.map((ex) => ({
           exerciseId: ex.exerciseId,

@@ -44,6 +44,7 @@ interface AppState {
 
   // Workout history
   deleteWorkout: (id: string) => void
+  updateWorkout: (workout: Workout) => void
   deletePr: (exerciseId: string) => void
 
   // Tips
@@ -147,6 +148,9 @@ export const useStore = create<AppState>()(
         })),
 
       deleteWorkout: (id) => set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) })),
+
+      updateWorkout: (workout) =>
+        set((s) => ({ workouts: s.workouts.map((w) => (w.id === workout.id ? workout : w)) })),
 
       deletePr: (exerciseId) => set((s) => ({ prs: s.prs.filter((p) => p.exerciseId !== exerciseId) })),
 

@@ -3,6 +3,12 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import type { CalendarSubTab, Routine, Workout } from '../types'
 
+function toDateInputValue(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -28,6 +34,7 @@ function DaySheet({
   const { deleteWorkout, getArchivedRoutineName } = useStore()
   const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
   const { day, month, year } = selectedDay
   const dayWorkouts = allWorkouts.filter((w) => {
     if (!w.finishedAt) return false
@@ -95,6 +102,7 @@ function DaySheet({
                             <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
                             <p style={{ fontSize: 11, color: S.dim }}>{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
                           </div>
+                          <button onClick={() => setEditingWorkout(w)} style={{ padding: 6, color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
                           <button onClick={() => deleteWorkout(w.id)} style={{ padding: 6, color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
                         </div>
                         <div className="flex flex-col gap-1">
@@ -126,6 +134,141 @@ function DaySheet({
             </button>
           </>
         )}
+      </div>
+      {editingWorkout && (
+        <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
+      )}
+    </div>
+  )
+}
+
+function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () => void }) {
+  const { routines, getArchivedRoutineName, updateWorkout } = useStore()
+  const exercises = useAllExercises()
+  const routine = routines.find((r) => r.id === workout.routineId) ?? getArchivedRoutineName(workout.routineId)
+
+  const [dateStr, setDateStr] = useState(toDateInputValue(workout.startedAt))
+  const [durationStr, setDurationStr] = useState(String(workout.durationMin ?? 0))
+  const [draftExercises, setDraftExercises] = useState(
+    workout.exercises.map((we) => ({
+      exerciseId: we.exerciseId,
+      sets: we.sets.map((s) => ({ kg: String(s.kg), reps: String(s.reps) })),
+    }))
+  )
+
+  const setValue = (exIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, ei) => ei !== exIdx ? ex : {
+        ...ex,
+        sets: ex.sets.map((s, si) => si !== setIdx ? s : { ...s, [field]: value }),
+      })
+    )
+  }
+
+  const addSet = (exIdx: number) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, ei) => {
+        if (ei !== exIdx) return ex
+        const last = ex.sets[ex.sets.length - 1]
+        return { ...ex, sets: [...ex.sets, { kg: last?.kg ?? '0', reps: last?.reps ?? '0' }] }
+      })
+    )
+  }
+
+  const removeSet = (exIdx: number, setIdx: number) => {
+    setDraftExercises((prev) =>
+      prev.map((ex, ei) => ei !== exIdx ? ex : { ...ex, sets: ex.sets.filter((_, si) => si !== setIdx) })
+    )
+  }
+
+  const handleSave = () => {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const original = new Date(workout.startedAt)
+    const newStartedAt = new Date(y, m - 1, d, original.getHours(), original.getMinutes(), original.getSeconds()).getTime()
+    const durationMin = Math.max(0, Math.round(parseFloat(durationStr)) || 0)
+    const finishedAt = newStartedAt + durationMin * 60000
+    const newExercises = draftExercises.map((ex) => ({
+      exerciseId: ex.exerciseId,
+      sets: ex.sets
+        .filter((s) => s.kg !== '' || s.reps !== '')
+        .map((s) => ({ kg: parseFloat(s.kg) || 0, reps: parseInt(s.reps) || 0, completedAt: finishedAt })),
+    })).filter((ex) => ex.sets.length > 0)
+
+    updateWorkout({
+      ...workout,
+      startedAt: newStartedAt,
+      finishedAt,
+      durationMin,
+      kcal: Math.round(durationMin * 6.5),
+      exercises: newExercises,
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-end" onClick={(e) => { e.stopPropagation(); onClose() }}>
+      <div
+        className="w-full rounded-t-3xl px-4 pt-4 pb-8 max-h-[85vh] flex flex-col sheet-enter"
+        style={{ background: S.surf, borderTop: `1px solid ${S.line2}` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 16px' }} />
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 17 }}>{routine?.emoji} Editar entreno</h3>
+          <button onClick={onClose} style={{ color: S.dim, fontSize: 22, lineHeight: 1, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4">
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Fecha</label>
+              <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)}
+                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 13, color: S.ink, fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ width: 120 }}>
+              <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
+              <input type="number" min={0} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
+                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 13, color: S.ink, fontFamily: 'inherit' }} />
+            </div>
+          </div>
+
+          {draftExercises.map((ex, exIdx) => {
+            const exInfo = exercises.find((e) => e.id === ex.exerciseId)
+            return (
+              <div key={ex.exerciseId} style={{ background: S.surf2, borderRadius: 14, padding: 12, border: `1px solid ${S.line2}` }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: S.ink, marginBottom: 8 }}>{exInfo?.nameEs ?? ex.exerciseId}</p>
+                <div className="flex flex-col gap-2">
+                  {ex.sets.map((s, setIdx) => (
+                    <div key={setIdx} className="flex items-center gap-2">
+                      <span style={{ width: 18, fontSize: 11, color: S.faint }}>{setIdx + 1}</span>
+                      <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
+                        placeholder="kg"
+                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, color: S.ink, fontFamily: 'inherit' }} />
+                      <span style={{ color: S.faint, fontSize: 11 }}>×</span>
+                      <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
+                        placeholder="reps"
+                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, color: S.ink, fontFamily: 'inherit' }} />
+                      <button onClick={() => removeSet(exIdx, setIdx)}
+                        style={{ width: 24, height: 24, flexShrink: 0, color: S.dim, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => addSet(exIdx)}
+                  style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: S.acc, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  + Agregar serie
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        <button onClick={handleSave} style={{
+          marginTop: 16, width: '100%', padding: '14px 0', borderRadius: 14,
+          background: S.acc, border: 'none', color: '#fff',
+          fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', flexShrink: 0,
+        }}>
+          Guardar cambios
+        </button>
       </div>
     </div>
   )
@@ -244,6 +387,7 @@ function CalendarioTab() {
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [viewDate, setViewDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
   const today = new Date()
   const year = viewDate.getFullYear(); const month = viewDate.getMonth()
   const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0)
@@ -376,6 +520,7 @@ function CalendarioTab() {
                   <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{routine?.emoji} {routine?.name}</p>
                   <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{w.exercises.length} ej · {totalSets} series · {w.durationMin}min</p>
                 </div>
+                <button onClick={(e) => { e.stopPropagation(); setEditingWorkout(w) }} style={{ padding: 8, color: S.dim, fontSize: 13, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
                 <button onClick={(e) => { e.stopPropagation(); deleteWorkout(w.id) }} style={{ padding: 8, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
               </div>
             )
@@ -383,6 +528,10 @@ function CalendarioTab() {
           {recentWorkouts.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>Sin historial</p>}
         </div>
       </div>
+
+      {editingWorkout && (
+        <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
+      )}
 
       {selectedDay && (
         <DaySheet selectedDay={selectedDay} allWorkouts={workouts} routines={routines}
