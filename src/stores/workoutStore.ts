@@ -34,6 +34,12 @@ interface WorkoutState {
   dismissSummary: () => void
 }
 
+// A real workout rarely exceeds ~2h; if more than 3h elapse before the user
+// hits "finish" (app left open/backgrounded), treat the session as if it had
+// been closed at the 2h mark instead of recording the raw elapsed time.
+const AUTO_CLOSE_THRESHOLD_MIN = 180
+const MAX_WORKOUT_DURATION_MIN = 120
+
 function clampValue(field: 'kg' | 'reps', value: string): string {
   if (value === '') return ''
   const num = parseFloat(value)
@@ -112,13 +118,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             const kg = parseFloat(targetSet.kg)
             const reps = parseInt(targetSet.reps)
             if (isNaN(reps) || reps <= 0) {
-              useStore.setState(st => ({
-                toasts: [...st.toasts, {
-                  id: `toast-${Date.now()}`,
-                  message: 'Ingresá la cantidad de reps antes de completar',
-                  type: 'info' as const,
-                }],
-              }))
+              useStore.getState().addToast('Ingresá la cantidad de reps antes de completar', 'info')
               return {}
             }
             if (isNaN(kg)) return {}
@@ -203,13 +203,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ex.sets.some(s => s.completed)
         )
         if (!hasWorkingSets) {
-          useStore.setState(s => ({
-            toasts: [...s.toasts, {
-              id: `toast-${Date.now()}`,
-              message: 'Completá al menos una serie antes de terminar',
-              type: 'info' as const,
-            }],
-          }))
+          useStore.getState().addToast('Completá al menos una serie antes de terminar', 'info')
           return
         }
 
@@ -217,10 +211,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         const allExercises = [...allExDb, ...customExercises]
 
         const realFinishedAt = Date.now()
-        const durationMin = Math.round((realFinishedAt - activeWorkout.realStartedAt) / 60000)
-        // Use startedAt (which respects dateOverride) plus the real duration so that
-        // backdated workouts land on the correct date instead of today.
-        const finishedAt = activeWorkout.startedAt + (realFinishedAt - activeWorkout.realStartedAt)
+        const rawDurationMin = Math.round((realFinishedAt - activeWorkout.realStartedAt) / 60000)
+        // If the app was left open/backgrounded for a long time (e.g. the user
+        // forgot to close it), don't record the raw elapsed time as the workout
+        // duration — cap it at a realistic session length instead.
+        const durationMin = rawDurationMin > AUTO_CLOSE_THRESHOLD_MIN ? MAX_WORKOUT_DURATION_MIN : rawDurationMin
+        // Use startedAt (which respects dateOverride) plus the (possibly capped)
+        // duration so that backdated workouts land on the correct date instead of today.
+        const finishedAt = activeWorkout.startedAt + durationMin * 60000
 
         const workoutExercises = activeWorkout.exercises.map((ex) => ({
           exerciseId: ex.exerciseId,
@@ -282,7 +280,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             const maxKg = Math.max(...exSets.map((s) => s.kg))
             const exName = allExercises.find((e) => e.id === re.exerciseId)?.nameEs ?? re.exerciseId
             progressionToasts.push({
-              id: `toast-prog-${Date.now()}-${re.exerciseId}`,
+              id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               message: `💪 ${exName}: intentá ${maxKg + 2.5}kg la próxima vez`,
               type: 'info',
             })
@@ -290,12 +288,12 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
 
         const successToast: AppToast = {
-          id: `toast-${Date.now()}`,
+          id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
           type: 'success',
         }
         const prToast: AppToast | null = newPrCount > 0
-          ? { id: `toast-${Date.now() + 1}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
+          ? { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
           : null
 
         // Write finished workout + PRs + toasts to persisted store

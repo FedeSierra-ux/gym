@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
+import { getWorkoutTip } from '../utils/aiCoach'
 import type { Workout } from '../types'
 
 const S = {
@@ -15,14 +17,11 @@ interface Props {
 }
 
 export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
-  const { routines, userName } = useStore()
+  const { routines, userName, workouts, anthropicApiKey } = useStore()
   const exercises = useAllExercises()
   const routine = routines.find(r => r.id === workout.routineId)
 
   const totalSets = workout.exercises.reduce((a, e) => a + e.sets.length, 0)
-  const totalVolume = workout.exercises.reduce((a, e) =>
-    a + e.sets.reduce((b, s) => b + s.kg * s.reps, 0), 0)
-  const volumeStr = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}K` : `${Math.round(totalVolume)}`
   const kcal = workout.kcal ?? Math.round((workout.durationMin ?? 0) * 6.5)
 
   const topExercises = workout.exercises
@@ -35,11 +34,44 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
     .sort((a, b) => b.vol - a.vol)
     .slice(0, 3)
 
+  const [aiTip, setAiTip] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(!!anthropicApiKey)
+  const [aiError, setAiError] = useState(false)
+
+  useEffect(() => {
+    if (!anthropicApiKey) return
+    let cancelled = false
+    const recentFinished = workouts
+      .filter(w => w.finishedAt && w.routineId === workout.routineId && w.id !== workout.id)
+      .sort((a, b) => b.startedAt - a.startedAt)
+      .slice(0, 4)
+    const recentTrend = recentFinished.length > 0
+      ? `Últimas ${recentFinished.length} sesiones de esta rutina: ${recentFinished.map(w => `${w.durationMin ?? 0}min/${w.exercises.reduce((a, e) => a + e.sets.length, 0)}series`).join(', ')}`
+      : 'Primera vez registrando esta rutina.'
+    const exerciseSummaries = workout.exercises.map(we => {
+      const ex = exercises.find(e => e.id === we.exerciseId)
+      const best = we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0])
+      return `${ex?.nameEs ?? we.exerciseId}: ${we.sets.length} series, mejor ${best?.kg ?? 0}kg x ${best?.reps ?? 0}`
+    })
+    getWorkoutTip(anthropicApiKey, {
+      routineName: routine?.name ?? 'Sesión',
+      durationMin: workout.durationMin ?? 0,
+      totalSets,
+      newPrCount: prCount,
+      exerciseSummaries,
+      recentTrend,
+    })
+      .then(tip => { if (!cancelled) { setAiTip(tip); setAiLoading(false) } })
+      .catch(() => { if (!cancelled) { setAiError(true); setAiLoading(false) } })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workout.id, anthropicApiKey])
+
   const stats: [string | number, string, string, string][] = [
     [workout.durationMin ?? 0, 'min', 'Tiempo', S.acc],
-    [totalSets, 'series', 'Series', S.ink],
-    [volumeStr, 'kg', 'Volumen', S.acc2],
+    [totalSets, 'series', 'Volumen', S.acc2],
     [kcal, 'kcal', 'Calorías', S.good],
+    [prCount, prCount === 1 ? 'récord' : 'récords', 'PRs', S.ink],
   ]
 
   return (
@@ -90,6 +122,24 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
                 {prCount === 1 ? '¡Nuevo récord personal!' : `¡${prCount} nuevos récords!`}
               </div>
               <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Actualizados en tus récords</div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Coach tip */}
+        {anthropicApiKey && (aiLoading || aiTip) && !aiError && (
+          <div style={{
+            margin: '0 20px 16px', flexShrink: 0,
+            background: 'rgba(232,99,74,0.08)', border: `1px solid rgba(232,99,74,0.22)`,
+            borderRadius: 14, padding: '13px 16px',
+            display: 'flex', alignItems: 'flex-start', gap: 12,
+          }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>🤖</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: S.acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coach IA</div>
+              <div style={{ fontSize: 13, color: S.ink, marginTop: 3, lineHeight: 1.4 }}>
+                {aiLoading ? 'Analizando tu entreno...' : aiTip}
+              </div>
             </div>
           </div>
         )}

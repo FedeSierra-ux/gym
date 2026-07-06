@@ -35,28 +35,25 @@ interface ExerciseProgress {
 
 const MUSCLE_ORDER: MuscleGroup[] = ['pecho', 'espalda', 'hombros', 'biceps', 'triceps', 'piernas', 'gluteos', 'core']
 
-function MuscleVolumeSection({ period }: { period: Period }) {
-  const { workouts } = useStore()
-  const exercises = useAllExercises()
-  const monthsBack = getMonthsBack(period)
-  const now = new Date()
-  const cutoff = new Date(now.getFullYear(), now.getMonth() - monthsBack + 1, 1).getTime()
+function muscleVolumeBars(workouts: ReturnType<typeof useStore.getState>['workouts'], exercises: ReturnType<typeof useAllExercises>, start: number, end: number) {
   const volumeMap: Record<string, number> = {}
   for (const w of workouts) {
-    if (!w.finishedAt || w.startedAt < cutoff) continue
+    if (!w.finishedAt || w.startedAt < start || w.startedAt >= end) continue
     for (const wex of w.exercises) {
       const ex = exercises.find(e => e.id === wex.exerciseId)
       if (!ex) continue
       volumeMap[ex.muscleGroup] = (volumeMap[ex.muscleGroup] ?? 0) + wex.sets.length
     }
   }
-  const chartData = MUSCLE_ORDER
+  return MUSCLE_ORDER
     .filter(mg => volumeMap[mg] > 0)
     .map(mg => ({ name: muscleGroupConfig[mg].label, sets: volumeMap[mg], color: muscleGroupConfig[mg].color, mg }))
     .sort((a, b) => b.sets - a.sets)
+}
 
+function MuscleVolumeBarChart({ chartData }: { chartData: ReturnType<typeof muscleVolumeBars> }) {
   if (chartData.length === 0) {
-    return <div className="flex items-center justify-center h-32"><p style={{ color: S.faint, fontSize: 13 }}>Sin datos en el período seleccionado</p></div>
+    return <div className="flex items-center justify-center h-20"><p style={{ color: S.faint, fontSize: 12 }}>Sin series registradas</p></div>
   }
   const maxSets = Math.max(...chartData.map(d => d.sets))
   return (
@@ -74,6 +71,69 @@ function MuscleVolumeSection({ period }: { period: Period }) {
           <div style={{ width: 32, flexShrink: 0 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: S.ink }}>{item.sets}</span>
             <span style={{ fontSize: 9, color: S.faint }}> s</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function getWeeksInMonth(year: number, month: number): { label: string; start: number; end: number }[] {
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const weeks: { label: string; start: number; end: number }[] = []
+  let weekStart = new Date(firstDay)
+  let weekNum = 1
+  while (weekStart <= lastDay) {
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + (7 - 1))
+    const rangeEnd = weekEnd < lastDay ? weekEnd : lastDay
+    weeks.push({
+      label: `Semana ${weekNum} · ${weekStart.getDate()}-${rangeEnd.getDate()}`,
+      start: new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate()).getTime(),
+      end: new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate() + 1).getTime(),
+    })
+    weekStart = new Date(weekStart)
+    weekStart.setDate(weekStart.getDate() + 7)
+    weekNum++
+  }
+  return weeks
+}
+
+function MonthlyMuscleVolume() {
+  const { workouts } = useStore()
+  const exercises = useAllExercises()
+  const [viewDate, setViewDate] = useState(() => { const d = new Date(); d.setDate(1); return d })
+  const today = new Date()
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
+  const monthLabel = `${MONTH_NAMES_SHORT[month]} ${year}`
+  const monthStart = new Date(year, month, 1).getTime()
+  const monthEnd = new Date(year, month + 1, 1).getTime()
+  const weeks = getWeeksInMonth(year, month)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))}
+          style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'inherit' }}>‹</button>
+        <span style={{ fontSize: 14, fontWeight: 700, color: S.ink, textTransform: 'capitalize' }}>{monthLabel}</span>
+        <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth}
+          style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, border: `1px solid ${S.line2}`, color: isCurrentMonth ? S.faint : S.dim, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', fontFamily: 'inherit' }}>›</button>
+      </div>
+
+      <div style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}` }}>
+        <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13 }}>Series por grupo muscular</h3>
+        <p style={{ fontSize: 11, color: S.dim, marginTop: 2, marginBottom: 16 }}>Total del mes</p>
+        <MuscleVolumeBarChart chartData={muscleVolumeBars(workouts, exercises, monthStart, monthEnd)} />
+      </div>
+
+      {weeks.map((w) => (
+        <div key={w.label} style={{ background: S.surf, borderRadius: 18, padding: '16px 16px', border: `1px solid ${S.line2}` }}>
+          <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 12 }}>{w.label}</h3>
+          <div style={{ marginTop: 12 }}>
+            <MuscleVolumeBarChart chartData={muscleVolumeBars(workouts, exercises, w.start, w.end)} />
           </div>
         </div>
       ))}
@@ -152,24 +212,22 @@ export function ProgresoScreen() {
           ))}
         </div>
 
-        {/* Period filter */}
-        <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
-          {(['3m', '6m', '1a', 'todo'] as Period[]).map((p) => (
-            <button key={p} onClick={() => setPeriod(p)}
-              style={{ flex: 1, padding: '9px 0', borderRadius: 11, border: 'none', fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: period === p ? S.surf2 : 'transparent', color: period === p ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
-              {p}
-            </button>
-          ))}
-        </div>
+        {/* Period filter (fuerza only) */}
+        {tab === 'fuerza' && (
+          <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
+            {(['3m', '6m', '1a', 'todo'] as Period[]).map((p) => (
+              <button key={p} onClick={() => setPeriod(p)}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 11, border: 'none', fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: period === p ? S.surf2 : 'transparent', color: period === p ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
+                {p}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 22px 24px' }}>
         {tab === 'volumen' ? (
-          <div style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}` }}>
-            <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13 }}>Series por grupo muscular</h3>
-            <p style={{ fontSize: 11, color: S.dim, marginTop: 2, marginBottom: 16 }}>Total de series completadas en el período</p>
-            <MuscleVolumeSection period={period} />
-          </div>
+          <MonthlyMuscleVolume />
         ) : (
           <>
             {tab === 'fuerza' && muscleGroupsWithData.length > 1 && (

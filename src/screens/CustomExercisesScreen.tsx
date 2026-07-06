@@ -26,12 +26,13 @@ interface Props {
 }
 
 export function CustomExercisesScreen({ onClose }: Props) {
-  const { customExercises, addCustomExercise, deleteCustomExercise } = useStore()
+  const { customExercises, routines, addCustomExercise, deleteCustomExercise } = useStore()
 
   const [showForm, setShowForm] = useState(false)
   const [nameEs, setNameEs] = useState('')
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('pecho')
   const [equipment, setEquipment] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState<Exercise | null>(null)
 
   const handleCreate = () => {
     const trimmed = nameEs.trim()
@@ -134,7 +135,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 </div>
               </div>
               <button
-                onClick={() => deleteCustomExercise(ex.id)}
+                onClick={() => setConfirmDelete(ex)}
                 aria-label={`Eliminar ${ex.nameEs}`}
                 className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
                 style={{
@@ -230,6 +231,45 @@ export function CustomExercisesScreen({ onClose }: Props) {
           </div>
         )}
       </div>
+
+      {confirmDelete && (() => {
+        const usedInRoutines = routines.filter(r => r.exercises.some(re => re.exerciseId === confirmDelete.id))
+        return (
+          <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setConfirmDelete(null)}>
+            <div
+              className="rounded-2xl p-6 w-full"
+              style={{ background: '#161821', border: '1px solid rgba(255,255,255,0.12)', maxWidth: 340 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-bold text-white text-lg mb-2">¿Eliminar este ejercicio?</h3>
+              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                Se eliminará <strong className="text-white">{confirmDelete.nameEs}</strong> definitivamente.
+              </p>
+              {usedInRoutines.length > 0 && (
+                <p className="text-xs mb-4" style={{ color: 'rgba(239,68,68,0.8)' }}>
+                  También se quitará de {usedInRoutines.length === 1 ? 'la rutina' : 'las rutinas'}: {usedInRoutines.map(r => r.name).join(', ')}.
+                </p>
+              )}
+              <div className="flex gap-3" style={{ marginTop: usedInRoutines.length > 0 ? 0 : 20 }}>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', background: 'none' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => { deleteCustomExercise(confirmDelete.id); setConfirmDelete(null) }}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold"
+                  style={{ border: 'none', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

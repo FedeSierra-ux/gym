@@ -101,11 +101,11 @@ export function RoutineDetailScreen() {
     const sorted = [...routine.exercises].sort((a, b) => a.order - b.order)
     const newIdx = dir === 'up' ? idx - 1 : idx + 1
     if (newIdx < 0 || newIdx >= sorted.length) return
-    const reordered = sorted.map((ex, i) => {
-      if (i === idx) return { ...ex, order: newIdx }
-      if (i === newIdx) return { ...ex, order: idx }
-      return ex
-    })
+    const swapped = [...sorted]
+    ;[swapped[idx], swapped[newIdx]] = [swapped[newIdx], swapped[idx]]
+    // Reassign contiguous order values from the new positions, since prior
+    // add/remove operations can leave the underlying `order` field with gaps.
+    const reordered = swapped.map((ex, i) => ({ ...ex, order: i }))
     reorderRoutineExercises(routine.id, reordered)
   }
 
