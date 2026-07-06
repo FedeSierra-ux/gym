@@ -65,9 +65,17 @@ export function HomeScreen() {
   const volumeStr = lastVolume >= 1000 ? `${(lastVolume / 1000).toFixed(1)}K kg` : `${lastVolume} kg`
   const lastKcal = lastWorkout?.kcal ?? Math.round((lastWorkout?.durationMin ?? 0) * 6.5)
 
-  // Suggested routine
-  const lastRoutineIds = sortedWorkouts.slice(0, 3).map(w => w.routineId)
-  const suggestedRoutine = routines.find(r => !lastRoutineIds.includes(r.id)) ?? routines[0]
+  // Suggested routine: alternate away from the last routine done, picking
+  // whichever remaining routine was performed longest ago (or never).
+  const lastPerformedAt = new Map<string, number>()
+  for (const w of sortedWorkouts) {
+    if (!lastPerformedAt.has(w.routineId)) lastPerformedAt.set(w.routineId, w.finishedAt ?? w.startedAt)
+  }
+  const otherRoutines = routines.filter(r => r.id !== lastWorkout?.routineId)
+  const suggestionPool = otherRoutines.length > 0 ? otherRoutines : routines
+  const suggestedRoutine = [...suggestionPool].sort(
+    (a, b) => (lastPerformedAt.get(a.id) ?? 0) - (lastPerformedAt.get(b.id) ?? 0)
+  )[0]
   const suggestedExerciseCount = suggestedRoutine?.exercises.length ?? 0
   const approxMinutes = Math.round((suggestedRoutine?.exercises.reduce((a, e) => a + e.sets * 2.5, 0) ?? 0))
   const previewExercises = suggestedRoutine?.exercises.slice(0, 4).map(re => {
