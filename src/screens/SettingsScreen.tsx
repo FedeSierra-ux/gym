@@ -59,9 +59,8 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           <p className="text-sm font-semibold text-white mb-2">¿Para qué usa la IA?</p>
           <ul className="flex flex-col gap-1.5">
             {[
-              'Sugiere cuánto peso subir o bajar basándose en tu historial',
-              'Recomienda ejercicios alternativos cuando hacés swap',
-              'Analiza tu progreso y da consejos personalizados',
+              'Analiza tu progreso al terminar un entreno y te da un consejo personalizado',
+              'Sugiere qué ejercicio agregar a una rutina para balancearla mejor',
             ].map((item, i) => (
               <li key={i} className="flex gap-2 text-xs text-gray-400">
                 <span className="text-primary flex-shrink-0">✓</span>

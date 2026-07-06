@@ -118,13 +118,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             const kg = parseFloat(targetSet.kg)
             const reps = parseInt(targetSet.reps)
             if (isNaN(reps) || reps <= 0) {
-              useStore.setState(st => ({
-                toasts: [...st.toasts, {
-                  id: `toast-${Date.now()}`,
-                  message: 'Ingresá la cantidad de reps antes de completar',
-                  type: 'info' as const,
-                }],
-              }))
+              useStore.getState().addToast('Ingresá la cantidad de reps antes de completar', 'info')
               return {}
             }
             if (isNaN(kg)) return {}
@@ -209,13 +203,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ex.sets.some(s => s.completed)
         )
         if (!hasWorkingSets) {
-          useStore.setState(s => ({
-            toasts: [...s.toasts, {
-              id: `toast-${Date.now()}`,
-              message: 'Completá al menos una serie antes de terminar',
-              type: 'info' as const,
-            }],
-          }))
+          useStore.getState().addToast('Completá al menos una serie antes de terminar', 'info')
           return
         }
 
@@ -292,7 +280,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             const maxKg = Math.max(...exSets.map((s) => s.kg))
             const exName = allExercises.find((e) => e.id === re.exerciseId)?.nameEs ?? re.exerciseId
             progressionToasts.push({
-              id: `toast-prog-${Date.now()}-${re.exerciseId}`,
+              id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               message: `💪 ${exName}: intentá ${maxKg + 2.5}kg la próxima vez`,
               type: 'info',
             })
@@ -300,12 +288,12 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
 
         const successToast: AppToast = {
-          id: `toast-${Date.now()}`,
+          id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
           type: 'success',
         }
         const prToast: AppToast | null = newPrCount > 0
-          ? { id: `toast-${Date.now() + 1}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
+          ? { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
           : null
 
         // Write finished workout + PRs + toasts to persisted store

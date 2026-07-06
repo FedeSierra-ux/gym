@@ -35,6 +35,7 @@ function DaySheet({
   const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
+  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<Workout | null>(null)
   const { day, month, year } = selectedDay
   const dayWorkouts = allWorkouts.filter((w) => {
     if (!w.finishedAt) return false
@@ -42,7 +43,9 @@ function DaySheet({
     return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
   })
   const date = new Date(year, month, day)
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
   const isToday = date.toDateString() === new Date().toDateString()
+  const isFuture = date.getTime() > todayMidnight.getTime()
   const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
   const handleStart = (routineId: string) => {
     const dateOverride = isToday ? undefined : new Date(year, month, day, 12, 0, 0).getTime()
@@ -103,7 +106,7 @@ function DaySheet({
                             <p style={{ fontSize: 11, color: S.dim }}>{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
                           </div>
                           <button onClick={() => setEditingWorkout(w)} style={{ padding: 6, color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
-                          <button onClick={() => deleteWorkout(w.id)} style={{ padding: 6, color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                          <button onClick={() => setConfirmDeleteWorkout(w)} style={{ padding: 6, color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
                         </div>
                         <div className="flex flex-col gap-1">
                           {w.exercises.slice(0, 4).map((we) => {
@@ -125,19 +128,59 @@ function DaySheet({
                 </div>
               )}
             </div>
-            <button onClick={() => setShowRoutinePicker(true)} style={{
-              marginTop: 16, width: '100%', padding: '14px 0', borderRadius: 14,
-              background: S.acc, border: 'none', color: '#fff',
-              fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', flexShrink: 0,
-            }}>
-              + Registrar entreno
-            </button>
+            {isFuture ? (
+              <p style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: S.faint, flexShrink: 0 }}>
+                No podés registrar entrenos en fechas futuras
+              </p>
+            ) : (
+              <button onClick={() => setShowRoutinePicker(true)} style={{
+                marginTop: 16, width: '100%', padding: '14px 0', borderRadius: 14,
+                background: S.acc, border: 'none', color: '#fff',
+                fontFamily: 'DM Sans, system-ui, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', flexShrink: 0,
+              }}>
+                + Registrar entreno
+              </button>
+            )}
           </>
         )}
       </div>
       {editingWorkout && (
         <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
       )}
+      {confirmDeleteWorkout && (
+        <ConfirmDeleteWorkoutModal
+          workout={confirmDeleteWorkout}
+          routineName={(routines.find(r => r.id === confirmDeleteWorkout.routineId) ?? getArchivedRoutineName(confirmDeleteWorkout.routineId))?.name}
+          onCancel={() => setConfirmDeleteWorkout(null)}
+          onConfirm={() => { deleteWorkout(confirmDeleteWorkout.id); setConfirmDeleteWorkout(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ConfirmDeleteWorkoutModal({
+  workout, routineName, onCancel, onConfirm,
+}: { workout: Workout; routineName?: string; onCancel: () => void; onConfirm: () => void }) {
+  const date = new Date(workout.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onCancel}>
+      <div style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Eliminar este entreno?</h3>
+        <p style={{ color: S.dim, fontSize: 13, marginBottom: 20 }}>
+          Se eliminará el entreno de <strong style={{ color: S.ink }}>{routineName ?? 'rutina eliminada'}</strong> del {date}. Esta acción no se puede deshacer.
+        </p>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
+            Eliminar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -388,6 +431,7 @@ function CalendarioTab() {
   const [viewDate, setViewDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
+  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<Workout | null>(null)
   const today = new Date()
   const year = viewDate.getFullYear(); const month = viewDate.getMonth()
   const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0)
@@ -521,7 +565,7 @@ function CalendarioTab() {
                   <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{w.exercises.length} ej · {totalSets} series · {w.durationMin}min</p>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); setEditingWorkout(w) }} style={{ padding: 8, color: S.dim, fontSize: 13, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
-                <button onClick={(e) => { e.stopPropagation(); deleteWorkout(w.id) }} style={{ padding: 8, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteWorkout(w) }} style={{ padding: 8, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
               </div>
             )
           })}
@@ -531,6 +575,15 @@ function CalendarioTab() {
 
       {editingWorkout && (
         <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
+      )}
+
+      {confirmDeleteWorkout && (
+        <ConfirmDeleteWorkoutModal
+          workout={confirmDeleteWorkout}
+          routineName={(routines.find(r => r.id === confirmDeleteWorkout.routineId) ?? getArchivedRoutineName(confirmDeleteWorkout.routineId))?.name}
+          onCancel={() => setConfirmDeleteWorkout(null)}
+          onConfirm={() => { deleteWorkout(confirmDeleteWorkout.id); setConfirmDeleteWorkout(null) }}
+        />
       )}
 
       {selectedDay && (

@@ -142,6 +142,9 @@ export function ActiveWorkoutScreen() {
   const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.length, 0)
   const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
+  const prevWorkout = [...workouts]
+    .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
+    .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
   const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
     const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
@@ -188,7 +191,6 @@ export function ActiveWorkoutScreen() {
           const config = muscleGroupConfig[ex.muscleGroup]
           const pr = prs.find((p) => p.exerciseId === ex.id)
           const isBarbellLike = ex.equipmentType === 'barra'
-          const prevWorkout = [...workouts].filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt).sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
           const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === ex.id)?.sets ?? []
           const completedCount = activeEx.sets.filter((s) => s.completed).length
 

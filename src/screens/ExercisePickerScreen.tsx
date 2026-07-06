@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { getExerciseSuggestion } from '../utils/aiCoach'
 import type { MuscleGroup, Exercise } from '../types'
 
 interface Props {
@@ -16,12 +17,15 @@ const muscleGroupOrder: MuscleGroup[] = [
 ]
 
 export function ExercisePickerScreen({ routineName }: Props) {
-  const { exercises, customExercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker } = useStore()
+  const { exercises, customExercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker, anthropicApiKey } = useStore()
   const allExercises = useMemo(() => [...exercises, ...customExercises], [exercises, customExercises])
   const [search, setSearch] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null)
   const [detailExercise, setDetailExercise] = useState<Exercise | null>(null)
   const [mode, setMode] = useState<'browse' | 'search'>('browse')
+  const [aiSuggestion, setAiSuggestion] = useState<{ exercise: Exercise; reason: string } | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState(false)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
   const addedIds = useMemo(
@@ -34,6 +38,32 @@ export function ExercisePickerScreen({ routineName }: Props) {
       addExerciseToRoutine(activeRoutineId, exerciseId)
     }
   }, [activeRoutineId, addedIds, addExerciseToRoutine])
+
+  const handleAiSuggest = async () => {
+    if (!anthropicApiKey || !routine) return
+    setAiLoading(true)
+    setAiError(false)
+    setAiSuggestion(null)
+    try {
+      const candidates = allExercises.filter(ex => !addedIds.has(ex.id)).slice(0, 60)
+      const currentNames = routine.exercises
+        .map(re => allExercises.find(e => e.id === re.exerciseId)?.nameEs)
+        .filter(Boolean) as string[]
+      const result = await getExerciseSuggestion(
+        anthropicApiKey,
+        routine.name,
+        currentNames,
+        candidates.map(c => ({ id: c.id, nameEs: c.nameEs, muscleGroup: c.muscleGroup, equipment: c.equipment }))
+      )
+      const ex = result.exerciseId ? allExercises.find(e => e.id === result.exerciseId) : null
+      if (ex) setAiSuggestion({ exercise: ex, reason: result.reason })
+      else setAiError(true)
+    } catch {
+      setAiError(true)
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   // Search mode: filter by query (and optionally group)
   const searchFiltered = mode === 'search' ? allExercises.filter((ex) => {
@@ -130,6 +160,37 @@ export function ExercisePickerScreen({ routineName }: Props) {
           </div>
         )}
       </div>
+
+      {/* AI suggestion */}
+      {anthropicApiKey && (
+        <div className="flex-shrink-0 px-4 pt-3">
+          {aiSuggestion ? (
+            <div className="rounded-2xl p-3 flex items-center gap-3" style={{ background: 'rgba(232,99,74,0.08)', border: '1px solid rgba(232,99,74,0.22)' }}>
+              <span className="text-xl flex-shrink-0">🤖</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{aiSuggestion.exercise.nameEs}</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{aiSuggestion.reason}</p>
+              </div>
+              <button
+                onClick={() => { handleAdd(aiSuggestion.exercise.id); setAiSuggestion(null) }}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-black flex-shrink-0"
+                style={{ background: 'var(--primary)' }}
+              >
+                + Agregar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAiSuggest}
+              disabled={aiLoading}
+              className="w-full rounded-2xl p-3 flex items-center justify-center gap-2 text-sm font-semibold"
+              style={{ background: 'rgba(232,99,74,0.08)', border: '1px solid rgba(232,99,74,0.22)', color: 'var(--primary)' }}
+            >
+              🤖 {aiLoading ? 'Pensando...' : aiError ? 'No se pudo sugerir, reintentar' : 'Sugerir ejercicio con IA'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Group filter pills — show in both modes */}
       <div className="flex-shrink-0 px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
