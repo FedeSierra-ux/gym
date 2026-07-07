@@ -21,14 +21,15 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
   const exercises = useAllExercises()
   const routine = routines.find(r => r.id === workout.routineId)
 
-  const totalSets = workout.exercises.reduce((a, e) => a + e.sets.length, 0)
+  const totalSets = workout.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
   const kcal = workout.kcal ?? Math.round((workout.durationMin ?? 0) * 6.5)
 
   const topExercises = workout.exercises
     .map(we => {
       const ex = exercises.find(e => e.id === we.exerciseId)
-      const vol = we.sets.reduce((a, s) => a + s.kg * s.reps, 0)
-      return { ex, vol, sets: we.sets }
+      const workingSets = we.sets.filter(s => !s.isWarmup)
+      const vol = workingSets.reduce((a, s) => a + s.kg * s.reps, 0)
+      return { ex, vol, sets: workingSets }
     })
     .filter(e => e.ex && e.vol > 0)
     .sort((a, b) => b.vol - a.vol)

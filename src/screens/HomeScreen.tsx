@@ -60,7 +60,7 @@ export function HomeScreen() {
     ? Math.floor((todayMidnight.getTime() - new Date(lastWorkout.startedAt).setHours(0, 0, 0, 0)) / 86400000)
     : null
   const daysAgoStr = daysAgo === null ? '' : daysAgo === 0 ? 'hoy' : daysAgo === 1 ? 'hace 1 día' : `hace ${daysAgo} días`
-  const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.length, 0) ?? 0
+  const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0) ?? 0
   const lastKcal = lastWorkout?.kcal ?? Math.round((lastWorkout?.durationMin ?? 0) * 6.5)
 
   // Suggested routine: alternate away from the last routine done, picking

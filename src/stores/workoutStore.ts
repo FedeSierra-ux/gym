@@ -22,6 +22,7 @@ interface WorkoutState {
 
   startWorkout: (routineId: string, dateOverride?: number) => void
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
+  toggleSetWarmup: (exerciseIdx: number, setIdx: number) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
   removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
@@ -109,6 +110,19 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { activeWorkout: { ...s.activeWorkout, exercises } }
         }),
 
+      toggleSetWarmup: (exerciseIdx, setIdx) =>
+        set((s) => {
+          if (!s.activeWorkout) return {}
+          const exercises = s.activeWorkout.exercises.map((ex, ei) => {
+            if (ei !== exerciseIdx) return ex
+            return {
+              ...ex,
+              sets: ex.sets.map((st, si) => (si === setIdx ? { ...st, isWarmup: !st.isWarmup } : st)),
+            }
+          })
+          return { activeWorkout: { ...s.activeWorkout, exercises } }
+        }),
+
       completeSet: (exerciseIdx, setIdx) =>
         set((s) => {
           if (!s.activeWorkout) return {}
@@ -140,9 +154,9 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : s.activeWorkout.lastCompletedSet
 
-          // Detect live PR
+          // Detect live PR (warm-up sets never count as PRs)
           let livePr = s.activeWorkout.livePr
-          if (completedSet.completed) {
+          if (completedSet.completed && !completedSet.isWarmup) {
             const { prs } = useStore.getState()
             const exerciseId = exercises[exerciseIdx].exerciseId
             const kg = parseFloat(completedSet.kg) || 0
@@ -228,6 +242,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               kg: parseFloat(s.kg) || 0,
               reps: parseInt(s.reps) || 0,
               completedAt: finishedAt,
+              isWarmup: s.isWarmup || undefined,
             })),
         }))
 
@@ -244,7 +259,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         const newPrs = [...prs]
         for (const ex of activeWorkout.exercises) {
           for (const s of ex.sets) {
-            if (!s.completed) continue
+            if (!s.completed || s.isWarmup) continue
             const kg = parseFloat(s.kg) || 0
             const reps = parseInt(s.reps) || 0
             if (kg <= 0) continue
@@ -273,7 +288,8 @@ export const useWorkoutStore = create<WorkoutState>()(
         if (routine) {
           for (const re of routine.exercises) {
             if (progressionToasts.length >= 2) break
-            const exSets = workoutExercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
+            const exSets = (workoutExercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? [])
+              .filter((s) => !s.isWarmup)
             if (exSets.length === 0) continue
             const allHitMax = exSets.every((s) => s.reps >= re.repsMax)
             if (!allHitMax) continue

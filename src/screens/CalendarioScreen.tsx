@@ -195,7 +195,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
   const [draftExercises, setDraftExercises] = useState(
     workout.exercises.map((we) => ({
       exerciseId: we.exerciseId,
-      sets: we.sets.map((s) => ({ kg: String(s.kg), reps: String(s.reps) })),
+      sets: we.sets.map((s) => ({ kg: String(s.kg), reps: String(s.reps), isWarmup: s.isWarmup })),
     }))
   )
 
@@ -213,7 +213,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
       prev.map((ex, ei) => {
         if (ei !== exIdx) return ex
         const last = ex.sets[ex.sets.length - 1]
-        return { ...ex, sets: [...ex.sets, { kg: last?.kg ?? '0', reps: last?.reps ?? '0' }] }
+        return { ...ex, sets: [...ex.sets, { kg: last?.kg ?? '0', reps: last?.reps ?? '0', isWarmup: undefined }] }
       })
     )
   }
@@ -234,7 +234,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
       exerciseId: ex.exerciseId,
       sets: ex.sets
         .filter((s) => s.kg !== '' || s.reps !== '')
-        .map((s) => ({ kg: parseFloat(s.kg) || 0, reps: parseInt(s.reps) || 0, completedAt: finishedAt })),
+        .map((s) => ({ kg: parseFloat(s.kg) || 0, reps: parseInt(s.reps) || 0, completedAt: finishedAt, isWarmup: s.isWarmup })),
     })).filter((ex) => ex.sets.length > 0)
 
     updateWorkout({
