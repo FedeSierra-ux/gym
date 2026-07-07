@@ -118,7 +118,7 @@ export function ActiveWorkoutScreen() {
   const { routines, workouts, prs } = useStore()
   const exercises = useAllExercises()
   const {
-    activeWorkout, updateSetValue, completeSet, addSetToExercise, removeSetFromExercise,
+    activeWorkout, updateSetValue, toggleSetWarmup, completeSet, addSetToExercise, removeSetFromExercise,
     dismissLivePr, finishWorkout, cancelWorkout,
   } = useWorkoutStore()
 
@@ -227,6 +227,7 @@ export function ActiveWorkoutScreen() {
               {/* Sets */}
               {activeEx.sets.map((set, setIdx) => {
                 const isCompleted = set.completed
+                const isWarmup = !!set.isWarmup
                 const flashKey = `${exIdx}-${setIdx}`
                 const kg = parseFloat(set.kg) || 0
                 const reps = parseInt(set.reps) || 0
@@ -247,9 +248,22 @@ export function ActiveWorkoutScreen() {
                         minHeight: 52,
                       }}
                     >
-                      {/* Set # + delete */}
+                      {/* Set # + warm-up toggle + delete */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: isCompleted ? S.acc : S.dim }}>{setIdx + 1}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: isWarmup ? S.acc2 : isCompleted ? S.acc : S.dim }}>{setIdx + 1}</span>
+                        <button
+                          onClick={() => toggleSetWarmup(exIdx, setIdx)}
+                          aria-label={isWarmup ? 'Quitar calentamiento' : 'Marcar como calentamiento'}
+                          title="Serie de calentamiento (no cuenta para volumen/PRs)"
+                          style={{
+                            fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
+                            background: isWarmup ? 'rgba(242,169,59,0.18)' : 'none',
+                            border: `1px solid ${isWarmup ? 'rgba(242,169,59,0.4)' : S.line2}`,
+                            color: isWarmup ? S.acc2 : S.faint,
+                            cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.4,
+                          }}>
+                          W
+                        </button>
                         {canDelete && (
                           <button onClick={() => removeSetFromExercise(exIdx, setIdx)}
                             style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: S.faint, fontSize: 9, fontFamily: 'inherit', lineHeight: 1 }}>

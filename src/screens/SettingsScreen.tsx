@@ -1,17 +1,42 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
+import { exportBackup, readBackupFile, applyBackup } from '../utils/backup'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
-  const { anthropicApiKey, setAnthropicApiKey, userName, updateUserName } = useStore()
+  const { anthropicApiKey, setAnthropicApiKey, userName, updateUserName, addToast } = useStore()
   const [key, setKey] = useState(anthropicApiKey ?? '')
   const [name, setName] = useState(userName)
   const [saved, setSaved] = useState(false)
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
     setAnthropicApiKey(key.trim())
     updateUserName(name.trim() || 'Atleta')
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleExport = () => {
+    try {
+      exportBackup()
+      addToast('Backup descargado', 'success')
+    } catch {
+      addToast('No hay datos para exportar todavía', 'info')
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!pendingImportFile) return
+    try {
+      const backup = await readBackupFile(pendingImportFile)
+      applyBackup(backup)
+      window.location.reload()
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'No se pudo importar el backup', 'info')
+    } finally {
+      setPendingImportFile(null)
+    }
   }
 
   return (
@@ -75,6 +100,40 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
+        {/* Backup */}
+        <div>
+          <p className="section-label mb-2">Backup de datos</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Tus rutinas, entrenos y récords viven solo en este dispositivo. Si vas a reinstalar la app o cambiar de
+            celular, exportá un backup antes para no perderlos.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold border border-border text-white bg-surface"
+            >
+              ⬇️ Exportar
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold border border-border text-white bg-surface"
+            >
+              ⬆️ Importar
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setPendingImportFile(file)
+                e.target.value = ''
+              }}
+            />
+          </div>
+        </div>
+
         <button
           onClick={handleSave}
           className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
@@ -84,6 +143,33 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           {saved ? '✓ Guardado' : 'Guardar cambios'}
         </button>
       </div>
+
+      {pendingImportFile && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <div className="rounded-2xl p-6 w-full" style={{ background: '#161821', border: '1px solid rgba(255,255,255,0.12)', maxWidth: 340 }}>
+            <h3 className="font-bold text-white text-lg mb-2">¿Importar este backup?</h3>
+            <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Esto reemplaza <strong className="text-white">todos</strong> tus datos actuales (rutinas, entrenos, récords) por los del archivo. No se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPendingImportFile(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', background: 'none' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                className="flex-1 py-3 rounded-xl text-sm font-bold"
+                style={{ border: 'none', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}
+              >
+                Reemplazar datos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
