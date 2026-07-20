@@ -18,8 +18,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const EXERCISES_FILE = join(ROOT, 'src/data/exercises.ts')
 const REPORT_FILE = process.env.GIF_REPORT || join(ROOT, 'gif-refresh-report.md')
-const API = (process.env.EXERCISEDB_API || 'https://www.exercisedb.dev/api/v1').replace(/\/$/, '')
+// Se puede pasar una o varias bases separadas por coma; se prueban en orden.
+const APIS = (process.env.EXERCISEDB_API ||
+  'https://www.exercisedb.dev/api/v1,https://exercisedb-api.vercel.app/api/v1')
+  .split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean)
 const THRESHOLD = parseFloat(process.env.MATCH_THRESHOLD || '0.55')
+// El cert TLS de exercisedb.dev suele estar vencido. La validación se desactiva
+// a nivel de proceso vía NODE_TLS_REJECT_UNAUTHORIZED=0 (lo setea el workflow);
+// esto es solo para reflejarlo en el reporte.
+const INSECURE_TLS = process.env.NODE_TLS_REJECT_UNAUTHORIZED === '0'
+if (INSECURE_TLS) {
+  console.warn('⚠  Validación de certificado TLS desactivada (solo para este refresco en CI).')
+}
 
 // ── helpers de texto ────────────────────────────────────────────────────────
 const norm = (s) =>
@@ -45,21 +55,44 @@ function score(a, b) {
 }
 
 // ── traer todo el dataset de ExerciseDB ─────────────────────────────────────
-async function fetchAll() {
+async function fetchJson(url) {
+  const res = await fetch(url, { headers: { accept: 'application/json' } })
+  if (!res.ok) throw new Error(`API ${res.status} en ${url}`)
+  return res.json()
+}
+
+async function fetchAllFrom(API) {
   const all = []
   let offset = 0
   const limit = 100
   for (let page = 0; page < 100; page++) {
-    const url = `${API}/exercises?limit=${limit}&offset=${offset}`
-    const res = await fetch(url, { headers: { accept: 'application/json' } })
-    if (!res.ok) throw new Error(`API ${res.status} en ${url}`)
-    const json = await res.json()
+    const json = await fetchJson(`${API}/exercises?limit=${limit}&offset=${offset}`)
     const data = Array.isArray(json) ? json : (json.data ?? json.exercises ?? [])
     if (!data.length) break
     all.push(...data)
     if (data.length < limit) break
     offset += limit
   }
+  return all
+}
+
+async function fetchAll() {
+  let lastErr
+  for (const API of APIS) {
+    try {
+      console.log(`Bajando dataset de ${API} ...`)
+      const all = await fetchAllFrom(API)
+      if (all.length) return mapDataset(all)
+      console.warn(`  (vacío en ${API}, pruebo el siguiente)`)
+    } catch (e) {
+      lastErr = e
+      console.warn(`  falló ${API}: ${e.message}`)
+    }
+  }
+  throw lastErr || new Error('Ninguna API devolvió datos')
+}
+
+function mapDataset(all) {
   return all.map((e) => {
     const gifUrl = e.gifUrl || e.gif || e.image || ''
     const mid = (gifUrl.match(/media\/([^./]+)\.gif/) || [])[1] || e.exerciseId || e.id || ''
@@ -79,7 +112,6 @@ async function main() {
   }
   console.log(`Ejercicios en la app: ${ours.length}`)
 
-  console.log(`Bajando dataset de ${API} ...`)
   const db = await fetchAll()
   console.log(`Dataset ExerciseDB: ${db.length} ejercicios`)
   if (!db.length) throw new Error('Dataset vacío — revisá EXERCISEDB_API')
@@ -115,7 +147,7 @@ async function main() {
   const lines = []
   lines.push(`# Refresco de GIFs — reporte`)
   lines.push('')
-  lines.push(`- API: \`${API}\``
+  lines.push(`- API: \`${APIS.join(', ')}\`${INSECURE_TLS ? ' (TLS sin validar)' : ''}`
     + `\n- Umbral de match: ${THRESHOLD}`
     + `\n- Ejercicios: ${ours.length} · Cambios: ${changes.length} · Sin match confiable: ${misses.length}`)
   lines.push('')
