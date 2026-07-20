@@ -6,6 +6,7 @@ const TABS: { id: NavTab; label: string; emoji: string }[] = [
   { id: 'rutinas', label: 'Rutinas', emoji: '📋' },
   { id: 'calendario', label: 'Agenda', emoji: '📅' },
   { id: 'progreso', label: 'Progreso', emoji: '📈' },
+  { id: 'perfil', label: 'Perfil', emoji: '👤' },
 ]
 
 export function BottomNav() {
@@ -38,7 +39,7 @@ export function BottomNav() {
                 style={{
                   fontSize: 10,
                   fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#E8634A' : '#737A8C',
+                  color: isActive ? '#E8634A' : '#8A91A3',
                   transition: 'color 0.15s',
                 }}
               >

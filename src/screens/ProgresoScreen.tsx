@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
+import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import type { MuscleGroup } from '../types'
 
 type Period = '3m' | '6m' | '1a' | 'todo'
@@ -10,7 +11,7 @@ const MONTH_NAMES_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago
 
 const S = {
   bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#737A8C', faint: '#3B3F4E',
+  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
   acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
   line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
 }
@@ -116,10 +117,10 @@ function MonthlyMuscleVolume() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))}
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} aria-label="Mes anterior"
           style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'inherit' }}>‹</button>
         <span style={{ fontSize: 14, fontWeight: 700, color: S.ink, textTransform: 'capitalize' }}>{monthLabel}</span>
-        <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth}
+        <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth} aria-label="Mes siguiente"
           style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, border: `1px solid ${S.line2}`, color: isCurrentMonth ? S.faint : S.dim, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', fontFamily: 'inherit' }}>›</button>
       </div>
 
@@ -147,6 +148,7 @@ export function ProgresoScreen() {
   const [period, setPeriod] = useState<Period>('6m')
   const [tab, setTab] = useState<Tab>('fuerza')
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
+  const [historyExerciseId, setHistoryExerciseId] = useState<string | null>(null)
 
   const monthsBack = getMonthsBack(period)
   const now = new Date()
@@ -287,11 +289,16 @@ export function ProgresoScreen() {
                   const firstMonthLabel = bars.find(m => m.maxKg > 0)?.label ?? ''
                   const exConfig = muscleGroupConfig[ex.muscleGroup]
                   return (
-                    <div key={ep.exerciseId} style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}`, borderLeft: `3px solid ${exConfig.color}` }}>
+                    <button key={ep.exerciseId} onClick={() => setHistoryExerciseId(ep.exerciseId)}
+                      aria-label={`Ver historial de ${ex.nameEs}`}
+                      style={{ background: S.surf, borderRadius: 18, padding: '18px 16px', border: `1px solid ${S.line2}`, borderLeft: `3px solid ${exConfig.color}`, textAlign: 'left', width: '100%', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
                       {/* Top row */}
                       <div className="flex items-start justify-between" style={{ marginBottom: 18 }}>
                         <div>
-                          <div style={{ fontSize: 15, color: S.ink, fontWeight: 700 }}>{ex.nameEs}</div>
+                          <div className="flex items-center gap-1.5" style={{ fontSize: 15, color: S.ink, fontWeight: 700 }}>
+                            {ex.nameEs}
+                            <span style={{ fontSize: 13, color: S.faint }} aria-hidden="true">›</span>
+                          </div>
                           <div style={{ fontSize: 11, color: exConfig.color, fontWeight: 600, marginTop: 3 }}>{exConfig.emoji} {exConfig.label}</div>
                           <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: -1, marginTop: 8, lineHeight: 1, color: S.ink }}>
                             {ep.currentMax}
@@ -333,7 +340,7 @@ export function ProgresoScreen() {
                           <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 9, color: S.faint }}>{m.label}</div>
                         ))}
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -341,6 +348,10 @@ export function ProgresoScreen() {
           </>
         )}
       </div>
+
+      {historyExerciseId && (
+        <ExerciseHistorySheet exerciseId={historyExerciseId} onClose={() => setHistoryExerciseId(null)} />
+      )}
     </div>
   )
 }

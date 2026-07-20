@@ -17,7 +17,7 @@
   --surf: #161821;
   --surf2: #1C1F2A;
   --ink: #ECEEF4;
-  --dim: #737A8C;
+  --dim: #8A91A3;
   --faint: #3B3F4E;
   --line: rgba(236,238,244,0.07);
   --line2: rgba(236,238,244,0.12);
@@ -39,6 +39,9 @@ html, body {
   -webkit-font-smoothing: antialiased;
   height: 100%;
   overflow: hidden;
+  /* Evita el pull-to-refresh del navegador/TWA, que choca con el scroll de las
+     listas y podría recargar la app en medio de un entreno. */
+  overscroll-behavior: none;
 }
 
 #root {
@@ -58,6 +61,7 @@ html, body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  overscroll-behavior-y: contain;
 }
 .scroll-area::-webkit-scrollbar { display: none; }
 
@@ -182,6 +186,13 @@ button:active { transform: scale(0.97); }
   50% { box-shadow: 0 0 0 8px rgba(232,99,74,0); }
 }
 .pulse-pr { animation: pulse-acc 2s ease-in-out infinite; }
+
+/* Live timer dot — latido suave durante el entreno activo */
+@keyframes live-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.live-dot { animation: live-dot 1.4s ease-in-out infinite; }
 
 /* Circular ring transition */
 circle[stroke-dashoffset] {

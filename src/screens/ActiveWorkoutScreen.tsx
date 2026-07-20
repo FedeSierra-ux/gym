@@ -11,7 +11,7 @@ import type { Exercise } from '../types'
 
 const S = {
   bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#737A8C', faint: '#3B3F4E',
+  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
   acc: '#E8634A', acc2: '#F2A93B',
   line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
 }
@@ -162,23 +162,33 @@ export function ActiveWorkoutScreen() {
 
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '54px 22px 16px', borderBottom: `1px solid ${S.line2}` }}>
-        <div className="flex items-center justify-between">
-          <div style={{ fontSize: 13, color: S.dim, fontWeight: 500 }}>
-            {routine?.emoji} {routine?.name} · En curso
-          </div>
-          <div style={{ fontSize: 12, color: S.acc, fontWeight: 600, background: 'rgba(232,99,74,0.12)', padding: '4px 10px', borderRadius: 20 }}>
-            ● {formatElapsed(elapsed)}
-          </div>
+        <div style={{ fontSize: 13, color: S.dim, fontWeight: 500 }}>
+          {routine?.emoji} {routine?.name}
         </div>
-        <div className="flex items-center gap-4" style={{ marginTop: 12 }}>
-          <CircularRing value={progressPct} size={50} strokeWidth={5} color={S.acc} trackColor={S.line2}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: S.ink }}>{progressPct}%</span>
-          </CircularRing>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>
-              {completedSets} <span style={{ color: S.dim, fontSize: 16 }}>/ {totalSets} series</span>
+        <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
+          <div className="flex items-center gap-4">
+            <CircularRing value={progressPct} size={50} strokeWidth={5} color={S.acc} trackColor={S.line2}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: S.ink }}>{progressPct}%</span>
+            </CircularRing>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>
+                {completedSets} <span style={{ color: S.dim, fontSize: 16 }}>/ {totalSets} series</span>
+              </div>
+              <div style={{ fontSize: 12, color: S.dim, marginTop: 2 }}>{progressPct}% completado</div>
             </div>
-            <div style={{ fontSize: 12, color: S.dim, marginTop: 2 }}>{progressPct}% completado</div>
+          </div>
+          {/* Cronómetro de duración — prominente */}
+          <div style={{ textAlign: 'right' }} aria-label="Duración del entreno" role="timer">
+            <div style={{
+              fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink,
+              fontFamily: 'JetBrains Mono, monospace', fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+            }}>
+              {formatElapsed(elapsed)}
+            </div>
+            <div className="flex items-center justify-end gap-1" style={{ marginTop: 5 }}>
+              <span className="live-dot" style={{ width: 7, height: 7, borderRadius: 4, background: S.acc, display: 'inline-block' }} />
+              <span style={{ fontSize: 11, color: S.acc, fontWeight: 600 }}>En curso</span>
+            </div>
           </div>
         </div>
       </div>
@@ -276,6 +286,7 @@ export function ActiveWorkoutScreen() {
                       <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
                         <input type="number" inputMode="decimal" value={set.kg}
+                          aria-label={`Peso en kg, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
                           onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
                           onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
@@ -297,6 +308,7 @@ export function ActiveWorkoutScreen() {
                       <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
                         <input type="number" inputMode="numeric" value={set.reps}
+                          aria-label={`Repeticiones, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
                           placeholder="reps" disabled={isCompleted}
                           style={{

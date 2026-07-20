@@ -66,7 +66,7 @@ export interface PR {
   history?: Array<{ kg: number; reps: number; date: number }>
 }
 
-export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso'
+export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso' | 'perfil'
 export type CalendarSubTab = 'calendario' | 'records'
 
 export interface AppToast {

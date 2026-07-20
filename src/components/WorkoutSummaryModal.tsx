@@ -5,7 +5,7 @@ import type { Workout } from '../types'
 
 const S = {
   bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#737A8C', faint: '#3B3F4E',
+  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
   acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
   line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
 }

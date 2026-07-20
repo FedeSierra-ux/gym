@@ -12,7 +12,7 @@ export default {
         surf: '#161821',
         surf2: '#1C1F2A',
         ink: '#ECEEF4',
-        dim: '#737A8C',
+        dim: '#8A91A3',
         faint: '#3B3F4E',
         acc: '#E8634A',
         acc2: '#F2A93B',

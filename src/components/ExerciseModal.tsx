@@ -11,7 +11,7 @@ interface ExerciseModalProps {
 
 const S = {
   surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#737A8C', faint: '#3B3F4E',
+  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
   line2: 'rgba(236,238,244,0.12)',
 }
 
