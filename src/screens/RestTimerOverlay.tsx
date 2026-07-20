@@ -114,7 +114,7 @@ export function RestTimerOverlay() {
               cy={size / 2}
               r={r}
               fill="none"
-              stroke="#00ff88"
+              stroke="#E8634A"
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeDasharray={circumference}

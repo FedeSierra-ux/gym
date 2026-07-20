@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { CircularRing } from '../components/CircularRing'
-import { SettingsScreen } from './SettingsScreen'
 
 function formatDate() {
   const now = new Date()
@@ -35,7 +33,6 @@ export function HomeScreen() {
   const { userName, workouts, routines, prs, setActiveTab, getArchivedRoutineName } = useStore()
   const allExercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
-  const [showSettings, setShowSettings] = useState(false)
 
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const sortedWorkouts = [...finishedWorkouts].sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
@@ -96,20 +93,21 @@ export function HomeScreen() {
         <div style={{ padding: '60px 22px 0' }}>
           <div className="flex justify-between items-center">
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: '#737A8C', letterSpacing: 0.3 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--dim)', letterSpacing: 0.3 }}>
                 {formatDate()}
               </div>
-              <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, marginTop: 4, color: '#ECEEF4' }}>
+              <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, marginTop: 4, color: 'var(--ink)' }}>
                 Hola, {userName} 👋
               </div>
             </div>
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={() => setActiveTab('perfil')}
+              aria-label="Abrir perfil"
               style={{
                 width: 42, height: 42, borderRadius: 21,
-                background: '#1C1F2A', border: '2px solid #E8634A',
+                background: 'var(--surf2)', border: '2px solid var(--acc)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 700, color: '#E8634A',
+                fontSize: 18, fontWeight: 700, color: 'var(--acc)',
               }}
             >
               {userInitial}
@@ -120,52 +118,52 @@ export function HomeScreen() {
         {/* Monthly progress card */}
         <div style={{ padding: '24px 22px 0' }}>
           <div style={{
-            background: '#161821', borderRadius: 18, padding: '22px 20px',
+            background: 'var(--surf)', borderRadius: 18, padding: '22px 20px',
             display: 'flex', alignItems: 'center', gap: 20,
-            border: '1px solid rgba(236,238,244,0.12)',
+            border: '1px solid var(--line2)',
           }}>
             <div className="relative flex-shrink-0">
-              <CircularRing value={ringPct} size={72} strokeWidth={6} color="#E8634A" trackColor="rgba(236,238,244,0.12)">
+              <CircularRing value={ringPct} size={72} strokeWidth={6} color="var(--acc)" trackColor="var(--line2)">
                 <div className="flex flex-col items-center">
-                  <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
                     {monthWorkouts.length}
                   </span>
-                  <span style={{ fontSize: 9, color: '#737A8C', fontWeight: 500 }}>de {MONTHLY_GOAL}</span>
+                  <span style={{ fontSize: 9, color: 'var(--dim)', fontWeight: 500 }}>de {MONTHLY_GOAL}</span>
                 </div>
               </CircularRing>
             </div>
             <div className="flex-1">
-              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2, color: '#ECEEF4' }}>
+              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2, color: 'var(--ink)' }}>
                 Progreso mensual
               </div>
-              <div style={{ fontSize: 12, color: '#737A8C', marginTop: 4, lineHeight: 1.5 }}>
-                <span style={{ color: '#E8634A', fontWeight: 600 }}>{monthHours}h</span> entrenadas ·{' '}
-                <span style={{ color: '#F2A93B', fontWeight: 600 }}>{monthPrCount} PRs</span> nuevos
+              <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4, lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--acc)', fontWeight: 600 }}>{monthHours}h</span> entrenadas ·{' '}
+                <span style={{ color: 'var(--acc2)', fontWeight: 600 }}>{monthPrCount} PRs</span> nuevos
               </div>
             </div>
             <div className="flex flex-col items-center gap-[2px]">
               <span style={{ fontSize: 16 }}>🔥</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#F2A93B' }}>{streak}</span>
-              <span style={{ fontSize: 9, color: '#737A8C' }}>días</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--acc2)' }}>{streak}</span>
+              <span style={{ fontSize: 9, color: 'var(--dim)' }}>días</span>
             </div>
           </div>
         </div>
 
         {/* Next workout */}
         <div style={{ padding: '20px 22px 0' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#737A8C', letterSpacing: 0.3, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3, marginBottom: 12 }}>
             Próximo entreno
           </div>
           {suggestedRoutine ? (
             <div style={{
-              background: '#161821', borderRadius: 18, overflow: 'hidden',
-              border: '1px solid rgba(236,238,244,0.12)',
+              background: 'var(--surf)', borderRadius: 18, overflow: 'hidden',
+              border: '1px solid var(--line2)',
             }}>
               <div style={{ padding: '18px 18px 14px' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
                   {suggestedRoutine.emoji} {suggestedRoutine.name}
                 </div>
-                <div style={{ fontSize: 12, color: '#737A8C', marginTop: 5 }}>
+                <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 5 }}>
                   {suggestedExerciseCount} ejercicios · ~{approxMinutes} min
                 </div>
                 {muscleGroups.length > 0 && (
@@ -175,9 +173,9 @@ export function HomeScreen() {
                       if (!cfg) return null
                       return (
                         <span key={mg} style={{
-                          fontSize: 11, fontWeight: 600, color: '#ECEEF4',
-                          background: '#1C1F2A', padding: '4px 10px', borderRadius: 20,
-                          border: '1px solid rgba(236,238,244,0.12)',
+                          fontSize: 11, fontWeight: 600, color: 'var(--ink)',
+                          background: 'var(--surf2)', padding: '4px 10px', borderRadius: 20,
+                          border: '1px solid var(--line2)',
                         }}>
                           {cfg.emoji} {cfg.label}
                         </span>
@@ -191,10 +189,10 @@ export function HomeScreen() {
                       <div key={ex.name} style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '9px 0',
-                        borderTop: i > 0 ? '1px solid rgba(236,238,244,0.07)' : undefined,
+                        borderTop: i > 0 ? '1px solid var(--line)' : undefined,
                       }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, flex: 1, color: '#ECEEF4' }}>{ex.name}</span>
-                        <span style={{ fontSize: 12, color: '#737A8C' }}>{ex.sets} series</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, flex: 1, color: 'var(--ink)' }}>{ex.name}</span>
+                        <span style={{ fontSize: 12, color: 'var(--dim)' }}>{ex.sets} series</span>
                       </div>
                     ))}
                   </div>
@@ -203,7 +201,7 @@ export function HomeScreen() {
               <button
                 onClick={() => startWorkout(suggestedRoutine.id)}
                 style={{
-                  width: '100%', background: 'linear-gradient(135deg, #E8634A 0%, #d4553e 100%)', border: 'none',
+                  width: '100%', background: 'linear-gradient(135deg, var(--acc) 0%, var(--primary-dim) 100%)', border: 'none',
                   color: '#fff', fontSize: 15, fontWeight: 700,
                   padding: '17px 0', cursor: 'pointer',
                   fontFamily: 'DM Sans, system-ui, sans-serif',
@@ -218,14 +216,14 @@ export function HomeScreen() {
           ) : (
             <div style={{
               borderRadius: 18, padding: '20px',
-              border: '1.5px dashed rgba(236,238,244,0.12)',
+              border: '1.5px dashed var(--line2)',
               textAlign: 'center',
             }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>🏋️</div>
-              <p style={{ color: '#ECEEF4', fontWeight: 600, fontSize: 14 }}>¡Tu primera sesión te espera!</p>
+              <p style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 14 }}>¡Tu primera sesión te espera!</p>
               <button
                 onClick={() => setActiveTab('rutinas')}
-                style={{ color: '#E8634A', fontSize: 13, fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: 'var(--acc)', fontSize: 13, fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Crear primera rutina →
               </button>
@@ -236,17 +234,17 @@ export function HomeScreen() {
         {/* Last session */}
         {lastWorkout && lastRoutine && (
           <div style={{ padding: '20px 22px 0' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#737A8C', letterSpacing: 0.3, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3, marginBottom: 12 }}>
               Última sesión · {daysAgoStr}
             </div>
             <div style={{
-              background: '#161821', borderRadius: 18, padding: 18,
-              border: '1px solid rgba(236,238,244,0.12)',
+              background: 'var(--surf)', borderRadius: 18, padding: 18,
+              border: '1px solid var(--line2)',
             }}>
               <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
                 <span style={{ fontSize: 22 }}>{lastRoutine.emoji}</span>
-                <span style={{ fontSize: 17, fontWeight: 700, flex: 1, color: '#ECEEF4' }}>{lastRoutine.name}</span>
-                <CircularRing value={lastTotalSets > 0 ? 100 : 0} size={38} strokeWidth={4} color="#E8634A" trackColor="rgba(236,238,244,0.12)" />
+                <span style={{ fontSize: 17, fontWeight: 700, flex: 1, color: 'var(--ink)' }}>{lastRoutine.name}</span>
+                <CircularRing value={lastTotalSets > 0 ? 100 : 0} size={38} strokeWidth={4} color="var(--acc)" trackColor="var(--line2)" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 {[
@@ -255,10 +253,10 @@ export function HomeScreen() {
                   [`${lastTotalSets} series`, 'Volumen'],
                 ].map(([v, l]) => (
                   <div key={l} style={{
-                    background: '#1C1F2A', borderRadius: 12, padding: '12px 10px', textAlign: 'center',
+                    background: 'var(--surf2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center',
                   }}>
-                    <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>{v}</div>
-                    <div style={{ fontSize: 10, color: '#737A8C', marginTop: 3 }}>{l}</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>{v}</div>
+                    <div style={{ fontSize: 10, color: 'var(--dim)', marginTop: 3 }}>{l}</div>
                   </div>
                 ))}
               </div>
@@ -269,7 +267,6 @@ export function HomeScreen() {
         <div style={{ height: 24 }} />
       </div>
 
-      {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
     </div>
   )
 }

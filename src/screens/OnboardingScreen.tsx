@@ -18,11 +18,11 @@ export function OnboardingScreen() {
         <div className="onboarding-in flex flex-col items-center gap-8 w-full max-w-sm">
           <div className="w-24 h-24 rounded-3xl bg-primary/15 border border-primary/30 flex items-center justify-center">
             <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
-              <rect x="13" y="21" width="22" height="6" rx="3" fill="#00ff88"/>
-              <rect x="9" y="19" width="5" height="10" rx="2" fill="#00e07a"/>
-              <rect x="34" y="19" width="5" height="10" rx="2" fill="#00e07a"/>
-              <rect x="3" y="16" width="7" height="16" rx="2.5" fill="#00ff88"/>
-              <rect x="38" y="16" width="7" height="16" rx="2.5" fill="#00ff88"/>
+              <rect x="13" y="21" width="22" height="6" rx="3" fill="#E8634A"/>
+              <rect x="9" y="19" width="5" height="10" rx="2" fill="#d4553e"/>
+              <rect x="34" y="19" width="5" height="10" rx="2" fill="#d4553e"/>
+              <rect x="3" y="16" width="7" height="16" rx="2.5" fill="#E8634A"/>
+              <rect x="38" y="16" width="7" height="16" rx="2.5" fill="#E8634A"/>
             </svg>
           </div>
 

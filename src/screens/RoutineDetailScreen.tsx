@@ -127,7 +127,7 @@ export function RoutineDetailScreen() {
       >
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(0,212,255,0.05) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(232,99,74,0.05) 0%, transparent 70%)' }}
         />
         <div className="flex items-center gap-3 mb-4 relative">
           <button
@@ -148,7 +148,7 @@ export function RoutineDetailScreen() {
                 className="w-full rounded-xl px-3 py-1.5 text-white font-bold text-lg focus:outline-none"
                 style={{
                   background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(0,255,136,0.3)',
+                  border: '1px solid rgba(232,99,74,0.3)',
                 }}
                 value={routine.name}
                 onChange={(e) => updateRoutine({ ...routine, name: e.target.value })}
@@ -194,7 +194,7 @@ export function RoutineDetailScreen() {
               <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
               <span
                 className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                style={{ background: 'rgba(0,255,136,0.06)', color: 'rgba(0,255,136,0.5)' }}
+                style={{ background: 'rgba(232,99,74,0.06)', color: 'rgba(232,99,74,0.5)' }}
               >
                 Último: {lastUsedDate}
               </span>
@@ -225,8 +225,8 @@ export function RoutineDetailScreen() {
           onClick={() => setEditMode(!editMode)}
           className="px-5 py-3 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all"
           style={editMode ? {
-            background: 'rgba(0,255,136,0.12)',
-            border: '1px solid rgba(0,255,136,0.3)',
+            background: 'rgba(232,99,74,0.12)',
+            border: '1px solid rgba(232,99,74,0.3)',
             color: 'var(--primary)',
           } : {
             background: 'rgba(255,255,255,0.05)',
@@ -263,7 +263,7 @@ export function RoutineDetailScreen() {
                       onClick={() => moveExercise(idx, 'up')}
                       disabled={idx === 0}
                       aria-label="Mover arriba"
-                      className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
+                      className="transition-colors leading-none text-sm w-8 h-7 flex items-center justify-center rounded"
                       style={{
                         color: idx === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
                         background: 'rgba(255,255,255,0.04)',
@@ -275,7 +275,7 @@ export function RoutineDetailScreen() {
                       onClick={() => moveExercise(idx, 'down')}
                       disabled={idx === sortedExercises.length - 1}
                       aria-label="Mover abajo"
-                      className="transition-colors leading-none text-sm w-6 h-5 flex items-center justify-center rounded"
+                      className="transition-colors leading-none text-sm w-8 h-7 flex items-center justify-center rounded"
                       style={{
                         color: idx === sortedExercises.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
                         background: 'rgba(255,255,255,0.04)',
@@ -379,9 +379,9 @@ export function RoutineDetailScreen() {
           onClick={() => setShowExercisePicker(true)}
           className="w-full mt-3 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all"
           style={{
-            border: '1.5px dashed rgba(0,255,136,0.2)',
-            background: 'rgba(0,255,136,0.02)',
-            color: 'rgba(0,255,136,0.5)',
+            border: '1.5px dashed rgba(232,99,74,0.2)',
+            background: 'rgba(232,99,74,0.02)',
+            color: 'rgba(232,99,74,0.5)',
           }}
         >
           <span className="text-lg leading-none">+</span>

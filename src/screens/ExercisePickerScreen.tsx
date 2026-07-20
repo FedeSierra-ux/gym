@@ -123,7 +123,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
               onClick={() => setMode('browse')}
               className="px-3 py-1.5 text-xs font-semibold transition-colors"
               style={mode === 'browse' ? {
-                background: 'rgba(0,255,136,0.15)',
+                background: 'rgba(232,99,74,0.15)',
                 color: 'var(--primary)',
               } : { color: 'rgba(255,255,255,0.3)' }}
             >
@@ -133,7 +133,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
               onClick={() => { setMode('search') }}
               className="px-3 py-1.5 text-xs font-semibold transition-colors"
               style={mode === 'search' ? {
-                background: 'rgba(0,255,136,0.15)',
+                background: 'rgba(232,99,74,0.15)',
                 color: 'var(--primary)',
               } : { color: 'rgba(255,255,255,0.3)' }}
             >
@@ -318,9 +318,9 @@ function ExerciseRow({
         onClick={onAdd}
         className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all font-bold text-lg"
         style={isAdded ? {
-          background: 'rgba(0,255,136,0.15)',
+          background: 'rgba(232,99,74,0.15)',
           color: 'var(--primary)',
-          border: '1px solid rgba(0,255,136,0.3)',
+          border: '1px solid rgba(232,99,74,0.3)',
         } : {
           background: 'rgba(255,255,255,0.06)',
           color: 'rgba(255,255,255,0.4)',

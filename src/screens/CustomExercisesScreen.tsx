@@ -94,7 +94,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
         {customExercises.length === 0 && !showForm && (
           <div
             className="rounded-2xl p-6 text-center"
-            style={{ border: '1.5px dashed rgba(0,255,136,0.2)', background: 'rgba(0,255,136,0.03)' }}
+            style={{ border: '1.5px dashed rgba(232,99,74,0.2)', background: 'rgba(232,99,74,0.03)' }}
           >
             <div className="text-3xl mb-2">🏋️</div>
             <p className="text-white font-semibold text-sm mb-1">Sin ejercicios personalizados</p>
@@ -156,7 +156,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
             className="rounded-2xl p-4 flex flex-col gap-3"
             style={{
               background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
-              border: '1px solid rgba(0,255,136,0.2)',
+              border: '1px solid rgba(232,99,74,0.2)',
               boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
             }}
           >

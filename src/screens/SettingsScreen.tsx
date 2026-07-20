@@ -42,7 +42,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   return (
     <div className="absolute inset-0 z-50 bg-background flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       <div className="flex-shrink-0 px-4 pt-12 pb-4 border-b border-border flex items-center gap-3">
-        <button onClick={onClose} className="text-gray-400 text-2xl leading-none">‹</button>
+        <button onClick={onClose} aria-label="Volver" className="text-gray-400 text-2xl leading-none">‹</button>
         <h1 className="text-lg font-bold text-white">Ajustes</h1>
       </div>
 

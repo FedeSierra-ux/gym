@@ -49,7 +49,7 @@ export function RutinasScreen() {
       {/* Header */}
       <div style={{ padding: '60px 22px 0' }}>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>Mis Rutinas</div>
-        <div style={{ fontSize: 13, color: '#737A8C', marginTop: 4 }}>
+        <div style={{ fontSize: 13, color: '#8A91A3', marginTop: 4 }}>
           {routines.length} rutinas guardadas
         </div>
       </div>
@@ -99,7 +99,7 @@ export function RutinasScreen() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 12, color: '#737A8C', marginTop: 3 }}>
+                  <div style={{ fontSize: 12, color: '#8A91A3', marginTop: 3 }}>
                     {routine.exercises.length} ejercicios · ~{duration} min
                   </div>
                 </div>
@@ -151,7 +151,7 @@ export function RutinasScreen() {
             width: '100%', borderRadius: 18, padding: '14px 0',
             border: '1px solid rgba(236,238,244,0.12)',
             background: '#161821',
-            color: '#737A8C',
+            color: '#8A91A3',
             fontFamily: 'DM Sans, system-ui, sans-serif',
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
