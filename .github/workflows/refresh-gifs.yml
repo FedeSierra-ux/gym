@@ -7,13 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       api:
-        description: 'Base de la API de ExerciseDB'
+        description: 'Base(s) de la API de ExerciseDB (separadas por coma, se prueban en orden)'
         required: false
-        default: 'https://www.exercisedb.dev/api/v1'
+        default: 'https://www.exercisedb.dev/api/v1,https://exercisedb-api.vercel.app/api/v1'
       threshold:
         description: 'Score mínimo de match (0-1)'
         required: false
         default: '0.55'
+      insecure_tls:
+        description: 'Ignorar cert TLS vencido de exercisedb.dev (true/false)'
+        required: false
+        default: 'true'
 
 permissions:
   contents: write
@@ -33,6 +37,11 @@ jobs:
         env:
           EXERCISEDB_API: ${{ github.event.inputs.api }}
           MATCH_THRESHOLD: ${{ github.event.inputs.threshold }}
+          # El cert de exercisedb.dev está vencido; con insecure_tls=true se ignora
+          # (solo para este fetch de datos públicos en un runner efímero de CI).
+          # El script usa un https.Agent con rejectUnauthorized:false para asegurarlo.
+          INSECURE_TLS: ${{ github.event.inputs.insecure_tls }}
+          NODE_TLS_REJECT_UNAUTHORIZED: ${{ github.event.inputs.insecure_tls == 'true' && '0' || '1' }}
           GIF_REPORT: ${{ runner.temp }}/gif-refresh-report.md
         run: node scripts/refresh-gifs.mjs
 
