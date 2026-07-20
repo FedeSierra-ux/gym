@@ -17,8 +17,8 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'pecho-02', nameEs: 'Press Inclinado', nameEn: 'Incline Barbell Press', muscleGroup: 'pecho',
-    primaryMuscles: ['Pectoral superior'], equipment: 'Barra',
+    id: 'pecho-02', nameEs: 'Press Inclinado Mancuernas', nameEn: 'Incline Dumbbell Press', muscleGroup: 'pecho',
+    primaryMuscles: ['Pectoral superior'], equipment: 'Mancuernas',
     image: IMG('rDAiRf9'),
     instructions: [
       'Ajusta el banco a 30-45° de inclinación.',
@@ -29,7 +29,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'pecho-03', nameEs: 'Press de Banca - Maquina', nameEn: 'Machine Chest Press', muscleGroup: 'pecho',
+    id: 'pecho-03', nameEs: 'Press de Banca (Máquina)', nameEn: 'Machine Chest Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral mayor'], equipment: 'Máquina', equipmentType: 'maquina',
     image: IMG('SpYC0Kp'),
     instructions: [
@@ -62,18 +62,6 @@ export const exercises: Exercise[] = [
       'Baja hasta sentir el estiramiento sin forzar el hombro.',
       'Eleva de vuelta apretando el pecho como si abrazaras un árbol.',
       'Controla el movimiento durante todo el recorrido.',
-    ],
-  },
-  {
-    id: 'pecho-06', nameEs: 'Fondos en Paralelas', nameEn: 'Chest Dips', muscleGroup: 'pecho',
-    primaryMuscles: ['Pectoral inferior'], equipment: 'Paralelas',
-    image: IMG('O2K9Vb5'),
-    instructions: [
-      'Sujétate en las paralelas con los brazos extendidos.',
-      'Inclínate ligeramente hacia adelante para enfocar el pecho.',
-      'Baja el cuerpo doblando los codos hasta 90°.',
-      'Empuja con fuerza hacia arriba sin bloquear los codos.',
-      'Mantén el torso inclinado durante todo el ejercicio.',
     ],
   },
   {
@@ -112,18 +100,6 @@ export const exercises: Exercise[] = [
       'Vuelve atrás de forma controlada sin dejar caer el peso.',
     ],
   },
-  {
-    id: 'pecho-10', nameEs: 'Press Inclinado Barra', nameEn: 'Incline Barbell Bench Press', muscleGroup: 'pecho',
-    primaryMuscles: ['Pectoral superior'], equipment: 'Barra',
-    image: IMG('3TZduzM'),
-    instructions: [
-      'Ajusta el banco a 30-45° de inclinación.',
-      'Agarra la barra a la misma anchura que el press de banca.',
-      'Baja la barra hasta la parte superior del pecho.',
-      'Empuja hacia arriba y ligeramente hacia atrás.',
-      'Mantén la tensión en la parte clavicular del pectoral.',
-    ],
-  },
 
   // ESPALDA (10)
   {
@@ -139,7 +115,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'espalda-02', nameEs: 'Remo maquina', nameEn: 'Machine Row', muscleGroup: 'espalda',
+    id: 'espalda-02', nameEs: 'Remo en Máquina', nameEn: 'Machine Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal medio'], equipment: 'Máquina', equipmentType: 'maquina',
     image: IMG('eZyBC3j'),
     instructions: [
@@ -160,30 +136,6 @@ export const exercises: Exercise[] = [
       'Tira del accesorio hacia el abdomen apretando los codos.',
       'El agarre supino aumenta la activación del bíceps y dorsal inferior.',
       'Extiende lentamente sin perder la postura.',
-    ],
-  },
-  {
-    id: 'espalda-04', nameEs: 'Dominadas', nameEn: 'Pull-Up', muscleGroup: 'espalda',
-    primaryMuscles: ['Dorsal', 'Bíceps'], equipment: 'Barra fija',
-    image: IMG('lBDjFxJ'),
-    instructions: [
-      'Cuelga de la barra con agarre prono a la anchura de hombros.',
-      'Inicia el movimiento retrayendo los omóplatos.',
-      'Tira del cuerpo hacia arriba hasta que la barbilla supere la barra.',
-      'Mantén el core apretado durante todo el movimiento.',
-      'Baja de forma controlada hasta el estiramiento completo.',
-    ],
-  },
-  {
-    id: 'espalda-05', nameEn: 'Lat Pulldown', nameEs: 'Jalón Frontal', muscleGroup: 'espalda',
-    primaryMuscles: ['Dorsal'], equipment: 'Cable',
-    image: IMG('LEprlgG'),
-    instructions: [
-      'Siéntate en la máquina y agarra la barra con las manos más anchas que los hombros.',
-      'Inclínate ligeramente hacia atrás.',
-      'Tira de la barra hacia el pecho superior apretando los codos hacia abajo.',
-      'Aprieta los dorsales en el punto más bajo.',
-      'Sube controlando el peso hasta extender los brazos.',
     ],
   },
   {
@@ -208,18 +160,6 @@ export const exercises: Exercise[] = [
       'Tira del peso hacia el pecho apretando los omóplatos.',
       'Mantén la posición durante un segundo en la contracción.',
       'Baja con control sin dejar que el torso se desplome.',
-    ],
-  },
-  {
-    id: 'espalda-08', nameEs: 'Chin-ups', nameEn: 'Chin-Up', muscleGroup: 'espalda',
-    primaryMuscles: ['Dorsal', 'Bíceps'], equipment: 'Barra fija',
-    image: IMG('T2mxWqc'),
-    instructions: [
-      'Cuelga de la barra con agarre supino (palmas hacia ti).',
-      'Activa el core y retrae los omóplatos.',
-      'Tira del cuerpo hacia arriba hasta que la barbilla supere la barra.',
-      'Controla el descenso durante al menos 2 segundos.',
-      'Estira completamente los brazos abajo antes de la siguiente repetición.',
     ],
   },
   {
@@ -249,7 +189,7 @@ export const exercises: Exercise[] = [
 
   // HOMBROS (9)
   {
-    id: 'hombros-01', nameEs: 'Press Maquina', nameEn: 'Machine Shoulder Press', muscleGroup: 'hombros',
+    id: 'hombros-01', nameEs: 'Press Máquina', nameEn: 'Machine Shoulder Press', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides frontal'], equipment: 'Máquina', equipmentType: 'maquina',
     image: IMG('67n3r98'),
     instructions: [
@@ -285,30 +225,6 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'hombros-04', nameEs: 'Elevación Lateral DB', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
-    primaryMuscles: ['Deltoides lateral'], equipment: 'Mancuernas',
-    image: IMG('DsgkuIt'),
-    instructions: [
-      'Párate con una mancuerna en cada mano a los lados.',
-      'Con los codos ligeramente flexionados, eleva los brazos hacia los lados.',
-      'Lleva los brazos hasta la altura de los hombros.',
-      'El meñique debe quedar ligeramente más alto que el pulgar.',
-      'Baja lentamente durante 2-3 segundos.',
-    ],
-  },
-  {
-    id: 'hombros-05', nameEs: 'Elevación Frontal DB', nameEn: 'Front Raise', muscleGroup: 'hombros',
-    primaryMuscles: ['Deltoides frontal'], equipment: 'Mancuernas',
-    image: IMG('3eGE2JC'),
-    instructions: [
-      'Sujeta las mancuernas frente a los muslos.',
-      'Con los codos casi extendidos, eleva un brazo hacia el frente.',
-      'Llega hasta la altura de los hombros.',
-      'Baja de forma controlada y alterna con el otro brazo.',
-      'Mantén el torso estable sin balancearte.',
-    ],
-  },
-  {
     id: 'hombros-06', nameEs: 'Pájaros', nameEn: 'Reverse Fly', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides posterior'], equipment: 'Mancuernas',
     image: IMG('mu5Guxt'),
@@ -320,46 +236,10 @@ export const exercises: Exercise[] = [
       'Baja lentamente con control.',
     ],
   },
-  {
-    id: 'hombros-07', nameEs: 'Remo Vertical', nameEn: 'Upright Row', muscleGroup: 'hombros',
-    primaryMuscles: ['Deltoides', 'Trapecios'], equipment: 'Barra',
-    image: IMG('UDlhcO8'),
-    instructions: [
-      'Párate con la barra frente a los muslos.',
-      'Tira de la barra verticalmente hasta la altura del mentón.',
-      'Los codos deben subir más alto que la barra.',
-      'Mantén la barra cerca del cuerpo.',
-      'Baja de forma controlada.',
-    ],
-  },
-  {
-    id: 'hombros-08', nameEs: 'Elevación Lateral Cable', nameEn: 'Cable Lateral Raise', muscleGroup: 'hombros',
-    primaryMuscles: ['Deltoides lateral'], equipment: 'Cable',
-    image: IMG('goJ6ezq'),
-    instructions: [
-      'Coloca la polea baja y sujeta el cable con la mano opuesta.',
-      'Eleva el brazo hacia el lado hasta la altura del hombro.',
-      'Mantén el codo ligeramente flexionado.',
-      'Controla el descenso resistiendo la polea.',
-      'Mantén el torso estático durante el movimiento.',
-    ],
-  },
-  {
-    id: 'hombros-09', nameEs: 'Press Máquina', nameEn: 'Machine Shoulder Press', muscleGroup: 'hombros',
-    primaryMuscles: ['Deltoides'], equipment: 'Máquina',
-    image: IMG('67n3r98'),
-    instructions: [
-      'Ajusta el asiento para que las asas queden a la altura de los hombros.',
-      'Empuja las asas hacia arriba hasta casi extender los brazos.',
-      'Baja de forma controlada sin que el peso descanse entre repeticiones.',
-      'Mantén la espalda pegada al respaldo.',
-      'Aprieta los hombros en la parte más alta.',
-    ],
-  },
 
   // BICEPS (8)
   {
-    id: 'biceps-01', nameEs: 'Curl inclinado', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
+    id: 'biceps-01', nameEs: 'Curl Inclinado', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps braquial'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
     image: IMG('ae9UoXQ'),
     instructions: [
@@ -371,7 +251,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'biceps-02', nameEs: 'Curl predicador banco scott', nameEn: 'Preacher Curl', muscleGroup: 'biceps',
+    id: 'biceps-02', nameEs: 'Curl Predicador (Banco Scott)', nameEn: 'Preacher Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
     image: IMG('b6hQYMb'),
     instructions: [
@@ -383,7 +263,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'biceps-03', nameEs: 'Curl barra polea', nameEn: 'Cable Bar Curl', muscleGroup: 'biceps',
+    id: 'biceps-03', nameEs: 'Curl en Polea con Barra', nameEn: 'Cable Bar Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Cable', equipmentType: 'cable',
     image: IMG('G08RZcQ'),
     instructions: [
@@ -428,30 +308,6 @@ export const exercises: Exercise[] = [
       'Flexiona el brazo llevando la mancuerna hacia el hombro.',
       'Gira ligeramente la muñeca en el punto más alto.',
       'Baja lentamente para maximizar el estiramiento.',
-    ],
-  },
-  {
-    id: 'biceps-07', nameEs: 'Curl Cable', nameEn: 'Cable Curl', muscleGroup: 'biceps',
-    primaryMuscles: ['Bíceps'], equipment: 'Cable',
-    image: IMG('G08RZcQ'),
-    instructions: [
-      'Ajusta la polea baja y sujeta el accesorio.',
-      'Párate derecho y flexiona los codos.',
-      'La tensión del cable es constante en todo el recorrido.',
-      'Aprieta fuerte en la parte alta.',
-      'Controla la bajada resistiendo el cable.',
-    ],
-  },
-  {
-    id: 'biceps-08', nameEs: 'Curl Inclinado (Mancuernas)', nameEn: 'Incline Dumbbell Curl', muscleGroup: 'biceps',
-    primaryMuscles: ['Bíceps largo'], equipment: 'Mancuernas',
-    image: IMG('ae9UoXQ'),
-    instructions: [
-      'Ajusta el banco a unos 45-60° de inclinación.',
-      'Acuéstate hacia atrás con los brazos colgando.',
-      'Flexiona los codos hacia arriba.',
-      'El estiramiento inicial del bíceps es mayor en esta posición.',
-      'Baja lentamente para aprovechar el recorrido completo.',
     ],
   },
 
@@ -502,54 +358,6 @@ export const exercises: Exercise[] = [
       'Baja la mancuerna detrás de la cabeza.',
       'Extiende los codos para subir.',
       'Este ejercicio estira el tríceps largo al máximo.',
-    ],
-  },
-  {
-    id: 'triceps-05', nameEs: 'Fondos Tríceps', nameEn: 'Triceps Dips', muscleGroup: 'triceps',
-    primaryMuscles: ['Tríceps'], equipment: 'Banco',
-    image: IMG('X6C6i5Y'),
-    instructions: [
-      'Apoya las manos en el banco con los dedos hacia adelante.',
-      'Extiende las piernas frente a ti.',
-      'Baja el cuerpo flexionando los codos hasta 90°.',
-      'Empuja hacia arriba con los tríceps.',
-      'Para más dificultad, eleva los pies en otro banco.',
-    ],
-  },
-  {
-    id: 'triceps-06', nameEs: 'Kickback', nameEn: 'Triceps Kickback', muscleGroup: 'triceps',
-    primaryMuscles: ['Tríceps lateral'], equipment: 'Mancuerna',
-    image: IMG('W6PxUkg'),
-    instructions: [
-      'Inclínate hacia adelante apoyando una mano en el banco.',
-      'Lleva el codo al nivel de la cadera con el brazo flexionado.',
-      'Extiende el antebrazo hacia atrás.',
-      'Aprieta los tríceps en la extensión máxima.',
-      'Mantén el brazo superior paralelo al suelo en todo momento.',
-    ],
-  },
-  {
-    id: 'triceps-07', nameEs: 'Extensión V-Bar', nameEn: 'Triceps Pushdown', muscleGroup: 'triceps',
-    primaryMuscles: ['Tríceps'], equipment: 'Cable',
-    image: IMG('gAwDzB3'),
-    instructions: [
-      'Sujeta el accesorio en V en polea alta.',
-      'Mantén los codos pegados al cuerpo.',
-      'Extiende los brazos hacia abajo.',
-      'Aprieta los tríceps y mantén 1 segundo.',
-      'Flexiona de vuelta de forma controlada.',
-    ],
-  },
-  {
-    id: 'triceps-08', nameEs: 'Máquina Tríceps', nameEn: 'Triceps Machine', muscleGroup: 'triceps',
-    primaryMuscles: ['Tríceps'], equipment: 'Máquina',
-    image: IMG('Ser9eQp'),
-    instructions: [
-      'Ajusta el asiento para que los codos queden en el acolchado.',
-      'Sujeta las asas y extiende los brazos hacia abajo.',
-      'Aprieta los tríceps en el punto más bajo.',
-      'Controla el retorno sin dejar que el peso caiga.',
-      'Mantén la espalda apoyada en el respaldo.',
     ],
   },
 
@@ -930,42 +738,6 @@ export const exercises: Exercise[] = [
       'Aumenta la resistencia para intervalos de alta intensidad.',
       'Mantén el torso relajado, no te apoyes en el manillar.',
       'Finaliza con 3 minutos de pedaleo suave.',
-    ],
-  },
-  {
-    id: 'cardio-03', nameEs: 'Remo Máquina', nameEn: 'Rowing Machine', muscleGroup: 'cardio',
-    primaryMuscles: ['Full body', 'Cardio'], equipment: 'Remo',
-    image: IMG('XSCHmiI'),
-    instructions: [
-      'Siéntate y sujeta los remos con los pies asegurados.',
-      'Inicia el movimiento empujando con las piernas.',
-      'Inclínate hacia atrás y tira de los remos hacia el abdomen.',
-      'Extiende los brazos y vuelve hacia adelante.',
-      'El 60% del trabajo lo hacen las piernas.',
-    ],
-  },
-  {
-    id: 'cardio-04', nameEs: 'Elíptica', nameEn: 'Elliptical', muscleGroup: 'cardio',
-    primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Elíptica',
-    image: IMG('rjtuP6X'),
-    instructions: [
-      'Ajusta el nivel de resistencia según tu condición.',
-      'Mantén el torso erguido durante el movimiento.',
-      'Usa los mangos móviles para involucrar la parte superior.',
-      'Pedalea hacia adelante para cuádriceps y hacia atrás para glúteos.',
-      'Mantén una cadencia constante de 60-80 rpm.',
-    ],
-  },
-  {
-    id: 'cardio-05', nameEs: 'Saltar Cuerda', nameEn: 'Jump Rope', muscleGroup: 'cardio',
-    primaryMuscles: ['Gemelos', 'Cardio'], equipment: 'Cuerda',
-    image: IMG('e1e76I2'),
-    instructions: [
-      'Agarra las asas con ambas manos.',
-      'Salta con ambos pies a la vez al inicio.',
-      'Aterriza suavemente sobre los antepies.',
-      'Mantén los codos cerca del cuerpo y gira solo las muñecas.',
-      'Aumenta la velocidad progresivamente.',
     ],
   },
 ]

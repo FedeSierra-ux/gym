@@ -14,7 +14,7 @@ export const seedRoutines: Routine[] = [
       { exerciseId: 'pecho-02', sets: 3, repsMin: 8, repsMax: 12, order: 1 },
       { exerciseId: 'pecho-04', sets: 3, repsMin: 12, repsMax: 15, order: 2 },
       { exerciseId: 'hombros-01', sets: 4, repsMin: 6, repsMax: 10, order: 3 },
-      { exerciseId: 'hombros-04', sets: 3, repsMin: 12, repsMax: 15, order: 4 },
+      { exerciseId: 'hombros-02', sets: 3, repsMin: 12, repsMax: 15, order: 4 },
       { exerciseId: 'triceps-01', sets: 3, repsMin: 12, repsMax: 15, order: 5 },
       { exerciseId: 'triceps-02', sets: 3, repsMin: 8, repsMax: 10, order: 6 },
     ],
@@ -26,8 +26,8 @@ export const seedRoutines: Routine[] = [
     createdAt: now - DAY * 9,
     exercises: [
       { exerciseId: 'espalda-01', sets: 4, repsMin: 5, repsMax: 8, order: 0 },
-      { exerciseId: 'espalda-04', sets: 4, repsMin: 6, repsMax: 10, order: 1 },
-      { exerciseId: 'espalda-05', sets: 3, repsMin: 10, repsMax: 12, order: 2 },
+      { exerciseId: 'espalda-03', sets: 4, repsMin: 6, repsMax: 10, order: 1 },
+      { exerciseId: 'espalda-06', sets: 3, repsMin: 10, repsMax: 12, order: 2 },
       { exerciseId: 'espalda-02', sets: 3, repsMin: 8, repsMax: 12, order: 3 },
       { exerciseId: 'biceps-01', sets: 3, repsMin: 10, repsMax: 12, order: 4 },
       { exerciseId: 'biceps-03', sets: 3, repsMin: 12, repsMax: 15, order: 5 },
@@ -56,11 +56,11 @@ export const seedRoutines: Routine[] = [
       { exerciseId: 'pecho-01', sets: 3, repsMin: 8, repsMax: 10, order: 0 },
       { exerciseId: 'espalda-02', sets: 3, repsMin: 8, repsMax: 10, order: 1 },
       { exerciseId: 'hombros-01', sets: 3, repsMin: 8, repsMax: 10, order: 2 },
-      { exerciseId: 'espalda-05', sets: 3, repsMin: 10, repsMax: 12, order: 3 },
+      { exerciseId: 'espalda-06', sets: 3, repsMin: 10, repsMax: 12, order: 3 },
       { exerciseId: 'pecho-04', sets: 3, repsMin: 12, repsMax: 15, order: 4 },
       { exerciseId: 'biceps-01', sets: 3, repsMin: 10, repsMax: 12, order: 5 },
       { exerciseId: 'triceps-01', sets: 3, repsMin: 12, repsMax: 15, order: 6 },
-      { exerciseId: 'hombros-04', sets: 3, repsMin: 12, repsMax: 15, order: 7 },
+      { exerciseId: 'hombros-02', sets: 3, repsMin: 12, repsMax: 15, order: 7 },
     ],
   },
 ]
@@ -120,7 +120,7 @@ export const seedWorkouts: Workout[] = [
         ],
       },
       {
-        exerciseId: 'espalda-04',
+        exerciseId: 'espalda-03',
         sets: [
           { kg: 10, reps: 10, completedAt: now - DAY * 4 + 1800000 },
           { kg: 15, reps: 8, completedAt: now - DAY * 4 + 2100000 },

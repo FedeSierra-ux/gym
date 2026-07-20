@@ -24,3 +24,6 @@ dist-ssr
 
 # Claude Code internal
 .claude/
+
+# Reporte generado por scripts/refresh-gifs.mjs
+gif-refresh-report.md
