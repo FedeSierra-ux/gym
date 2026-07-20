@@ -8,6 +8,17 @@ interface WgerInfo {
   imageUrl?: string
 }
 
+/** Lee de forma síncrona la info de wger ya cacheada en sessionStorage (o null). */
+function getCachedWgerInfo(wgerId: number | undefined): WgerInfo | null {
+  if (!wgerId) return null
+  try {
+    const cached = sessionStorage.getItem(`wger-${wgerId}`)
+    return cached ? (JSON.parse(cached) as WgerInfo) : null
+  } catch {
+    return null
+  }
+}
+
 interface Props {
   exercise: Exercise
   onClose: () => void
@@ -23,19 +34,24 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
 
   const wgerId = detail?.wgerId ?? exercise.wgerId
 
-  const [wgerInfo, setWgerInfo] = useState<WgerInfo | null>(null)
+  const [wgerInfo, setWgerInfo] = useState<WgerInfo | null>(() => getCachedWgerInfo(wgerId))
   const [imgError, setImgError] = useState(false)
 
-  useEffect(() => {
-    // Batch both resets together so React renders them in one pass
+  // Reseteamos el estado derivado del ejercicio durante el render (patrón
+  // recomendado de React) en vez de con setState dentro del efecto, que dispara
+  // renders en cascada. Sembramos la info ya cacheada para no re-pedirla.
+  // Ver: https://react.dev/learn/you-might-not-need-an-effect
+  const [prevExId, setPrevExId] = useState(exercise.id)
+  if (prevExId !== exercise.id) {
+    setPrevExId(exercise.id)
+    setWgerInfo(getCachedWgerInfo(wgerId))
     setImgError(false)
-    setWgerInfo(null)
+  }
 
+  useEffect(() => {
     if (wgerId) {
-      try {
-        const cached = sessionStorage.getItem(`wger-${wgerId}`)
-        if (cached) { setWgerInfo(JSON.parse(cached) as WgerInfo); return }
-      } catch { /* ignore */ }
+      // Si ya estaba cacheado, el render lo sembró: no hace falta pedirlo.
+      if (getCachedWgerInfo(wgerId)) return
       fetch(`https://wger.de/api/v2/exerciseinfo/${wgerId}/?format=json`)
         .then(r => r.json())
         .then(data => {
