@@ -1,0 +1,26 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Monograma G con barra">
+  <defs>
+    <linearGradient id="c2-bg" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#F2A93B"/>
+      <stop offset="0.55" stop-color="#E8634A"/>
+      <stop offset="1" stop-color="#C6452F"/>
+    </linearGradient>
+    <!-- el moleteado se recorta de la marca para que asome el fondo -->
+    <mask id="c2-knurl">
+      <rect width="512" height="512" fill="white"/>
+      <rect x="330" y="240" width="9" height="32" rx="4.5" fill="black"/>
+      <rect x="354" y="240" width="9" height="32" rx="4.5" fill="black"/>
+      <rect x="378" y="240" width="9" height="32" rx="4.5" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="512" height="512" rx="114" fill="url(#c2-bg)"/>
+
+  <g mask="url(#c2-knurl)">
+    <!-- arco de la G: abre arriba a la derecha y termina en la horizontal -->
+    <path d="M 360 174.7 A 132 132 0 1 0 388 256"
+          fill="none" stroke="#0C0E14" stroke-width="62" stroke-linecap="butt"/>
+    <!-- espolón horizontal: cierra la G y evoca la barra -->
+    <rect x="272" y="225" width="147" height="62" rx="12" fill="#0C0E14"/>
+  </g>
+</svg>
