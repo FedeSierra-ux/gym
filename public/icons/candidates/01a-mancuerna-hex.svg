@@ -1,0 +1,32 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mancuerna hexagonal">
+  <defs>
+    <linearGradient id="a-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171A24"/><stop offset="1" stop-color="#0C0E14"/>
+    </linearGradient>
+    <linearGradient id="a-mark" x1="0.08" y1="0.15" x2="0.92" y2="0.85">
+      <stop offset="0" stop-color="#F2A93B"/><stop offset="1" stop-color="#E8634A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="114" fill="url(#a-bg)"/>
+
+  <g fill="url(#a-mark)" stroke="url(#a-mark)" stroke-width="18" stroke-linejoin="round">
+    <!-- cabezas hexagonales: la forma real de una mancuerna de gimnasio -->
+    <path d="M 178 256 L 144 334 L 76 334 L 42 256 L 76 178 L 144 178 Z"/>
+    <path d="M 470 256 L 436 334 L 368 334 L 334 256 L 368 178 L 436 178 Z"/>
+  </g>
+
+  <g fill="url(#a-mark)">
+    <!-- collarines -->
+    <rect x="168" y="208" width="30" height="96" rx="12"/>
+    <rect x="314" y="208" width="30" height="96" rx="12"/>
+    <!-- agarre -->
+    <rect x="190" y="230" width="132" height="52" rx="14"/>
+  </g>
+
+  <g fill="#0C0E14" opacity="0.5">
+    <rect x="234" y="238" width="8" height="36" rx="4"/>
+    <rect x="252" y="238" width="8" height="36" rx="4"/>
+    <rect x="270" y="238" width="8" height="36" rx="4"/>
+  </g>
+</svg>

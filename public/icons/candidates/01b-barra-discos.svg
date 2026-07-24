@@ -1,0 +1,29 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barra olímpica con discos">
+  <defs>
+    <linearGradient id="b-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171A24"/><stop offset="1" stop-color="#0C0E14"/>
+    </linearGradient>
+    <linearGradient id="b-mark" x1="0.08" y1="0.15" x2="0.92" y2="0.85">
+      <stop offset="0" stop-color="#F2A93B"/><stop offset="1" stop-color="#E8634A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="114" fill="url(#b-bg)"/>
+
+  <g fill="url(#b-mark)">
+    <!-- barra completa: las mangas asoman por fuera de los discos -->
+    <rect x="28" y="236" width="456" height="40" rx="20"/>
+    <!-- collarines -->
+    <rect x="212" y="212" width="26" height="88" rx="11"/>
+    <rect x="274" y="212" width="26" height="88" rx="11"/>
+    <!-- discos -->
+    <circle cx="130" cy="256" r="84"/>
+    <circle cx="382" cy="256" r="84"/>
+  </g>
+
+  <!-- aro interior del disco -->
+  <g fill="none" stroke="#0C0E14" opacity="0.4">
+    <circle cx="130" cy="256" r="50" stroke-width="12"/>
+    <circle cx="382" cy="256" r="50" stroke-width="12"/>
+  </g>
+</svg>

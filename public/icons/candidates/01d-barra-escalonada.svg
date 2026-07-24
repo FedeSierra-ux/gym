@@ -1,0 +1,31 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barra con discos escalonados">
+  <defs>
+    <linearGradient id="d-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171A24"/><stop offset="1" stop-color="#0C0E14"/>
+    </linearGradient>
+    <linearGradient id="d-mark" x1="0.08" y1="0.15" x2="0.92" y2="0.85">
+      <stop offset="0" stop-color="#F2A93B"/><stop offset="1" stop-color="#E8634A"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="114" fill="url(#d-bg)"/>
+
+  <g fill="url(#d-mark)">
+    <!-- mangas de la barra, asomando por fuera -->
+    <rect x="34" y="238" width="444" height="36" rx="18"/>
+    <!-- discos grandes -->
+    <rect x="60" y="140" width="70" height="232" rx="26"/>
+    <rect x="382" y="140" width="70" height="232" rx="26"/>
+    <!-- discos chicos -->
+    <rect x="136" y="184" width="52" height="144" rx="20"/>
+    <rect x="324" y="184" width="52" height="144" rx="20"/>
+    <!-- agarre -->
+    <rect x="196" y="228" width="120" height="56" rx="16"/>
+  </g>
+
+  <g fill="#0C0E14" opacity="0.5">
+    <rect x="234" y="238" width="8" height="36" rx="4"/>
+    <rect x="252" y="238" width="8" height="36" rx="4"/>
+    <rect x="270" y="238" width="8" height="36" rx="4"/>
+  </g>
+</svg>
