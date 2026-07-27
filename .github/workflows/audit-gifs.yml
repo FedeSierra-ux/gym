@@ -1,0 +1,45 @@
+name: Auditar GIFs de ejercicios
+
+# Corre a mano desde la pestaña Actions. El entorno de desarrollo no siempre
+# tiene salida a static.exercisedb.dev; CI sí, así que la verificación de que
+# cada GIF muestra el ejercicio que dice mostrar se hace acá.
+#
+# Deja como artifact:
+#   gif-audit.md        qué ejercicio es realmente cada mediaId
+#   sheet-actual-NN.png hojas de contacto con 2 frames de cada GIF
+on:
+  workflow_dispatch:
+    inputs:
+      api:
+        description: 'Base(s) de la API de ExerciseDB (separadas por coma)'
+        required: false
+        default: 'https://oss.exercisedb.dev/api/v1,https://v1.exercisedb.dev/api/v1'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Auditar GIFs
+        env:
+          EXERCISEDB_API: ${{ github.event.inputs.api }}
+          # El cert de exercisedb.dev suele estar vencido; se ignora solo para
+          # este fetch de datos públicos en un runner efímero.
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        run: node scripts/audit-gifs.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gif-audit
+          path: audit/

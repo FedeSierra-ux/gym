@@ -27,3 +27,6 @@ dist-ssr
 
 # Reporte generado por scripts/refresh-gifs.mjs
 gif-refresh-report.md
+
+# resultados de la auditoría de GIFs (se bajan como artifact de CI)
+audit/
