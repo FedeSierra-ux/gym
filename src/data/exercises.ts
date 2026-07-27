@@ -19,7 +19,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-02', nameEs: 'Press Inclinado Mancuernas', nameEn: 'Incline Dumbbell Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral superior'], equipment: 'Mancuernas',
-    image: IMG('rDAiRf9'),
+    image: IMG('ns0SIbU'),
     instructions: [
       'Ajusta el banco a 30-45° de inclinación.',
       'Coge las mancuernas a la altura del pecho con los codos a 45°.',
@@ -31,7 +31,7 @@ export const exercises: Exercise[] = [
   {
     id: 'pecho-03', nameEs: 'Press de Banca (Máquina)', nameEn: 'Machine Chest Press', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral mayor'], equipment: 'Máquina', equipmentType: 'maquina',
-    image: IMG('SpYC0Kp'),
+    image: IMG('T0yTjgW'),
     instructions: [
       'Ajusta el asiento para que las asas queden a la altura del pecho.',
       'Empuja las asas hacia adelante hasta casi extender los brazos.',
@@ -105,7 +105,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-01', nameEs: 'Jalón al pecho', nameEn: 'Lat Pulldown', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal', 'Romboides'], equipment: 'Máquina', equipmentType: 'maquina',
-    image: IMG('LEprlgG'),
+    image: IMG('7F1DVzn'),
     instructions: [
       'Siéntate en la máquina y agarra la barra con las manos más anchas que los hombros.',
       'Inclínate ligeramente hacia atrás.',
@@ -117,7 +117,7 @@ export const exercises: Exercise[] = [
   {
     id: 'espalda-02', nameEs: 'Remo en Máquina', nameEn: 'Machine Row', muscleGroup: 'espalda',
     primaryMuscles: ['Dorsal medio'], equipment: 'Máquina', equipmentType: 'maquina',
-    image: IMG('eZyBC3j'),
+    image: IMG('7I6LNUG'),
     instructions: [
       'Siéntate en la máquina con el pecho apoyado en el acolchado.',
       'Agarra las asas con las manos a la anchura de hombros.',
@@ -127,15 +127,15 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'espalda-03', nameEs: 'Remo supino', nameEn: 'Underhand Cable Row', muscleGroup: 'espalda',
-    primaryMuscles: ['Dorsal'], equipment: 'Máquina', equipmentType: 'maquina',
+    id: 'espalda-03', nameEs: 'Remo con Mancuerna', nameEn: 'Dumbbell One Arm Row', muscleGroup: 'espalda',
+    primaryMuscles: ['Dorsal'], equipment: 'Mancuerna', equipmentType: 'mancuernas',
     image: IMG('C0MA9bC'),
     instructions: [
-      'Siéntate en la máquina de remo con agarre supino (palmas hacia arriba).',
-      'Mantén la espalda recta y el pecho fuera.',
-      'Tira del accesorio hacia el abdomen apretando los codos.',
-      'El agarre supino aumenta la activación del bíceps y dorsal inferior.',
-      'Extiende lentamente sin perder la postura.',
+      'Apoyá una rodilla y una mano en el banco, con la espalda paralela al piso.',
+      'Dejá que el brazo cuelgue estirado y el omóplato se separe.',
+      'Tirá la mancuerna hacia la cadera con el codo cerca del torso.',
+      'Bajá controlado hasta el estiramiento completo.',
+      'No rotes el torso para ayudarte a subir el peso.',
     ],
   },
   {
@@ -289,7 +289,7 @@ export const exercises: Exercise[] = [
   {
     id: 'biceps-05', nameEs: 'Curl Predicador', nameEn: 'Preacher Curl', muscleGroup: 'biceps',
     primaryMuscles: ['Bíceps'], equipment: 'Banco predicador',
-    image: IMG('b6hQYMb'),
+    image: IMG('7D5bgLT'),
     instructions: [
       'Apoya la parte posterior de los brazos en el banco predicador.',
       'Sujeta la barra o mancuernas con agarre supino.',
@@ -315,7 +315,7 @@ export const exercises: Exercise[] = [
   {
     id: 'triceps-01', nameEs: 'Extensión Overhead', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps largo'], equipment: 'Mancuerna', equipmentType: 'mancuernas',
-    image: IMG('5fKX7wi'),
+    image: IMG('kont8Ut'),
     instructions: [
       'Siéntate sosteniendo la mancuerna con ambas manos sobre la cabeza.',
       'Los codos deben apuntar hacia arriba.',
@@ -449,7 +449,7 @@ export const exercises: Exercise[] = [
   {
     id: 'piernas-08', nameEs: 'Sentadilla Búlgara', nameEn: 'Bulgarian Split Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas',
-    image: IMG('gGNQmVt'),
+    image: IMG('qx4fgX7'),
     instructions: [
       'Coloca el pie trasero en un banco.',
       'Da un paso largo hacia adelante con el pie de apoyo.',

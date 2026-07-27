@@ -20,10 +20,17 @@ const ROOT = join(__dirname, '..')
 const EXERCISES_FILE = join(ROOT, 'src/data/exercises.ts')
 const REPORT_FILE = process.env.GIF_REPORT || join(ROOT, 'gif-refresh-report.md')
 // Se puede pasar una o varias bases separadas por coma; se prueban en orden.
+// La base vieja (www.exercisedb.dev/api/v1) devuelve 404 desde 2026: la versión
+// gratuita del proyecto se mudó a oss.exercisedb.dev.
 const APIS = (process.env.EXERCISEDB_API ||
-  'https://www.exercisedb.dev/api/v1,https://exercisedb-api.vercel.app/api/v1')
+  'https://oss.exercisedb.dev/api/v1,https://v1.exercisedb.dev/api/v1')
   .split(',').map((s) => s.trim().replace(/\/$/, '')).filter(Boolean)
-const THRESHOLD = parseFloat(process.env.MATCH_THRESHOLD || '0.55')
+const THRESHOLD = parseFloat(process.env.MATCH_THRESHOLD || '0.75')
+// Por defecto solo reporta. El match por nombre se equivoca seguido (los nombres
+// de ExerciseDB no se parecen a los nuestros: "lever seated fly" es el pec deck)
+// y varios GIF de la app se eligieron a ojo, así que pisarlos automáticamente
+// hace más daño que bien. Con APPLY=true reescribe exercises.ts.
+const APPLY = /^(1|true|yes)$/i.test(process.env.APPLY || '')
 // El cert TLS de exercisedb.dev suele estar vencido. La validación se desactiva
 // a nivel de proceso vía NODE_TLS_REJECT_UNAUTHORIZED=0 (lo setea el workflow);
 // esto es solo para reflejarlo en el reporte.
@@ -84,17 +91,39 @@ function fetchJson(url, redirects = 0) {
   })
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Paginación por cursor: la API devuelve meta.nextCursor y se pasa como `after`.
+// Ojo: capa el limit (pedís 100, devuelve 25), así que "vino menos de lo pedido"
+// NO significa última página. Y responde 429 con facilidad: por eso las pausas.
 async function fetchAllFrom(API) {
   const all = []
-  let offset = 0
-  const limit = 100
-  for (let page = 0; page < 100; page++) {
-    const json = await fetchJson(`${API}/exercises?limit=${limit}&offset=${offset}`)
+  const seen = new Set()
+  let cursor = ''
+  for (let page = 0; page < 200; page++) {
+    const url = `${API}/exercises?limit=100${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`
+    let json
+    try {
+      json = await fetchJson(url)
+    } catch (e) {
+      if (!/API 429|API 5\d\d|timeout/.test(e.message)) throw e
+      await sleep(5000)
+      json = await fetchJson(url)
+    }
     const data = Array.isArray(json) ? json : (json.data ?? json.exercises ?? [])
     if (!data.length) break
-    all.push(...data)
-    if (data.length < limit) break
-    offset += limit
+    let added = 0
+    for (const e of data) {
+      const key = e.exerciseId || e.id || e.name
+      if (seen.has(key)) continue
+      seen.add(key)
+      all.push(e)
+      added++
+    }
+    const meta = json.meta ?? json.metadata ?? {}
+    if (!added || !meta.hasNextPage || !meta.nextCursor) break
+    cursor = meta.nextCursor
+    await sleep(1200)
   }
   return all
 }
@@ -164,7 +193,11 @@ async function main() {
     )
     text = text.replace(re, `$1${c.newMid}$2`)
   }
-  await writeFile(EXERCISES_FILE, text)
+  if (APPLY) {
+    await writeFile(EXERCISES_FILE, text)
+  } else if (changes.length) {
+    console.log('(modo reporte: no se tocó exercises.ts — corré con APPLY=true para aplicar)')
+  }
 
   // reporte
   const lines = []
