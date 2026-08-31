@@ -38,8 +38,19 @@ export function RestTimerOverlay() {
       const workout = state.activeWorkout
       if (!workout?.restTimerVisible) return
 
-      const endsAt = workout.restEndsAt ?? Date.now() + workout.restSecondsLeft * 1000
-      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+      // Un entreno guardado por una versión anterior no tiene restEndsAt.
+      // Hay que fijarlo UNA vez a partir de los segundos que le quedaban: si lo
+      // recalculáramos en cada tick, el descuento nunca avanzaría.
+      if (!workout.restEndsAt) {
+        useWorkoutStore.setState((s) => ({
+          activeWorkout: s.activeWorkout
+            ? { ...s.activeWorkout, restEndsAt: Date.now() + s.activeWorkout.restSecondsLeft * 1000 }
+            : null,
+        }))
+        return
+      }
+
+      const left = Math.max(0, Math.ceil((workout.restEndsAt - Date.now()) / 1000))
       const prev = workout.restSecondsLeft
       if (left === prev) return
 

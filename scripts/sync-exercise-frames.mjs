@@ -100,12 +100,6 @@ const OVERRIDES = {
   'core-16': 'worlds-greatest-stretch',
   'core-17': 'plank-shoulder-tap',
   'cardio-02': 'cycling',
-  'cardio-03': 'elliptical',
-  'cardio-04': 'rowing',
-  'cardio-05': 'stair-climber',
-  'cardio-06': 'jump-rope',
-  'cardio-07': 'battle-ropes',
-  'cardio-08': 'burpee',
 }
 
 const norm = (s) =>

@@ -35,7 +35,14 @@ interface WorkoutState {
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
   removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
-  finishWorkout: () => void
+  /** `auto` marca el cierre automático: guarda sin abrir el resumen. */
+  finishWorkout: (options?: { auto?: boolean }) => void
+  /**
+   * Cierra el entreno del día si quedó abierto más de 4 horas. Devuelve true si
+   * hizo algo. Se llama al abrir la app, al volver del segundo plano y cada
+   * minuto mientras está abierta.
+   */
+  autoCloseStaleWorkout: () => boolean
   cancelWorkout: () => void
   dismissRestTimer: () => void
   adjustRestTimer: (delta: number) => void
@@ -49,6 +56,13 @@ interface WorkoutState {
 // been closed at the 2h mark instead of recording the raw elapsed time.
 const AUTO_CLOSE_THRESHOLD_MIN = 180
 const MAX_WORKOUT_DURATION_MIN = 120
+
+/**
+ * A las 4 horas el entreno se cierra solo: si la app quedó abierta (o el
+ * teléfono se guardó en el bolso), la sesión del día se guarda con la duración
+ * capeada en vez de quedar viva para siempre y arrastrarse al día siguiente.
+ */
+const AUTO_CLOSE_AFTER_MIN = 240
 
 function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
   if (value === '') return ''
@@ -267,7 +281,25 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { activeWorkout: { ...s.activeWorkout, exercises } }
         }),
 
-      finishWorkout: () => {
+      autoCloseStaleWorkout: () => {
+        const { activeWorkout } = get()
+        if (!activeWorkout) return false
+        const openMin = (Date.now() - activeWorkout.realStartedAt) / 60000
+        if (openMin < AUTO_CLOSE_AFTER_MIN) return false
+
+        const tieneSeries = activeWorkout.exercises.some((ex) => ex.sets.some((s) => s.completed))
+        if (tieneSeries) {
+          // Se guarda con la duración capeada (MAX_WORKOUT_DURATION_MIN).
+          get().finishWorkout({ auto: true })
+        } else {
+          // Sin series completadas no hay nada que guardar: se descarta.
+          set({ activeWorkout: null })
+          useStore.getState().addToast('Se cerró un entreno que quedó abierto sin series', 'info')
+        }
+        return true
+      },
+
+      finishWorkout: (options) => {
         const { activeWorkout } = get()
         if (!activeWorkout) return
 
@@ -368,10 +400,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           }
         }
 
+        const seriesTotales = workoutExercises.reduce((a, e) => a + e.sets.length, 0)
         const successToast: AppToast = {
           id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          message: `¡Entreno terminado! ${durationMin} min · ${workoutExercises.reduce((a, e) => a + e.sets.length, 0)} series`,
-          type: 'success',
+          message: options?.auto
+            ? `El entreno quedó abierto más de 4 h: lo guardamos con ${durationMin} min · ${seriesTotales} series`
+            : `¡Entreno terminado! ${durationMin} min · ${seriesTotales} series`,
+          type: options?.auto ? 'info' : 'success',
         }
         const prToast: AppToast | null = newPrCount > 0
           ? { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
@@ -385,8 +420,10 @@ export const useWorkoutStore = create<WorkoutState>()(
         }))
 
         set((s) => ({
-          summaryWorkout: newWorkout,
-          summaryPrCount: newPrCount,
+          // En el cierre automático no abrimos el resumen: el usuario no está
+          // mirando y se lo encontraría de golpe al día siguiente.
+          summaryWorkout: options?.auto ? null : newWorkout,
+          summaryPrCount: options?.auto ? 0 : newPrCount,
           activeWorkout: s.activeWorkout,
         }))
 

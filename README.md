@@ -73,6 +73,14 @@ Es una sugerencia, no una imposición: aparece como un cartel arriba de cada
 ejercicio en el entreno y prellena los kilos, que se pueden editar. Si pasaron
 más de tres semanas desde la última vez, propone arrancar un 10 % abajo.
 
+## Cierre automático del entreno
+
+Un entreno que queda abierto más de **4 horas** se cierra solo (al abrir la app,
+al volver del segundo plano y una vez por minuto mientras está en uso): si tiene
+series completadas se guarda con la duración capeada en 2 h, y si no tiene
+ninguna se descarta. Así la sesión del día no se arrastra al día siguiente ni
+queda viva para siempre porque el teléfono se guardó en el bolso.
+
 ## Constancia (heatmap)
 
 En Progreso, arriba de todo, con dos zooms: **semanal** (últimas 12 semanas, día
