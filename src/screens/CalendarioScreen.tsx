@@ -266,12 +266,12 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
             <div className="flex-1">
               <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Fecha</label>
               <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)}
-                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 13, color: S.ink, fontFamily: 'inherit' }} />
+                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
             </div>
             <div style={{ width: 120 }}>
               <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
               <input type="number" min={0} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
-                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 13, color: S.ink, fontFamily: 'inherit' }} />
+                style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
             </div>
           </div>
 
@@ -286,11 +286,11 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
                       <span style={{ width: 18, fontSize: 11, color: S.faint }}>{setIdx + 1}</span>
                       <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
                         placeholder="kg"
-                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, color: S.ink, fontFamily: 'inherit' }} />
+                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                       <span style={{ color: S.faint, fontSize: 11 }}>×</span>
                       <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
                         placeholder="reps"
-                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 12, color: S.ink, fontFamily: 'inherit' }} />
+                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                       <button onClick={() => removeSet(exIdx, setIdx)}
                         style={{ width: 24, height: 24, flexShrink: 0, color: S.dim, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </div>
@@ -700,7 +700,7 @@ export function CalendarioScreen() {
   const { calendarSubTab, setCalendarSubTab } = useStore()
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div style={{ flexShrink: 0, padding: '60px 22px 0' }}>
+      <div style={{ flexShrink: 0, paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>Seguimiento</div>
         <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 16 }}>
           {([['calendario', '📅 Calendario'], ['records', '🏆 Récords']] as [CalendarSubTab, string][]).map(([id, label]) => (

@@ -17,6 +17,10 @@ export interface Exercise {
   equipmentType?: ExerciseEquipment
   wgerId?: number
   image?: string     // GIF URL de ExerciseDB (hardcodeado para los 79 ejercicios base)
+  /** Slug del catálogo de ilustraciones (public/exercise-frames). Ver utils/exerciseMatch. */
+  frameSlug?: string
+  /** true para los ejercicios que creó el usuario a mano. */
+  isCustom?: boolean
   instructions?: string[]
 }
 

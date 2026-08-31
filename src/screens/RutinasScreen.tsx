@@ -47,7 +47,7 @@ export function RutinasScreen() {
     <div className="flex-1 min-h-0 scroll-area" style={{ paddingBottom: 16 }}>
 
       {/* Header */}
-      <div style={{ padding: '60px 22px 0' }}>
+      <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: '#ECEEF4' }}>Mis Rutinas</div>
         <div style={{ fontSize: 13, color: '#8A91A3', marginTop: 4 }}>
           {routines.length} rutinas guardadas

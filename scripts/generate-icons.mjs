@@ -99,6 +99,10 @@ async function writePng(relPath, svg, size) {
 const squircle = buildSvg('squircle')
 const circle = buildSvg('circle')
 const maskable = buildSvg('full', 0.62)
+// iOS recorta el ícono él mismo: si le pasamos el squircle quedan esquinas
+// negras, así que el apple-touch-icon va a sangre y con la marca un poco más
+// chica para no comerse el borde redondeado del sistema.
+const appleTouch = buildSvg('full', 0.78)
 
 // Web y PWA
 await writeSvg('public/favicon.svg', squircle)
@@ -107,6 +111,7 @@ await writeSvg('public/icons/icon-512.svg', squircle)
 await writePng('public/icons/icon-192.png', squircle, 192)
 await writePng('public/icons/icon-512.png', squircle, 512)
 await writePng('public/icons/icon-512-maskable.png', maskable, 512)
+await writePng('public/icons/apple-touch-icon.png', appleTouch, 180)
 
 // Android (TWA): un PNG por densidad, cuadrado y redondo.
 const densities = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 }

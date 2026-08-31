@@ -44,6 +44,27 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* iOS: con viewport-fit=cover y la barra de estado translúcida, el contenido
+   arranca debajo del notch / Dynamic Island. `safe-top` reemplaza al pt-12 fijo
+   y respeta el recorte real del dispositivo (en Android y escritorio queda igual
+   que antes, porque el inset es 0). */
+.safe-top {
+  padding-top: max(48px, calc(env(safe-area-inset-top, 0px) + 12px));
+}
+
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+
+/* Safari en iOS hace zoom al enfocar cualquier campo de menos de 16px y después
+   deja la pantalla corrida. Subimos el mínimo a 16px sólo en el momento de
+   escribir; el resto del diseño sigue con sus tamaños. */
+input[class],
+select[class],
+textarea[class] {
+  font-size: 16px;
+}
+
 #root {
   height: 100%;
   height: 100dvh;

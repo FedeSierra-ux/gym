@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useMemo } from 'react'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast, MuscleGroup } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
+import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
+import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 
 interface AppState {
@@ -63,6 +65,10 @@ interface AppState {
 
   // Custom exercises
   addCustomExercise: (ex: Exercise) => void
+  /** Crea un ejercicio propio a partir del nombre y devuelve el ejercicio creado. */
+  createCustomExercise: (name: string, opts?: { group?: MuscleGroup; equipment?: string }) => Exercise | null
+  /** Edita un ejercicio propio ya creado (el historial no se toca: el id no cambia). */
+  updateCustomExercise: (id: string, patch: { nameEs: string; group: MuscleGroup; equipment: string }) => void
   deleteCustomExercise: (id: string) => void
 
   // Archived routines (for history display after deletion)
@@ -166,6 +172,40 @@ export const useStore = create<AppState>()(
 
       addCustomExercise: (ex) =>
         set((s) => ({ customExercises: [...s.customExercises, ex] })),
+
+      createCustomExercise: (name, opts) => {
+        const trimmed = name.trim()
+        if (!trimmed) return null
+        // Si ya existe uno con ese nombre (base o propio) lo reutilizamos, para
+        // no terminar con tres "Press de banca" distintos en el historial.
+        const existing = [...get().exercises, ...get().customExercises].find(
+          (e) => e.nameEs.trim().toLowerCase() === trimmed.toLowerCase()
+        )
+        if (existing) return existing
+        const ex = buildCustomExercise(trimmed, opts)
+        set((s) => ({ customExercises: [...s.customExercises, ex] }))
+        return ex
+      },
+
+      updateCustomExercise: (id, patch) =>
+        set((s) => ({
+          customExercises: s.customExercises.map((e) => {
+            if (e.id !== id) return e
+            const name = patch.nameEs.trim() || e.nameEs
+            const equipment = patch.equipment.trim() || 'Libre'
+            // El dibujo se recalcula con el nombre y el grupo nuevos.
+            const draft = draftFromName(name, patch.group)
+            return {
+              ...e,
+              nameEs: name,
+              muscleGroup: patch.group,
+              primaryMuscles: [muscleGroupConfig[patch.group].label],
+              equipment,
+              equipmentType: inferEquipmentType(equipment),
+              frameSlug: draft.frameSlug ?? undefined,
+            }
+          }),
+        })),
 
       deleteCustomExercise: (id) =>
         set((s) => ({

@@ -11,6 +11,13 @@ export interface ActiveWorkout {
   restTimerVisible: boolean
   restSecondsLeft: number
   restTotalSeconds: number
+  /**
+   * Momento (epoch ms) en que termina el descanso. El contador se deriva de
+   * este timestamp y no de restar 1 por segundo: iOS congela los timers cuando
+   * la PWA queda en segundo plano o se bloquea la pantalla, así que un contador
+   * incremental volvía con minutos de atraso.
+   */
+  restEndsAt?: number
   lastCompletedSet?: { exerciseId: string; setIdx: number; kg: number; reps: number }
   livePr?: { exerciseId: string; kg: number; reps: number } | null
 }
@@ -92,6 +99,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             restTimerVisible: false,
             restSecondsLeft: 75,
             restTotalSeconds: 75,
+            restEndsAt: undefined,
           },
         })
       },
@@ -179,6 +187,9 @@ export const useWorkoutStore = create<WorkoutState>()(
               restTimerVisible: completedSet.completed,
               restSecondsLeft: s.activeWorkout.restTotalSeconds,
               restTotalSeconds: s.activeWorkout.restTotalSeconds,
+              restEndsAt: completedSet.completed
+                ? Date.now() + s.activeWorkout.restTotalSeconds * 1000
+                : s.activeWorkout.restEndsAt,
             },
           }
         }),
@@ -346,6 +357,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               ...s.activeWorkout,
               restSecondsLeft: newSeconds,
               restTotalSeconds: Math.max(s.activeWorkout.restTotalSeconds, newSeconds),
+              restEndsAt: Date.now() + newSeconds * 1000,
             },
           }
         }),
@@ -358,6 +370,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               ...s.activeWorkout,
               restSecondsLeft: seconds,
               restTotalSeconds: seconds,
+              restEndsAt: Date.now() + seconds * 1000,
             },
           }
         }),

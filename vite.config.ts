@@ -19,7 +19,7 @@ export default defineConfig({
       // the update via a toast, instead of a surprise auto-reload that could
       // interrupt an in-progress workout.
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
+      includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         name: 'Gym',
         short_name: 'Gym',

@@ -7,6 +7,7 @@ import { CircularRing } from '../components/CircularRing'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate } from '../utils/haptics'
+import { useWakeLock } from '../utils/useWakeLock'
 import type { Exercise } from '../types'
 
 const S = {
@@ -57,7 +58,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
           <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder="Ej: Escápulas retraídas, bajar lento 3s..."
             rows={3}
-            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 11, color: S.ink, fontFamily: 'DM Sans, system-ui, sans-serif', outline: 'none', resize: 'none' }}
+            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 16, color: S.ink, fontFamily: 'DM Sans, system-ui, sans-serif', outline: 'none', resize: 'none' }}
           />
           <div className="flex gap-2 justify-end">
             <button onClick={() => setOpen(false)} style={{ fontSize: 11, color: S.dim, padding: '4px 12px', borderRadius: 8, border: `1px solid ${S.line2}`, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Cancelar</button>
@@ -72,7 +73,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
 function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
   return (
     <button onClick={onPress} aria-label={ariaLabel}
-      style={{ width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+      style={{ width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
     >
       {label}
     </button>
@@ -128,6 +129,9 @@ export function ActiveWorkoutScreen() {
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
   const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
+
+  // Pantalla encendida mientras el entreno está abierto.
+  useWakeLock(!!activeWorkout)
 
   const realStartedAt = activeWorkout?.realStartedAt
   useEffect(() => {
@@ -290,9 +294,11 @@ export function ActiveWorkoutScreen() {
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
                           onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
                           onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
-                          placeholder="kg" disabled={isCompleted}
+                          placeholder="0" disabled={isCompleted}
                           style={{
-                            flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
+                            // 16px es el mínimo con el que iOS no hace zoom al
+                            // enfocar el campo en medio de la serie.
+                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
                             background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
                             border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
@@ -310,9 +316,11 @@ export function ActiveWorkoutScreen() {
                         <input type="number" inputMode="numeric" value={set.reps}
                           aria-label={`Repeticiones, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                          placeholder="reps" disabled={isCompleted}
+                          placeholder="0" disabled={isCompleted}
                           style={{
-                            flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
+                            // 16px es el mínimo con el que iOS no hace zoom al
+                            // enfocar el campo en medio de la serie.
+                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
                             background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
                             border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,

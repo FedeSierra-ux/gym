@@ -41,7 +41,7 @@ export function ProfileScreen() {
 
   return (
     <div className="flex-1 min-h-0 scroll-area pb-4">
-      <div className="px-4 pt-12 pb-6">
+      <div className="px-4 safe-top pb-6">
         <h1 className="text-2xl font-bold text-ink">Perfil</h1>
       </div>
 

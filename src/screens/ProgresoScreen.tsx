@@ -202,7 +202,7 @@ export function ProgresoScreen() {
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Fixed header */}
-      <div style={{ flexShrink: 0, padding: '60px 22px 0' }}>
+      <div style={{ flexShrink: 0, paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>Progreso</div>
 
         {/* Tab switcher: fuerza / volumen */}
