@@ -74,7 +74,7 @@ export const exerciseFrameSlug: Record<string, string> = {
   'core-11': 'cable-crunch',
   'cardio-01': 'running',
   'cardio-02': 'cycling',
-  'cardio-03': 'elliptical',
+  'cardio-03': 'treadmill-incline-walk',
   'piernas-13': 'smith-machine-squat',
   'piernas-14': 'dumbbell-sumo-squat',
   'piernas-16': 'reverse-lunge',

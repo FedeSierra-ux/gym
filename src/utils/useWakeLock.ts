@@ -16,7 +16,16 @@ export function useWakeLock(active: boolean) {
     const request = async () => {
       if (released || document.visibilityState !== 'visible') return
       try {
-        sentinel = await navigator.wakeLock.request('screen')
+        const acquired = await navigator.wakeLock.request('screen')
+        // El pedido es asíncrono: si mientras tanto terminó el entreno (o se
+        // desmontó el componente), el cleanup ya corrió con sentinel en null.
+        // Soltamos acá el lock recién conseguido en vez de guardarlo, o la
+        // pantalla se quedaría encendida para siempre.
+        if (released) {
+          void acquired.release().catch(() => {})
+          return
+        }
+        sentinel = acquired
       } catch {
         // El navegador puede negarlo (batería baja, pestaña en segundo plano).
       }

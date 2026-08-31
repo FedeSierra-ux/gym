@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { useWorkoutStore } from './stores/workoutStore'
 import { BottomNav } from './components/BottomNav'
@@ -16,6 +17,19 @@ import { WorkoutSummaryModal } from './components/WorkoutSummaryModal'
 function App() {
   const { activeTab, activeRoutineId, onboarded } = useStore()
   const { activeWorkout, summaryWorkout, summaryPrCount, dismissSummary } = useWorkoutStore()
+
+  // Un entreno que quedó abierto más de 4 horas se cierra solo: al abrir la
+  // app, al volver del segundo plano y una vez por minuto mientras está en uso.
+  useEffect(() => {
+    const check = () => useWorkoutStore.getState().autoCloseStaleWorkout()
+    check()
+    const id = setInterval(check, 60000)
+    document.addEventListener('visibilitychange', check)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', check)
+    }
+  }, [])
 
   if (!onboarded) {
     return (
