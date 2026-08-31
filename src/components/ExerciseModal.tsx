@@ -58,6 +58,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
               size={200}
               rounded="rounded-none"
               forceStatic
+              animate
             />
           </div>
 

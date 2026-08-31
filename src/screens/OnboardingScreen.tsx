@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 
 export function OnboardingScreen() {
-  const { updateUserName, setOnboarded } = useStore()
+  const { updateUserName, setOnboarded, installMileRoutines } = useStore()
   const [name, setName] = useState('')
   const [step, setStep] = useState<'welcome' | 'name'>('welcome')
 
   const handleStart = () => {
     const trimmed = name.trim()
     if (trimmed) updateUserName(trimmed)
+    // La app arranca con el plan de los 3 días ya cargado y repartido en la
+    // semana; se puede editar o borrar como cualquier otra rutina.
+    installMileRoutines()
     setOnboarded()
   }
 

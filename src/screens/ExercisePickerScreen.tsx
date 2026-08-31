@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { CreateExerciseCard } from '../components/CreateExerciseCard'
 import { getExerciseSuggestion } from '../utils/aiCoach'
 import type { MuscleGroup, Exercise } from '../types'
 
@@ -76,6 +77,11 @@ export function ExercisePickerScreen({ routineName }: Props) {
     return matchGroup && matchSearch
   }) : []
 
+  // Sólo ofrecemos crearlo si no existe ya uno con ese mismo nombre.
+  const canCreate = mode === 'search'
+    && search.trim().length >= 2
+    && !allExercises.some(ex => ex.nameEs.trim().toLowerCase() === search.trim().toLowerCase())
+
   // Browse mode: group by muscle
   const groupedExercises = mode === 'browse'
     ? muscleGroupOrder
@@ -91,7 +97,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
     <div className="flex-1 min-h-0 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       {/* Header */}
       <div
-        className="flex-shrink-0 px-4 pt-12 pb-3 relative overflow-hidden"
+        className="flex-shrink-0 px-4 safe-top pb-3 relative overflow-hidden"
         style={{
           background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -147,7 +153,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>🔍</span>
             <input
               type="text"
-              placeholder="Buscar ejercicio..."
+              placeholder="Buscar o escribir uno nuevo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
@@ -227,6 +233,15 @@ export function ExercisePickerScreen({ routineName }: Props) {
       <div className="flex-1 min-h-0 scroll-area px-4 py-3 pb-6">
         {mode === 'search' ? (
           <div className="flex flex-col gap-2">
+            {/* Ejercicio a mano: si lo que escribiste no existe, se crea al toque
+                con el nombre tal cual, y queda para seguirlo como cualquier otro. */}
+            {canCreate && (
+              <CreateExerciseCard
+                name={search}
+                groupHint={selectedGroup ?? undefined}
+                onCreated={(ex) => { handleAdd(ex.id); setSearch('') }}
+              />
+            )}
             {searchFiltered.map(ex => (
               <ExerciseRow
                 key={ex.id}
@@ -236,7 +251,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
                 onDetail={() => setDetailExercise(ex)}
               />
             ))}
-            {searchFiltered.length === 0 && search && (
+            {searchFiltered.length === 0 && search && !canCreate && (
               <div className="text-center py-8">
                 <p className="text-gray-500 text-sm">Sin resultados para "{search}"</p>
               </div>

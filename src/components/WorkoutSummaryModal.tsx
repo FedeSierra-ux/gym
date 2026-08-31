@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
+import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
 import type { Workout } from '../types'
 
@@ -155,6 +156,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
               {topExercises.map(({ ex, sets, vol }) => {
                 if (!ex) return null
                 const best = sets.reduce((a, s) => s.kg > a.kg ? s : a, sets[0])
+                const byTime = isDurationExercise(ex)
                 return (
                   <div key={ex.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
@@ -164,12 +166,16 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: S.ink }}>{ex.nameEs}</div>
                       <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
-                        {sets.length} series · mejor: {best.kg}kg × {best.reps} reps
+                        {byTime
+                          ? `${sets.length} × ${formatDuration(totalSeconds(sets) / Math.max(1, sets.length))} · total ${formatDuration(totalSeconds(sets))}`
+                          : `${sets.length} series · mejor: ${best.kg}kg × ${best.reps} reps`}
                       </div>
                     </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: S.dim, flexShrink: 0 }}>
-                      {vol >= 1000 ? `${(vol / 1000).toFixed(1)}K` : Math.round(vol)}kg vol
-                    </div>
+                    {!byTime && (
+                      <div style={{ fontSize: 12, fontWeight: 700, color: S.dim, flexShrink: 0 }}>
+                        {vol >= 1000 ? `${(vol / 1000).toFixed(1)}K` : Math.round(vol)}kg vol
+                      </div>
+                    )}
                   </div>
                 )
               })}

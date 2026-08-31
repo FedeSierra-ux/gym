@@ -7,12 +7,15 @@ import { CircularRing } from '../components/CircularRing'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate } from '../utils/haptics'
+import { useWakeLock } from '../utils/useWakeLock'
+import { isDurationExercise, durationUnit, toSeconds } from '../utils/duration'
+import { suggestNextWeight } from '../utils/progression'
 import type { Exercise } from '../types'
 
 const S = {
   bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
   ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A', acc2: '#F2A93B',
+  acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
   line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
 }
 
@@ -57,7 +60,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
           <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
             placeholder="Ej: Escápulas retraídas, bajar lento 3s..."
             rows={3}
-            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 11, color: S.ink, fontFamily: 'DM Sans, system-ui, sans-serif', outline: 'none', resize: 'none' }}
+            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 16, color: S.ink, fontFamily: 'DM Sans, system-ui, sans-serif', outline: 'none', resize: 'none' }}
           />
           <div className="flex gap-2 justify-end">
             <button onClick={() => setOpen(false)} style={{ fontSize: 11, color: S.dim, padding: '4px 12px', borderRadius: 8, border: `1px solid ${S.line2}`, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Cancelar</button>
@@ -72,7 +75,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
 function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
   return (
     <button onClick={onPress} aria-label={ariaLabel}
-      style={{ width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+      style={{ width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
     >
       {label}
     </button>
@@ -129,6 +132,9 @@ export function ActiveWorkoutScreen() {
   const [flashingSet, setFlashingSet] = useState<string | null>(null)
   const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
 
+  // Pantalla encendida mientras el entreno está abierto.
+  useWakeLock(!!activeWorkout)
+
   const realStartedAt = activeWorkout?.realStartedAt
   useEffect(() => {
     if (!realStartedAt) return
@@ -150,6 +156,12 @@ export function ActiveWorkoutScreen() {
     const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
     const current = parseFloat(currentVal) || 0
     updateSetValue(exIdx, setIdx, field, String(Math.max(0, current + delta)))
+  }
+
+  /** Los ± del campo de tiempo: de a 1 minuto o de a 5 segundos. */
+  const adjustDuration = (exIdx: number, setIdx: number, delta: number) => {
+    const current = parseFloat(activeWorkout.exercises[exIdx]?.sets[setIdx]?.duration ?? '') || 0
+    updateSetValue(exIdx, setIdx, 'duration', String(Math.max(0, Math.round((current + delta) * 10) / 10)))
   }
 
   return (
@@ -203,6 +215,13 @@ export function ActiveWorkoutScreen() {
           const isBarbellLike = ex.equipmentType === 'barra'
           const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === ex.id)?.sets ?? []
           const completedCount = activeEx.sets.filter((s) => s.completed).length
+          const byTime = isDurationExercise(ex)
+          const unit = durationUnit(ex)
+          const routineEx = routine?.exercises.find((re) => re.exerciseId === ex.id)
+          // Sugerencia de doble progresión: sólo tiene sentido con kg y reps.
+          const suggestion = routineEx && !byTime
+            ? suggestNextWeight(ex, routineEx, workouts, ex.id)
+            : null
 
           return (
             <div key={activeEx.exerciseId} style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px solid ${S.line2}` }}>
@@ -227,9 +246,26 @@ export function ActiveWorkoutScreen() {
                 </div>
               </div>
 
+              {/* Sugerencia de doble progresión */}
+              {suggestion && (
+                <div style={{
+                  margin: '0 16px 10px', padding: '8px 10px', borderRadius: 10,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.035)',
+                  border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.30)' : S.line2}`,
+                }}>
+                  <span style={{ fontSize: 13, flexShrink: 0 }}>
+                    {suggestion.reason === 'subir' ? '▲' : suggestion.reason === 'bajar' ? '▼' : suggestion.reason === 'primera-vez' ? '🎯' : '='}
+                  </span>
+                  <span style={{ fontSize: 11, color: suggestion.reason === 'subir' ? S.good : S.dim, lineHeight: 1.4 }}>
+                    {suggestion.note}
+                  </span>
+                </div>
+              )}
+
               {/* Table header */}
               <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px', padding: '0 12px 6px', gap: 6 }}>
-                {['Set', 'KG', 'Reps', ''].map((h, i) => (
+                {['Set', byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG', byTime ? '' : 'Reps', ''].map((h, i) => (
                   <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i === 0 ? 'center' : i < 3 ? 'center' : 'center' }}>{h}</div>
                 ))}
               </div>
@@ -245,7 +281,7 @@ export function ActiveWorkoutScreen() {
                 const plateKey = `${exIdx}-${setIdx}`
                 const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
                 const canDelete = !isCompleted && activeEx.sets.length > 1
-                const canComplete = isCompleted || reps > 0
+                const canComplete = isCompleted || (byTime ? toSeconds(set.duration ?? '', unit) > 0 : reps > 0)
                 return (
                   <div key={setIdx}>
                     <div
@@ -282,6 +318,30 @@ export function ActiveWorkoutScreen() {
                         )}
                       </div>
 
+                      {/* Tiempo (cinta, planchas): un solo campo que ocupa las dos columnas */}
+                      {byTime ? (
+                        <div className="flex items-center gap-1" style={{ gridColumn: 'span 2', paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
+                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir tiempo" onPress={() => adjustDuration(exIdx, setIdx, unit === 'min' ? -1 : -5)} />}
+                          <input
+                            type="number" inputMode="decimal" value={set.duration ?? ''}
+                            aria-label={`Tiempo en ${unit === 'min' ? 'minutos' : 'segundos'}, serie ${setIdx + 1}`}
+                            onChange={(e) => updateSetValue(exIdx, setIdx, 'duration', e.target.value)}
+                            placeholder="0" disabled={isCompleted}
+                            style={{
+                              flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
+                              borderRadius: 8, padding: '7px 2px',
+                              background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
+                              border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
+                              color: isCompleted ? S.acc : S.ink,
+                              fontFamily: 'DM Sans, system-ui, sans-serif',
+                              outline: 'none', minWidth: 0,
+                            }}
+                          />
+                          <span style={{ fontSize: 11, color: S.faint, flexShrink: 0, width: 26 }}>{unit}</span>
+                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar tiempo" onPress={() => adjustDuration(exIdx, setIdx, unit === 'min' ? 1 : 5)} />}
+                        </div>
+                      ) : (
+                      <>
                       {/* KG */}
                       <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
@@ -290,9 +350,11 @@ export function ActiveWorkoutScreen() {
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
                           onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
                           onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
-                          placeholder="kg" disabled={isCompleted}
+                          placeholder="0" disabled={isCompleted}
                           style={{
-                            flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
+                            // 16px es el mínimo con el que iOS no hace zoom al
+                            // enfocar el campo en medio de la serie.
+                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
                             background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
                             border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
@@ -310,9 +372,11 @@ export function ActiveWorkoutScreen() {
                         <input type="number" inputMode="numeric" value={set.reps}
                           aria-label={`Repeticiones, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                          placeholder="reps" disabled={isCompleted}
+                          placeholder="0" disabled={isCompleted}
                           style={{
-                            flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 700,
+                            // 16px es el mínimo con el que iOS no hace zoom al
+                            // enfocar el campo en medio de la serie.
+                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
                             borderRadius: 8, padding: '7px 2px',
                             background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
                             border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
@@ -323,6 +387,8 @@ export function ActiveWorkoutScreen() {
                         />
                         {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar reps" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
                       </div>
+                      </>
+                      )}
 
                       {/* ✓ Completar — full height, prominent */}
                       <button

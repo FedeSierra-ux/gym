@@ -1,20 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
+import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { ExerciseFrames } from '../components/ExerciseFrames'
 import { MuscleBodyMap } from '../components/MuscleBodyMap'
-import type { MuscleGroup, Exercise, ExerciseEquipment } from '../types'
-
-function inferEquipmentType(equipment: string): ExerciseEquipment {
-  const lower = equipment.toLowerCase()
-  if (lower.includes('barra') || lower.includes('bar')) return 'barra'
-  if (lower.includes('cable') || lower.includes('polea')) return 'cable'
-  if (lower.includes('maquin')) return 'maquina'
-  if (lower.includes('kettlebell') || lower.includes('pesa rusa')) return 'kettlebell'
-  if (lower.includes('banda') || lower.includes('elast')) return 'banda'
-  if (lower.includes('cardio') || lower.includes('cinta') || lower.includes('bici')) return 'cardio_maquina'
-  if (lower.includes('corporal') || lower.includes('libre') || lower.includes('sin')) return 'peso_corporal'
-  return 'mancuernas'
-}
+import { draftFromName } from '../utils/exerciseMatch'
+import type { MuscleGroup, Exercise } from '../types'
 
 const muscleGroups: MuscleGroup[] = [
   'pecho', 'espalda', 'hombros', 'biceps',
@@ -26,37 +17,52 @@ interface Props {
 }
 
 export function CustomExercisesScreen({ onClose }: Props) {
-  const { customExercises, routines, addCustomExercise, deleteCustomExercise } = useStore()
+  const { customExercises, routines, createCustomExercise, updateCustomExercise, deleteCustomExercise } = useStore()
 
   const [showForm, setShowForm] = useState(false)
+  /** id del ejercicio que se está editando, o null si es uno nuevo. */
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [nameEs, setNameEs] = useState('')
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('pecho')
+  // El grupo se deduce del nombre hasta que el usuario elige uno a mano.
+  const [groupOverride, setGroupOverride] = useState<MuscleGroup | null>(null)
   const [equipment, setEquipment] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<Exercise | null>(null)
 
-  const handleCreate = () => {
-    const trimmed = nameEs.trim()
-    if (!trimmed) return
-    const equipmentStr = equipment.trim() || 'Libre'
-    const ex: Exercise = {
-      id: `custom-${Date.now()}`,
-      nameEs: trimmed,
-      muscleGroup,
-      primaryMuscles: [muscleGroupConfig[muscleGroup].label],
-      equipment: equipmentStr,
-      equipmentType: inferEquipmentType(equipmentStr),
-    }
-    addCustomExercise(ex)
+  const draft = useMemo(() => draftFromName(nameEs.trim(), groupOverride ?? undefined), [nameEs, groupOverride])
+  const muscleGroup = groupOverride ?? draft.group
+  const setMuscleGroup = (mg: MuscleGroup) => setGroupOverride(mg)
+
+  const resetForm = () => {
     setNameEs('')
     setEquipment('')
-    setMuscleGroup('pecho')
+    setGroupOverride(null)
+    setEditingId(null)
     setShowForm(false)
+  }
+
+  const startEdit = (ex: Exercise) => {
+    setEditingId(ex.id)
+    setNameEs(ex.nameEs)
+    setGroupOverride(ex.muscleGroup)
+    setEquipment(ex.equipment ?? '')
+    setShowForm(true)
+  }
+
+  const handleSubmit = () => {
+    const trimmed = nameEs.trim()
+    if (!trimmed) return
+    if (editingId) {
+      updateCustomExercise(editingId, { nameEs: trimmed, group: muscleGroup, equipment: equipment.trim() })
+    } else {
+      createCustomExercise(trimmed, { group: muscleGroup, equipment: equipment.trim() || undefined })
+    }
+    resetForm()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--bg)' }}>
       <div
-        className="flex-shrink-0 px-4 pt-12 pb-4"
+        className="flex-shrink-0 px-4 safe-top pb-4"
         style={{
           background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -79,7 +85,9 @@ export function CustomExercisesScreen({ onClose }: Props) {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-white">Mis ejercicios</h1>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{customExercises.length} ejercicios personalizados</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {customExercises.length} propios · tocá uno para editarlo
+            </p>
           </div>
           <button
             onClick={() => setShowForm(true)}
@@ -114,12 +122,13 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 16px rgba(0,0,0,0.35)',
               }}
             >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: config.color + '15', border: `1px solid ${config.color}25` }}
+              <button
+                onClick={() => startEdit(ex)}
+                className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                aria-label={`Editar ${ex.nameEs}`}
+                style={{ background: 'none', border: 'none', padding: 0 }}
               >
-                <MuscleBodyMap muscleGroup={ex.muscleGroup} size={32} />
-              </div>
+              <ExerciseThumbnail exercise={ex} size={44} />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -134,6 +143,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                   )}
                 </div>
               </div>
+              </button>
               <button
                 onClick={() => setConfirmDelete(ex)}
                 aria-label={`Eliminar ${ex.nameEs}`}
@@ -160,7 +170,12 @@ export function CustomExercisesScreen({ onClose }: Props) {
               boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
             }}
           >
-            <h3 className="text-white font-bold text-sm">Nuevo ejercicio</h3>
+            <h3 className="text-white font-bold text-sm">{editingId ? 'Editar ejercicio' : 'Nuevo ejercicio'}</h3>
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {editingId
+                ? 'El historial y los récords se mantienen: sólo cambia cómo se muestra.'
+                : 'Con el nombre alcanza: la app deduce grupo, equipamiento y dibujo. Podés corregir lo que quieras.'}
+            </p>
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Nombre</label>
               <input
@@ -208,9 +223,25 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 }}
               />
             </div>
+            {nameEs.trim() && (
+              <div className="flex items-center gap-3 rounded-xl p-2.5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{ width: 44, height: 44, background: muscleGroupConfig[muscleGroup].color + '12' }}>
+                  {draft.frameSlug
+                    ? <ExerciseFrames slug={draft.frameSlug} size={44} alt={nameEs} animate />
+                    : <MuscleBodyMap muscleGroup={muscleGroup} size={32} />}
+                </div>
+                <p className="text-[11px] flex-1 min-w-0" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {draft.frameSlug
+                    ? <>Dibujo: <span className="text-white">{draft.matchedName}</span> · {draft.equipment}</>
+                    : 'Sin dibujo parecido: se usa el ícono del grupo muscular.'}
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 mt-1">
               <button
-                onClick={() => { setShowForm(false); setNameEs(''); setEquipment('') }}
+                onClick={resetForm}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                 style={{
                   border: '1px solid rgba(255,255,255,0.08)',
@@ -221,11 +252,11 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 Cancelar
               </button>
               <button
-                onClick={handleCreate}
+                onClick={handleSubmit}
                 disabled={!nameEs.trim()}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm text-black btn-primary-glow disabled:opacity-40"
               >
-                Crear
+                {editingId ? 'Guardar' : 'Crear'}
               </button>
             </div>
           </div>

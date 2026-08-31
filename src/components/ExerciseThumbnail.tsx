@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { exerciseDetails } from '../data/exerciseDetails'
 import { MuscleBodyMap } from './MuscleBodyMap'
+import { ExerciseFrames } from './ExerciseFrames'
+import { frameSlugFor } from '../utils/exerciseMatch'
 
 interface Props {
   exercise: Exercise
@@ -10,6 +12,8 @@ interface Props {
   rounded?: string
   /** Skip the GIF and force wger.de static image lookup */
   forceStatic?: boolean
+  /** Alterna las dos poses de la ilustración local para mostrar el movimiento. */
+  animate?: boolean
 }
 
 const LS = {
@@ -69,21 +73,35 @@ async function resolveWgerImageUrl(exercise: Exercise): Promise<string | null> {
   }
 }
 
-export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl', forceStatic = false }: Props) {
+export function ExerciseThumbnail({ exercise, size = 44, rounded = 'rounded-xl', forceStatic = false, animate = false }: Props) {
+  // Las ilustraciones locales van primero: no dependen de red y cubren tanto
+  // los ejercicios base como los que el usuario crea a mano.
+  const frameSlug = useMemo(() => frameSlugFor(exercise), [exercise])
   const initialUrl = (!forceStatic && exercise.image) ? exercise.image : null
   const [imageUrl, setImageUrl] = useState<string | null>(initialUrl)
   const [failed, setFailed] = useState(false)
   const config = muscleGroupConfig[exercise.muscleGroup]
 
   useEffect(() => {
-    if (imageUrl || failed) return
+    if (frameSlug || imageUrl || failed) return
     resolveWgerImageUrl(exercise)
       .then(url => {
         if (url) setImageUrl(url)
         else setFailed(true)
       })
       .catch(() => setFailed(true))
-  }, [exercise.id, forceStatic]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [exercise.id, forceStatic, frameSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (frameSlug) {
+    return (
+      <div
+        className={`flex-shrink-0 ${rounded} overflow-hidden`}
+        style={{ width: size, height: size, background: config.color + '12' }}
+      >
+        <ExerciseFrames slug={frameSlug} size={size} alt={exercise.nameEs} animate={animate} />
+      </div>
+    )
+  }
 
   if (imageUrl && !failed) {
     return (

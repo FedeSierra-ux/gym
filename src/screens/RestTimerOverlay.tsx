@@ -30,34 +30,47 @@ export function RestTimerOverlay() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
+    // El tiempo restante sale siempre de restEndsAt (reloj de pared): si iOS
+    // suspende la PWA con la pantalla bloqueada, al volver el contador muestra
+    // lo que realmente queda en vez de haberse quedado congelado.
+    const tick = () => {
       const state = useWorkoutStore.getState()
-      if (!state.activeWorkout?.restTimerVisible) return
-      const left = state.activeWorkout.restSecondsLeft
+      const workout = state.activeWorkout
+      if (!workout?.restTimerVisible) return
+
+      const endsAt = workout.restEndsAt ?? Date.now() + workout.restSecondsLeft * 1000
+      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+      const prev = workout.restSecondsLeft
+      if (left === prev) return
+
       if (left <= 0) {
         vibrate([150, 80, 150, 80, 300])
         playBeep(660, 250)
         setTimeout(() => playBeep(880, 300), 300)
         useWorkoutStore.setState((s) => ({
           activeWorkout: s.activeWorkout
-            ? { ...s.activeWorkout, restTimerVisible: false }
+            ? { ...s.activeWorkout, restTimerVisible: false, restSecondsLeft: 0 }
             : null,
         }))
-      } else {
-        if (left === 10) vibrate([80])
-        if (left === 5) vibrate([100, 50, 100])
-        if (left === 3) playBeep(660, 100)
-        if (left === 2) playBeep(660, 100)
-        if (left === 1) playBeep(660, 100)
-        useWorkoutStore.setState((s) => ({
-          activeWorkout: s.activeWorkout
-            ? { ...s.activeWorkout, restSecondsLeft: s.activeWorkout.restSecondsLeft - 1 }
-            : null,
-        }))
+        return
       }
-    }, 1000)
+
+      // Los avisos se disparan al cruzar el umbral, no al valer exactamente N:
+      // si la app estuvo dormida el contador puede saltar varios segundos.
+      if (prev > 10 && left <= 10) vibrate([80])
+      if (prev > 5 && left <= 5) vibrate([100, 50, 100])
+      if (prev > 3 && left <= 3) playBeep(660, 100)
+
+      useWorkoutStore.setState((s) => ({
+        activeWorkout: s.activeWorkout ? { ...s.activeWorkout, restSecondsLeft: left } : null,
+      }))
+    }
+
+    intervalRef.current = setInterval(tick, 250)
+    document.addEventListener('visibilitychange', tick)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      document.removeEventListener('visibilitychange', tick)
     }
   }, [])
 

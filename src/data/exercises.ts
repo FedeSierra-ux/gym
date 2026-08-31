@@ -53,7 +53,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'pecho-05', nameEs: 'Aperturas DB', nameEn: 'Dumbbell Flyes', muscleGroup: 'pecho',
+    id: 'pecho-05', nameEs: 'Aperturas DB', nameArg: 'Aperturas Planas con Mancuernas', nameEn: 'Dumbbell Flyes', muscleGroup: 'pecho',
     primaryMuscles: ['Pectoral'], equipment: 'Mancuernas',
     image: IMG('yz9nUhF'),
     instructions: [
@@ -201,7 +201,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'hombros-02', nameEs: 'Elevación Lateral', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
+    id: 'hombros-02', nameEs: 'Elevación Lateral', nameArg: 'Vuelos Laterales', nameEn: 'Lateral Raise', muscleGroup: 'hombros',
     primaryMuscles: ['Deltoides lateral'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
     image: IMG('DsgkuIt'),
     instructions: [
@@ -313,7 +313,7 @@ export const exercises: Exercise[] = [
 
   // TRICEPS (8)
   {
-    id: 'triceps-01', nameEs: 'Extensión Overhead', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
+    id: 'triceps-01', nameEs: 'Extensión Overhead', nameArg: 'Tras Nuca con Soga en Polea Alta', nameEn: 'Overhead Triceps Extension', muscleGroup: 'triceps',
     primaryMuscles: ['Tríceps largo'], equipment: 'Mancuerna', equipmentType: 'mancuernas',
     image: IMG('kont8Ut'),
     instructions: [
@@ -387,7 +387,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'piernas-03', nameEs: 'Prensa Piernas', nameEn: 'Leg Press', muscleGroup: 'piernas',
+    id: 'piernas-03', nameEs: 'Prensa Piernas', nameArg: 'Prensa 45°', nameEn: 'Leg Press', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Máquina',
     image: IMG('10Z2DXU'),
     instructions: [
@@ -399,7 +399,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'piernas-04', nameEs: 'Extensión Cuádriceps', nameEn: 'Leg Extension', muscleGroup: 'piernas',
+    id: 'piernas-04', nameEs: 'Extensión Cuádriceps', nameArg: 'Sillón de Cuádriceps', nameEn: 'Leg Extension', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps'], equipment: 'Máquina',
     image: IMG('my33uHU'),
     instructions: [
@@ -411,7 +411,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'piernas-05', nameEs: 'Curl Isquiotibiales', nameEn: 'Lying Leg Curl', muscleGroup: 'piernas',
+    id: 'piernas-05', nameEs: 'Curl Isquiotibiales', nameArg: 'Camilla de Isquios', nameEn: 'Lying Leg Curl', muscleGroup: 'piernas',
     primaryMuscles: ['Isquiotibiales'], equipment: 'Máquina',
     image: IMG('17lJ1kr'),
     instructions: [
@@ -447,7 +447,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'piernas-08', nameEs: 'Sentadilla Búlgara', nameEn: 'Bulgarian Split Squat', muscleGroup: 'piernas',
+    id: 'piernas-08', nameEs: 'Sentadilla Búlgara', nameArg: 'Estocadas Búlgaras con Mancuerna', nameEn: 'Bulgarian Split Squat', muscleGroup: 'piernas',
     primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas',
     image: IMG('qx4fgX7'),
     instructions: [
@@ -471,7 +471,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'piernas-10', nameEs: 'Hip Thrust', nameEn: 'Barbell Hip Thrust', muscleGroup: 'piernas',
+    id: 'piernas-10', nameEs: 'Hip Thrust', nameArg: 'Hip Thruster con Barra', nameEn: 'Barbell Hip Thrust', muscleGroup: 'piernas',
     primaryMuscles: ['Glúteos', 'Isquiotibiales'], equipment: 'Barra',
     image: IMG('SNFfUff'),
     instructions: [
@@ -533,7 +533,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'gluteos-03', nameEs: 'Cable Kickback', nameEn: 'Cable Glute Kickback', muscleGroup: 'gluteos',
+    id: 'gluteos-03', nameEs: 'Cable Kickback', nameArg: 'Patadas de Glúteo en Polea Baja', nameEn: 'Cable Glute Kickback', muscleGroup: 'gluteos',
     primaryMuscles: ['Glúteo mayor'], equipment: 'Cable',
     image: IMG('Kpajagk'),
     instructions: [
@@ -607,7 +607,8 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'core-03', nameEs: 'Plancha', nameEn: 'Plank', muscleGroup: 'core',
+    id: 'core-03', nameEs: 'Plancha', nameArg: 'Plancha Frontal', nameEn: 'Plank', muscleGroup: 'core',
+    trackingType: 'duration', durationUnit: 'seg',
     primaryMuscles: ['Core', 'Transverso'], equipment: 'Peso corporal',
     image: IMG('VBAWRPG'),
     instructions: [
@@ -631,7 +632,7 @@ export const exercises: Exercise[] = [
     ],
   },
   {
-    id: 'core-05', nameEs: 'Russian Twist', nameEn: 'Russian Twist', muscleGroup: 'core',
+    id: 'core-05', nameEs: 'Russian Twist', nameArg: 'Abdominales Soviéticos con Disco', nameEn: 'Russian Twist', muscleGroup: 'core',
     primaryMuscles: ['Oblicuos'], equipment: 'Peso corporal',
     image: IMG('XVDdcoj'),
     instructions: [
@@ -717,8 +718,9 @@ export const exercises: Exercise[] = [
 
   // CARDIO (5)
   {
-    id: 'cardio-01', nameEs: 'Cinta Correr', nameEn: 'Running', muscleGroup: 'cardio',
-    primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Cinta',
+    id: 'cardio-01', nameEs: 'Cinta', nameArg: 'Cinta de correr', nameEn: 'Running', muscleGroup: 'cardio',
+    primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Cinta', equipmentType: 'cardio_maquina',
+    trackingType: 'duration', durationUnit: 'min',
     image: IMG('oLrKqDH'),
     instructions: [
       'Comienza caminando para calentar durante 2-3 minutos.',
@@ -730,7 +732,8 @@ export const exercises: Exercise[] = [
   },
   {
     id: 'cardio-02', nameEs: 'Bicicleta Estática', nameEn: 'Stationary Bike', muscleGroup: 'cardio',
-    primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Bicicleta',
+    primaryMuscles: ['Piernas', 'Cardio'], equipment: 'Bicicleta', equipmentType: 'cardio_maquina',
+    trackingType: 'duration', durationUnit: 'min',
     image: IMG('H1PESYI'),
     instructions: [
       'Ajusta el asiento para que la rodilla quede levemente flexionada en la bajada.',
@@ -738,6 +741,197 @@ export const exercises: Exercise[] = [
       'Aumenta la resistencia para intervalos de alta intensidad.',
       'Mantén el torso relajado, no te apoyes en el manillar.',
       'Finaliza con 3 minutos de pedaleo suave.',
+    ],
+  },
+  // --- Agregados para el plan de Milena (septiembre) ---
+  {
+    id: 'cardio-03', nameEs: 'Cinta Inclinada', nameArg: 'Caminata en cinta con pendiente', nameEn: 'Treadmill Incline Walk',
+    muscleGroup: 'cardio', primaryMuscles: ['Piernas', 'Glúteos', 'Cardio'], equipment: 'Cinta', equipmentType: 'cardio_maquina',
+    trackingType: 'duration', durationUnit: 'min',
+    instructions: [
+      'Subí la inclinación entre 8 y 15% y la velocidad a paso rápido.',
+      'Caminá erguida, sin agarrarte de los manubrios: el apoyo saca casi todo el trabajo.',
+      'Apoyá el pie completo y empujá con el talón para que trabajen glúteo e isquios.',
+      'Mantené un ritmo en el que puedas hablar entrecortado.',
+      'Bajá la inclinación los últimos 2 minutos para enfriar.',
+    ],
+  },
+  {
+    id: 'piernas-13', nameEs: 'Sentadillas en Smith', nameEn: 'Smith Machine Squat', muscleGroup: 'piernas',
+    primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Smith', equipmentType: 'maquina',
+    instructions: [
+      'Ubicá la barra sobre los trapecios y los pies un paso adelante del cuerpo.',
+      'Bajá controlada hasta que el muslo quede paralelo al piso.',
+      'Mantené el talón apoyado y las rodillas siguiendo la línea del pie.',
+      'Empujá con todo el pie para subir.',
+    ],
+  },
+  {
+    id: 'piernas-14', nameEs: 'Sentadillas Sumo con Mancuerna', nameEn: 'Dumbbell Sumo Squat', muscleGroup: 'piernas',
+    primaryMuscles: ['Cuádriceps', 'Aductores', 'Glúteos'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
+    instructions: [
+      'Pies más anchos que los hombros y punteras hacia afuera.',
+      'Sostené la mancuerna con las dos manos entre las piernas.',
+      'Bajá manteniendo el pecho arriba y las rodillas abiertas.',
+      'Subí apretando los glúteos arriba.',
+    ],
+  },
+  {
+    id: 'piernas-16', nameEs: 'Estocadas con Mancuernas Paso Atrás', nameEn: 'Reverse Lunge', muscleGroup: 'piernas',
+    primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
+    instructions: [
+      'Parada con una mancuerna en cada mano, pies al ancho de cadera.',
+      'Dá un paso largo hacia atrás y bajá hasta que la rodilla de atrás casi toque el piso.',
+      'El peso queda sobre la pierna de adelante.',
+      'Volvé al centro empujando con el talón de adelante.',
+    ],
+  },
+  {
+    id: 'piernas-17', nameEs: 'Peso Muerto con Mancuernas', nameEn: 'Dumbbell Romanian Deadlift', muscleGroup: 'piernas',
+    primaryMuscles: ['Isquiotibiales', 'Glúteos'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
+    instructions: [
+      'Mancuernas al frente de los muslos, rodillas apenas flexionadas.',
+      'Llevá la cola hacia atrás bajando las mancuernas pegadas a la pierna.',
+      'Frená cuando sientas el estiramiento en la parte de atrás del muslo.',
+      'Subí empujando la cadera hacia adelante.',
+    ],
+  },
+  {
+    id: 'piernas-18', nameEs: 'Sentadilla Isométrica contra la Pared', nameEn: 'Wall Sit', muscleGroup: 'piernas',
+    primaryMuscles: ['Cuádriceps'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    trackingType: 'duration', durationUnit: 'seg',
+    instructions: [
+      'Espalda apoyada en la pared y rodillas a 90°.',
+      'Repartí el peso en todo el pie, sin apoyar las manos en las piernas.',
+      'Sostené la posición respirando normal.',
+    ],
+  },
+  {
+    id: 'piernas-19', nameEs: 'Sentadillas Libres', nameEn: 'Bodyweight Squat', muscleGroup: 'piernas',
+    primaryMuscles: ['Cuádriceps', 'Glúteos'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    instructions: [
+      'Pies al ancho de hombros, brazos al frente para equilibrar.',
+      'Bajá llevando la cola atrás hasta el paralelo.',
+      'Subí sin bloquear del todo las rodillas.',
+    ],
+  },
+  {
+    id: 'piernas-20', nameEs: 'Swing con Pesa Rusa', nameEn: 'Kettlebell Swing', muscleGroup: 'piernas',
+    primaryMuscles: ['Glúteos', 'Isquiotibiales'], equipment: 'Kettlebell', equipmentType: 'kettlebell',
+    instructions: [
+      'La pesa arranca en el piso, un paso adelante tuyo.',
+      'Llevala entre las piernas con la cadera hacia atrás y la espalda recta.',
+      'Empujá la cadera hacia adelante: el swing sale de ahí, no de los brazos.',
+      'La pesa llega a la altura del pecho y vuelve sola.',
+    ],
+  },
+  {
+    id: 'hombros-07', nameEs: 'Press Militar con Mancuernas', nameEn: 'Seated Dumbbell Shoulder Press', muscleGroup: 'hombros',
+    primaryMuscles: ['Deltoides anterior'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
+    instructions: [
+      'Mancuernas a la altura de los hombros, palmas hacia adelante.',
+      'Empujá hacia arriba sin bloquear del todo los codos.',
+      'Bajá controlada hasta que el codo quede apenas debajo del hombro.',
+      'No arquees la espalda: apretá el abdomen.',
+    ],
+  },
+  {
+    id: 'hombros-08', nameEs: 'Posteriores con Soga en Polea Alta', nameEn: 'Cable Rear Delt Fly', muscleGroup: 'hombros',
+    primaryMuscles: ['Deltoides posterior'], equipment: 'Polea', equipmentType: 'cable',
+    instructions: [
+      'Polea alta con soga, un paso atrás y brazos estirados al frente.',
+      'Abrí los brazos hacia afuera y atrás, como si separaras la soga.',
+      'Llevá los codos por detrás de la línea del cuerpo.',
+      'Volvé lento sin dejar caer el peso.',
+    ],
+  },
+  {
+    id: 'espalda-11', nameEs: 'Dorsalera con Barra Agarre Prono', nameEn: 'Wide Grip Lat Pulldown', muscleGroup: 'espalda',
+    primaryMuscles: ['Dorsal ancho'], equipment: 'Polea', equipmentType: 'cable',
+    instructions: [
+      'Agarre prono un poco más ancho que los hombros.',
+      'Bajá la barra al pecho llevando los codos hacia el piso.',
+      'Sacá pecho y juntá los omóplatos abajo.',
+      'Subí controlando, sin que los hombros se vayan a las orejas.',
+    ],
+  },
+  {
+    id: 'espalda-12', nameEs: 'Remo Bajo con Barra Agarre Prono', nameEn: 'Seated Cable Row', muscleGroup: 'espalda',
+    primaryMuscles: ['Dorsal ancho', 'Romboides'], equipment: 'Polea', equipmentType: 'cable',
+    instructions: [
+      'Sentada, rodillas apenas flexionadas y espalda recta.',
+      'Traé la barra al ombligo pegando los codos al cuerpo.',
+      'Juntá los omóplatos al final del recorrido.',
+      'Estirá los brazos sin dejar que la espalda se redondee.',
+    ],
+  },
+  {
+    id: 'triceps-05', nameEs: 'Extensiones con Barra en Polea Alta', nameEn: 'Triceps Cable Pushdown', muscleGroup: 'triceps',
+    primaryMuscles: ['Tríceps'], equipment: 'Polea', equipmentType: 'cable',
+    instructions: [
+      'Codos pegados al cuerpo y barra a la altura del pecho.',
+      'Estirá los codos hasta abajo sin mover los hombros.',
+      'Apretá el tríceps un segundo abajo.',
+      'Subí hasta 90° sin abrir los codos.',
+    ],
+  },
+  {
+    id: 'biceps-07', nameEs: 'Bíceps Alternado con Mancuernas', nameEn: 'Dumbbell Bicep Curl', muscleGroup: 'biceps',
+    primaryMuscles: ['Bíceps'], equipment: 'Mancuernas', equipmentType: 'mancuernas',
+    instructions: [
+      'Parada, mancuernas a los costados y palmas al frente.',
+      'Subí una mancuerna por vez sin mover el codo.',
+      'Apretá arriba y bajá lento.',
+      'Alterná brazo por brazo.',
+    ],
+  },
+  {
+    id: 'core-12', nameEs: 'Plancha Lateral', nameEn: 'Side Plank', muscleGroup: 'core',
+    primaryMuscles: ['Oblicuos'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    trackingType: 'duration', durationUnit: 'seg',
+    instructions: [
+      'Codo debajo del hombro y cuerpo en línea recta.',
+      'Subí la cadera y sostené sin dejarla caer.',
+      'Mirá al frente y respirá normal.',
+    ],
+  },
+  {
+    id: 'core-13', nameEs: 'Abdominales Cortitos', nameEn: 'Crunch', muscleGroup: 'core',
+    primaryMuscles: ['Recto abdominal'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    instructions: [
+      'Acostada con rodillas flexionadas y pies apoyados.',
+      'Despegá sólo los omóplatos del piso.',
+      'Llevá las costillas hacia la pelvis, sin tirar del cuello.',
+      'Bajá lento sin apoyar del todo la cabeza.',
+    ],
+  },
+  {
+    id: 'core-15', nameEs: 'Abdominales Completos', nameEn: 'Sit Up', muscleGroup: 'core',
+    primaryMuscles: ['Recto abdominal', 'Flexores de cadera'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    instructions: [
+      'Acostada, rodillas flexionadas y pies apoyados.',
+      'Subí hasta quedar sentada, enrollando la columna.',
+      'Bajá vértebra por vértebra sin dejarte caer.',
+    ],
+  },
+  {
+    id: 'core-16', nameEs: 'Movilidad de Cadera', nameEn: 'Worlds Greatest Stretch', muscleGroup: 'core',
+    primaryMuscles: ['Cadera', 'Movilidad'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    instructions: [
+      'Desde plancha alta, llevá el pie al lado de la mano del mismo lado.',
+      'Abrí el pecho girando el torso hacia esa pierna.',
+      'Volvé y cambiá de lado.',
+      'Movimiento controlado, sin rebotes.',
+    ],
+  },
+  {
+    id: 'core-17', nameEs: 'Plancha Alta Tocando Hombros', nameEn: 'Plank Shoulder Tap', muscleGroup: 'core',
+    primaryMuscles: ['Core', 'Hombros'], equipment: 'Peso corporal', equipmentType: 'peso_corporal',
+    trackingType: 'duration', durationUnit: 'seg',
+    instructions: [
+      'Plancha alta con los pies un poco separados.',
+      'Tocá el hombro contrario con una mano sin mover la cadera.',
+      'Alterná manos manteniendo la cola baja.',
     ],
   },
 ]

@@ -4,6 +4,8 @@ import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
+import { CreateExerciseCard } from '../components/CreateExerciseCard'
+import { isDurationExercise, durationUnit, formatDuration, fromSeconds, toSeconds } from '../utils/duration'
 import type { Routine } from '../types'
 
 function BackIcon() {
@@ -62,6 +64,8 @@ export function RoutineDetailScreen() {
     reorderRoutineExercises,
     showExercisePicker,
     setShowExercisePicker,
+    addExerciseToRoutine,
+    createCustomExercise,
     addToast,
   } = useStore()
   const exercises = useAllExercises()
@@ -69,6 +73,7 @@ export function RoutineDetailScreen() {
 
   const [editMode, setEditMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [quickName, setQuickName] = useState('')
 
   const routine = routines.find((r) => r.id === activeRoutineId)
 
@@ -119,7 +124,7 @@ export function RoutineDetailScreen() {
     <div className="flex-1 min-h-0 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       {/* Header */}
       <div
-        className="flex-shrink-0 px-4 pt-12 pb-4 relative overflow-hidden"
+        className="flex-shrink-0 px-4 safe-top pb-4 relative overflow-hidden"
         style={{
           background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -145,10 +150,11 @@ export function RoutineDetailScreen() {
           <div className="flex-1 min-w-0">
             {editMode ? (
               <input
-                className="w-full rounded-xl px-3 py-1.5 text-white font-bold text-lg focus:outline-none"
+                className="w-full rounded-xl px-3 py-1.5 text-white font-bold focus:outline-none"
                 style={{
                   background: 'rgba(255,255,255,0.07)',
                   border: '1px solid rgba(232,99,74,0.3)',
+                  fontSize: 18,
                 }}
                 value={routine.name}
                 onChange={(e) => updateRoutine({ ...routine, name: e.target.value })}
@@ -246,6 +252,8 @@ export function RoutineDetailScreen() {
             const ex = exercises.find((e) => e.id === re.exerciseId)
             if (!ex) return null
             const config = muscleGroupConfig[ex.muscleGroup]
+            const byTime = isDurationExercise(ex)
+            const unit = durationUnit(ex)
 
             return (
               <div
@@ -297,7 +305,36 @@ export function RoutineDetailScreen() {
                     >
                       {config.label}
                     </span>
-                    {editMode ? (
+                    {editMode && byTime ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={re.sets}
+                          min={1}
+                          max={20}
+                          aria-label="Series"
+                          onChange={e => {
+                            const v = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
+                            updateExerciseConfig(re.exerciseId, { sets: v })
+                          }}
+                          className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>×</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={fromSeconds(re.targetSeconds ?? 0, unit)}
+                          min={0}
+                          aria-label={unit === 'min' ? 'Minutos' : 'Segundos'}
+                          onChange={e => {
+                            updateExerciseConfig(re.exerciseId, { targetSeconds: toSeconds(e.target.value, unit) })
+                          }}
+                          className="w-12 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{unit}</span>
+                      </div>
+                    ) : editMode ? (
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
@@ -341,10 +378,17 @@ export function RoutineDetailScreen() {
                       </div>
                     ) : (
                       <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                        {re.sets} series · {re.repsMin}–{re.repsMax} reps
+                        {byTime
+                          ? `${re.sets > 1 ? `${re.sets} × ` : ''}${formatDuration(re.targetSeconds ?? 0)}`
+                          : `${re.sets} series · ${re.repsMin === re.repsMax ? re.repsMin : `${re.repsMin}–${re.repsMax}`} reps`}
                       </span>
                     )}
                   </div>
+                  {re.note && (
+                    <p className="text-[10px] mt-1 leading-snug" style={{ color: 'rgba(242,169,59,0.75)' }}>
+                      {re.note}
+                    </p>
+                  )}
                 </div>
 
                 {editMode ? (
@@ -387,6 +431,31 @@ export function RoutineDetailScreen() {
           <span className="text-lg leading-none">+</span>
           <span className="text-sm font-semibold">Agregar ejercicio</span>
         </button>
+
+        {/* Alta rápida: armar la rutina escribiendo sólo el nombre. */}
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            type="text"
+            value={quickName}
+            onChange={(e) => setQuickName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              const ex = createCustomExercise(quickName)
+              if (!ex) return
+              addExerciseToRoutine(routine.id, ex.id)
+              addToast(`${ex.nameEs} agregado`, 'success')
+              setQuickName('')
+            }}
+            placeholder="…o escribí el nombre y listo"
+            className="w-full rounded-xl px-3 py-3 text-white text-sm focus:outline-none"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+          />
+          <CreateExerciseCard
+            name={quickName}
+            onCreated={(ex) => { addExerciseToRoutine(routine.id, ex.id); setQuickName('') }}
+            label="Agregar"
+          />
+        </div>
 
         <div className="h-6" />
       </div>

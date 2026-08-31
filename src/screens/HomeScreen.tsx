@@ -90,7 +90,7 @@ export function HomeScreen() {
       <div className="flex-1 min-h-0 scroll-area">
 
         {/* Header */}
-        <div style={{ padding: '60px 22px 0' }}>
+        <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
           <div className="flex justify-between items-center">
             <div>
               <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--dim)', letterSpacing: 0.3 }}>

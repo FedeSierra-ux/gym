@@ -6,6 +6,13 @@ export type ExerciseEquipment =
   | 'barra' | 'mancuernas' | 'cable' | 'maquina'
   | 'peso_corporal' | 'kettlebell' | 'banda' | 'cardio_maquina'
 
+/**
+ * Cómo se registra el ejercicio. 'weight_reps' es kg × repeticiones (el default
+ * histórico); 'duration' es tiempo, y se usa para cardio (cinta) y para los
+ * isométricos del circuito (planchas, sentadilla contra la pared).
+ */
+export type TrackingType = 'weight_reps' | 'duration'
+
 export interface Exercise {
   id: string
   nameEs: string
@@ -17,6 +24,14 @@ export interface Exercise {
   equipmentType?: ExerciseEquipment
   wgerId?: number
   image?: string     // GIF URL de ExerciseDB (hardcodeado para los 79 ejercicios base)
+  /** Slug del catálogo de ilustraciones (public/exercise-frames). Ver utils/exerciseMatch. */
+  frameSlug?: string
+  /** true para los ejercicios que creó el usuario a mano. */
+  isCustom?: boolean
+  /** Por defecto 'weight_reps'. */
+  trackingType?: TrackingType
+  /** Unidad que se muestra en los ejercicios por tiempo. Cardio en minutos, isométricos en segundos. */
+  durationUnit?: 'min' | 'seg'
   instructions?: string[]
 }
 
@@ -26,6 +41,10 @@ export interface RoutineExercise {
   repsMin: number
   repsMax: number
   order: number
+  /** Objetivo en segundos para los ejercicios por tiempo (ignora repsMin/repsMax). */
+  targetSeconds?: number
+  /** Aclaración del plan: "10 por lado", "semana 4-6: 3x8", etc. */
+  note?: string
 }
 
 export interface Routine {
@@ -41,6 +60,8 @@ export interface WorkoutSet {
   reps: number
   completedAt: number
   isWarmup?: boolean
+  /** Duración registrada, en segundos, para los ejercicios por tiempo. */
+  durationSec?: number
 }
 
 export interface WorkoutExercise {
@@ -80,6 +101,8 @@ export interface ActiveWorkoutSet {
   reps: string
   completed: boolean
   isWarmup?: boolean
+  /** Lo que se escribe en el campo de tiempo, en la unidad del ejercicio. */
+  duration?: string
 }
 
 export interface ActiveWorkoutExercise {

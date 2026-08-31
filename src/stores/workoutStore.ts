@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ActiveWorkoutExercise, AppToast, Workout, PR } from '../types'
 import { useStore } from '../store/useStore'
+import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
+import { suggestNextWeight } from '../utils/progression'
 
 export interface ActiveWorkout {
   routineId: string
@@ -11,6 +13,13 @@ export interface ActiveWorkout {
   restTimerVisible: boolean
   restSecondsLeft: number
   restTotalSeconds: number
+  /**
+   * Momento (epoch ms) en que termina el descanso. El contador se deriva de
+   * este timestamp y no de restar 1 por segundo: iOS congela los timers cuando
+   * la PWA queda en segundo plano o se bloquea la pantalla, así que un contador
+   * incremental volvía con minutos de atraso.
+   */
+  restEndsAt?: number
   lastCompletedSet?: { exerciseId: string; setIdx: number; kg: number; reps: number }
   livePr?: { exerciseId: string; kg: number; reps: number } | null
 }
@@ -21,7 +30,7 @@ interface WorkoutState {
   summaryPrCount: number
 
   startWorkout: (routineId: string, dateOverride?: number) => void
-  updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => void
+  updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps' | 'duration', value: string) => void
   toggleSetWarmup: (exerciseIdx: number, setIdx: number) => void
   completeSet: (exerciseIdx: number, setIdx: number) => void
   addSetToExercise: (exerciseIdx: number) => void
@@ -41,12 +50,16 @@ interface WorkoutState {
 const AUTO_CLOSE_THRESHOLD_MIN = 180
 const MAX_WORKOUT_DURATION_MIN = 120
 
-function clampValue(field: 'kg' | 'reps', value: string): string {
+function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
   if (value === '') return ''
-  const num = parseFloat(value)
+  const num = parseFloat(value.replace(',', '.'))
   if (isNaN(num)) return ''
   if (field === 'kg') {
     return String(Math.min(500, Math.max(0, num)))
+  } else if (field === 'duration') {
+    // Sirve para minutos (cinta) y para segundos (planchas): el tope alto cubre
+    // los dos casos y la unidad la resuelve la pantalla.
+    return String(Math.min(600, Math.max(0, Math.round(num * 10) / 10)))
   } else {
     return String(Math.min(100, Math.max(0, Math.round(num))))
   }
@@ -70,12 +83,36 @@ export const useWorkoutStore = create<WorkoutState>()(
           .filter((w) => w.routineId === routineId && w.finishedAt)
           .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
+        const { exercises: exerciseDb, customExercises } = useStore.getState()
+        const allExercises = [...exerciseDb, ...customExercises]
+
         const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
           const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
+          const exercise = allExercises.find((e) => e.id === re.exerciseId)
+
+          if (isDurationExercise(exercise)) {
+            const unit = durationUnit(exercise)
+            // El objetivo del plan manda; si no hay, se repite lo de la última vez.
+            const target = re.targetSeconds ?? prevSets[0]?.durationSec ?? 0
+            return {
+              exerciseId: re.exerciseId,
+              sets: Array.from({ length: re.sets }, (_, i) => ({
+                kg: '',
+                reps: '',
+                duration: fromSeconds(prevSets[i]?.durationSec ?? target, unit),
+                completed: false,
+              })),
+            }
+          }
+
+          // Doble progresión: el peso que se prellena es el sugerido, no el de
+          // la sesión anterior, así el objetivo del día queda cargado solo.
+          const suggestion = suggestNextWeight(exercise, re, workouts, re.exerciseId)
+          const suggestedKg = suggestion && suggestion.kg > 0 ? String(suggestion.kg) : ''
           return {
             exerciseId: re.exerciseId,
             sets: Array.from({ length: re.sets }, (_, i) => ({
-              kg: prevSets[i] ? String(prevSets[i].kg) : '',
+              kg: suggestedKg || (prevSets[i] ? String(prevSets[i].kg) : ''),
               reps: prevSets[i] ? String(prevSets[i].reps) : '',
               completed: false,
             })),
@@ -92,6 +129,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             restTimerVisible: false,
             restSecondsLeft: 75,
             restTotalSeconds: 75,
+            restEndsAt: undefined,
           },
         })
       },
@@ -129,13 +167,30 @@ export const useWorkoutStore = create<WorkoutState>()(
           const targetSet = s.activeWorkout.exercises[exerciseIdx]?.sets[setIdx]
           if (!targetSet) return {}
           if (!targetSet.completed) {
-            const kg = parseFloat(targetSet.kg)
-            const reps = parseInt(targetSet.reps)
-            if (isNaN(reps) || reps <= 0) {
-              useStore.getState().addToast('Ingresá la cantidad de reps antes de completar', 'info')
-              return {}
+            const { exercises: exDb, customExercises: customEx } = useStore.getState()
+            const exercise = [...exDb, ...customEx].find(
+              (e) => e.id === s.activeWorkout?.exercises[exerciseIdx]?.exerciseId
+            )
+            if (isDurationExercise(exercise)) {
+              const seconds = toSeconds(targetSet.duration ?? '', durationUnit(exercise))
+              if (seconds <= 0) {
+                useStore.getState().addToast(
+                  durationUnit(exercise) === 'min'
+                    ? 'Ingresá los minutos antes de completar'
+                    : 'Ingresá los segundos antes de completar',
+                  'info'
+                )
+                return {}
+              }
+            } else {
+              const kg = parseFloat(targetSet.kg)
+              const reps = parseInt(targetSet.reps)
+              if (isNaN(reps) || reps <= 0) {
+                useStore.getState().addToast('Ingresá la cantidad de reps antes de completar', 'info')
+                return {}
+              }
+              if (isNaN(kg)) return {}
             }
-            if (isNaN(kg)) return {}
           }
           const exercises = s.activeWorkout.exercises.map((ex, ei) => {
             if (ei !== exerciseIdx) return ex
@@ -179,6 +234,9 @@ export const useWorkoutStore = create<WorkoutState>()(
               restTimerVisible: completedSet.completed,
               restSecondsLeft: s.activeWorkout.restTotalSeconds,
               restTotalSeconds: s.activeWorkout.restTotalSeconds,
+              restEndsAt: completedSet.completed
+                ? Date.now() + s.activeWorkout.restTotalSeconds * 1000
+                : s.activeWorkout.restEndsAt,
             },
           }
         }),
@@ -234,17 +292,24 @@ export const useWorkoutStore = create<WorkoutState>()(
         // duration so that backdated workouts land on the correct date instead of today.
         const finishedAt = activeWorkout.startedAt + durationMin * 60000
 
-        const workoutExercises = activeWorkout.exercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          sets: ex.sets
-            .filter((s) => s.completed)
-            .map((s) => ({
-              kg: parseFloat(s.kg) || 0,
-              reps: parseInt(s.reps) || 0,
-              completedAt: finishedAt,
-              isWarmup: s.isWarmup || undefined,
-            })),
-        }))
+        const workoutExercises = activeWorkout.exercises.map((ex) => {
+          const exercise = allExercises.find((e) => e.id === ex.exerciseId)
+          const unit = durationUnit(exercise)
+          return {
+            exerciseId: ex.exerciseId,
+            sets: ex.sets
+              .filter((s) => s.completed)
+              .map((s) => ({
+                kg: parseFloat(s.kg) || 0,
+                reps: parseInt(s.reps) || 0,
+                completedAt: finishedAt,
+                isWarmup: s.isWarmup || undefined,
+                durationSec: isDurationExercise(exercise)
+                  ? toSeconds(s.duration ?? '', unit)
+                  : undefined,
+              })),
+          }
+        })
 
         const newWorkout: Workout = {
           id: `workout-${Date.now()}`,
@@ -286,18 +351,18 @@ export const useWorkoutStore = create<WorkoutState>()(
         const progressionToasts: AppToast[] = []
         const routine = routines.find((r) => r.id === activeWorkout.routineId)
         if (routine) {
+          // Mismo criterio de doble progresión que usa la pantalla de entreno,
+          // evaluado ya con el entreno recién terminado incluido.
+          const workoutsWithThisOne = [...useStore.getState().workouts, newWorkout]
           for (const re of routine.exercises) {
             if (progressionToasts.length >= 2) break
-            const exSets = (workoutExercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? [])
-              .filter((s) => !s.isWarmup)
-            if (exSets.length === 0) continue
-            const allHitMax = exSets.every((s) => s.reps >= re.repsMax)
-            if (!allHitMax) continue
-            const maxKg = Math.max(...exSets.map((s) => s.kg))
-            const exName = allExercises.find((e) => e.id === re.exerciseId)?.nameEs ?? re.exerciseId
+            const exercise = allExercises.find((e) => e.id === re.exerciseId)
+            const suggestion = suggestNextWeight(exercise, re, workoutsWithThisOne, re.exerciseId)
+            if (!suggestion || suggestion.reason !== 'subir') continue
+            const exName = exercise?.nameEs ?? re.exerciseId
             progressionToasts.push({
               id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              message: `💪 ${exName}: intentá ${maxKg + 2.5}kg la próxima vez`,
+              message: `💪 ${exName}: la próxima, ${suggestion.kg} kg`,
               type: 'info',
             })
           }
@@ -346,6 +411,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               ...s.activeWorkout,
               restSecondsLeft: newSeconds,
               restTotalSeconds: Math.max(s.activeWorkout.restTotalSeconds, newSeconds),
+              restEndsAt: Date.now() + newSeconds * 1000,
             },
           }
         }),
@@ -358,6 +424,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               ...s.activeWorkout,
               restSecondsLeft: seconds,
               restTotalSeconds: seconds,
+              restEndsAt: Date.now() + seconds * 1000,
             },
           }
         }),

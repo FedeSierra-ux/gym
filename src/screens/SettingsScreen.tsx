@@ -41,7 +41,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="absolute inset-0 z-50 bg-background flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
-      <div className="flex-shrink-0 px-4 pt-12 pb-4 border-b border-border flex items-center gap-3">
+      <div className="flex-shrink-0 px-4 safe-top pb-4 border-b border-border flex items-center gap-3">
         <button onClick={onClose} aria-label="Volver" className="text-gray-400 text-2xl leading-none">‹</button>
         <h1 className="text-lg font-bold text-white">Ajustes</h1>
       </div>
@@ -107,6 +107,10 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             Tus rutinas, entrenos y récords viven solo en este dispositivo. Si vas a reinstalar la app o cambiar de
             celular, exportá un backup antes para no perderlos.
           </p>
+          <p className="text-xs text-gray-600 mb-3">
+            En iPhone, Safari borra los datos de un sitio que no usás en ~7 días. Agregando la app a la pantalla de
+            inicio (Compartir → Agregar a inicio) eso no pasa, pero igual conviene exportar de vez en cuando.
+          </p>
           <div className="flex gap-2">
             <button
               onClick={handleExport}
@@ -131,6 +135,32 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 e.target.value = ''
               }}
             />
+          </div>
+        </div>
+
+        {/* Créditos — las ilustraciones son CC BY-SA 4.0 y piden atribución. */}
+        <div>
+          <p className="section-label mb-2">Créditos</p>
+          <div className="bg-surface border border-border rounded-2xl p-4 flex flex-col gap-2">
+            <p className="text-xs text-gray-400">
+              Ilustraciones de los ejercicios:{' '}
+              <a href="https://bryllim.github.io/workout-guide/" target="_blank" rel="noreferrer" className="text-primary">
+                Workout Guide
+              </a>{' '}
+              de Bryl Lim, bajo{' '}
+              <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer" className="text-primary">
+                CC BY-SA 4.0
+              </a>
+              . Parte de los dibujos derivan de{' '}
+              <a href="https://github.com/everkinetic/data" target="_blank" rel="noreferrer" className="text-primary">
+                Everkinetic
+              </a>{' '}
+              (CC BY-SA 4.0).
+            </p>
+            <p className="text-xs text-gray-600">
+              Cambios respecto del original: se redimensionaron a 256 px y se recomprimieron para que la app funcione
+              sin conexión.
+            </p>
           </div>
         </div>
 

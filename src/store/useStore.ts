@@ -1,9 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useMemo } from 'react'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast, MuscleGroup } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
+import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
+import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
+import { buildMileRoutines, MILE_WEEK_PLAN } from '../data/mileRoutines'
 
 interface AppState {
   // Navigation
@@ -63,10 +66,17 @@ interface AppState {
 
   // Custom exercises
   addCustomExercise: (ex: Exercise) => void
+  /** Crea un ejercicio propio a partir del nombre y devuelve el ejercicio creado. */
+  createCustomExercise: (name: string, opts?: { group?: MuscleGroup; equipment?: string }) => Exercise | null
+  /** Edita un ejercicio propio ya creado (el historial no se toca: el id no cambia). */
+  updateCustomExercise: (id: string, patch: { nameEs: string; group: MuscleGroup; equipment: string }) => void
   deleteCustomExercise: (id: string) => void
 
   // Archived routines (for history display after deletion)
   getArchivedRoutineName: (routineId: string) => { name: string; emoji: string } | null
+
+  /** Carga (o repone) las tres rutinas del plan de Mile. Devuelve cuántas agregó. */
+  installMileRoutines: () => number
 
   // Seed
   seedData: () => void
@@ -114,20 +124,31 @@ export const useStore = create<AppState>()(
       }),
 
       addExerciseToRoutine: (routineId, exerciseId) =>
-        set((s) => ({
-          routines: s.routines.map((r) => {
-            if (r.id !== routineId) return r
-            if (r.exercises.some((e) => e.exerciseId === exerciseId)) return r
-            const maxOrder = r.exercises.reduce((max, e) => Math.max(max, e.order), -1)
-            return {
-              ...r,
-              exercises: [
-                ...r.exercises,
-                { exerciseId, sets: 3, repsMin: 8, repsMax: 12, order: maxOrder + 1 },
-              ],
-            }
-          }),
-        })),
+        set((s) => {
+          const exercise = [...s.exercises, ...s.customExercises].find((e) => e.id === exerciseId)
+          // Los ejercicios por tiempo arrancan con un objetivo razonable según
+          // su unidad: 15 minutos de cardio, 30 segundos de isométrico.
+          const byTime = exercise?.trackingType === 'duration'
+          const defaults = byTime
+            ? {
+                sets: 1,
+                repsMin: 8,
+                repsMax: 12,
+                targetSeconds: exercise?.durationUnit === 'seg' ? 30 : 15 * 60,
+              }
+            : { sets: 3, repsMin: 8, repsMax: 12 }
+          return {
+            routines: s.routines.map((r) => {
+              if (r.id !== routineId) return r
+              if (r.exercises.some((e) => e.exerciseId === exerciseId)) return r
+              const maxOrder = r.exercises.reduce((max, e) => Math.max(max, e.order), -1)
+              return {
+                ...r,
+                exercises: [...r.exercises, { exerciseId, ...defaults, order: maxOrder + 1 }],
+              }
+            }),
+          }
+        }),
 
       removeExerciseFromRoutine: (routineId, exerciseId) =>
         set((s) => ({
@@ -167,6 +188,40 @@ export const useStore = create<AppState>()(
       addCustomExercise: (ex) =>
         set((s) => ({ customExercises: [...s.customExercises, ex] })),
 
+      createCustomExercise: (name, opts) => {
+        const trimmed = name.trim()
+        if (!trimmed) return null
+        // Si ya existe uno con ese nombre (base o propio) lo reutilizamos, para
+        // no terminar con tres "Press de banca" distintos en el historial.
+        const existing = [...get().exercises, ...get().customExercises].find(
+          (e) => e.nameEs.trim().toLowerCase() === trimmed.toLowerCase()
+        )
+        if (existing) return existing
+        const ex = buildCustomExercise(trimmed, opts)
+        set((s) => ({ customExercises: [...s.customExercises, ex] }))
+        return ex
+      },
+
+      updateCustomExercise: (id, patch) =>
+        set((s) => ({
+          customExercises: s.customExercises.map((e) => {
+            if (e.id !== id) return e
+            const name = patch.nameEs.trim() || e.nameEs
+            const equipment = patch.equipment.trim() || 'Libre'
+            // El dibujo se recalcula con el nombre y el grupo nuevos.
+            const draft = draftFromName(name, patch.group)
+            return {
+              ...e,
+              nameEs: name,
+              muscleGroup: patch.group,
+              primaryMuscles: [muscleGroupConfig[patch.group].label],
+              equipment,
+              equipmentType: inferEquipmentType(equipment),
+              frameSlug: draft.frameSlug ?? undefined,
+            }
+          }),
+        })),
+
       deleteCustomExercise: (id) =>
         set((s) => ({
           customExercises: s.customExercises.filter((e) => e.id !== id),
@@ -182,6 +237,18 @@ export const useStore = create<AppState>()(
         return archivedRoutineNames[routineId] ?? null
       },
 
+      installMileRoutines: () => {
+        const existing = new Set(get().routines.map((r) => r.id))
+        const nuevas = buildMileRoutines().filter((r) => !existing.has(r.id))
+        if (!nuevas.length) return 0
+        set((s) => ({
+          routines: [...s.routines, ...nuevas],
+          // Si todavía no hay plan semanal armado, dejamos el sugerido.
+          weekPlan: Object.values(s.weekPlan).some(Boolean) ? s.weekPlan : { ...s.weekPlan, ...MILE_WEEK_PLAN },
+        }))
+        return nuevas.length
+      },
+
       seedData: () => {
         const { seeded } = get()
         if (seeded) return
@@ -195,9 +262,11 @@ export const useStore = create<AppState>()(
         ]
 
         set({
-          routines: seedRoutines,
+          // Las rutinas de Mile vienen prearmadas desde el primer arranque.
+          routines: [...buildMileRoutines(), ...seedRoutines],
           workouts: seedWorkouts,
           prs,
+          weekPlan: { ...MILE_WEEK_PLAN },
           seeded: true,
         })
       },
