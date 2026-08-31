@@ -6,6 +6,7 @@ import { exercises as exerciseDb } from '../data/exercises'
 import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
+import { buildMileRoutines, MILE_WEEK_PLAN } from '../data/mileRoutines'
 
 interface AppState {
   // Navigation
@@ -74,6 +75,9 @@ interface AppState {
   // Archived routines (for history display after deletion)
   getArchivedRoutineName: (routineId: string) => { name: string; emoji: string } | null
 
+  /** Carga (o repone) las tres rutinas del plan de Mile. Devuelve cuántas agregó. */
+  installMileRoutines: () => number
+
   // Seed
   seedData: () => void
 }
@@ -120,20 +124,31 @@ export const useStore = create<AppState>()(
       }),
 
       addExerciseToRoutine: (routineId, exerciseId) =>
-        set((s) => ({
-          routines: s.routines.map((r) => {
-            if (r.id !== routineId) return r
-            if (r.exercises.some((e) => e.exerciseId === exerciseId)) return r
-            const maxOrder = r.exercises.reduce((max, e) => Math.max(max, e.order), -1)
-            return {
-              ...r,
-              exercises: [
-                ...r.exercises,
-                { exerciseId, sets: 3, repsMin: 8, repsMax: 12, order: maxOrder + 1 },
-              ],
-            }
-          }),
-        })),
+        set((s) => {
+          const exercise = [...s.exercises, ...s.customExercises].find((e) => e.id === exerciseId)
+          // Los ejercicios por tiempo arrancan con un objetivo razonable según
+          // su unidad: 15 minutos de cardio, 30 segundos de isométrico.
+          const byTime = exercise?.trackingType === 'duration'
+          const defaults = byTime
+            ? {
+                sets: 1,
+                repsMin: 8,
+                repsMax: 12,
+                targetSeconds: exercise?.durationUnit === 'seg' ? 30 : 15 * 60,
+              }
+            : { sets: 3, repsMin: 8, repsMax: 12 }
+          return {
+            routines: s.routines.map((r) => {
+              if (r.id !== routineId) return r
+              if (r.exercises.some((e) => e.exerciseId === exerciseId)) return r
+              const maxOrder = r.exercises.reduce((max, e) => Math.max(max, e.order), -1)
+              return {
+                ...r,
+                exercises: [...r.exercises, { exerciseId, ...defaults, order: maxOrder + 1 }],
+              }
+            }),
+          }
+        }),
 
       removeExerciseFromRoutine: (routineId, exerciseId) =>
         set((s) => ({
@@ -222,6 +237,18 @@ export const useStore = create<AppState>()(
         return archivedRoutineNames[routineId] ?? null
       },
 
+      installMileRoutines: () => {
+        const existing = new Set(get().routines.map((r) => r.id))
+        const nuevas = buildMileRoutines().filter((r) => !existing.has(r.id))
+        if (!nuevas.length) return 0
+        set((s) => ({
+          routines: [...s.routines, ...nuevas],
+          // Si todavía no hay plan semanal armado, dejamos el sugerido.
+          weekPlan: Object.values(s.weekPlan).some(Boolean) ? s.weekPlan : { ...s.weekPlan, ...MILE_WEEK_PLAN },
+        }))
+        return nuevas.length
+      },
+
       seedData: () => {
         const { seeded } = get()
         if (seeded) return
@@ -235,9 +262,11 @@ export const useStore = create<AppState>()(
         ]
 
         set({
-          routines: seedRoutines,
+          // Las rutinas de Mile vienen prearmadas desde el primer arranque.
+          routines: [...buildMileRoutines(), ...seedRoutines],
           workouts: seedWorkouts,
           prs,
+          weekPlan: { ...MILE_WEEK_PLAN },
           seeded: true,
         })
       },

@@ -49,6 +49,47 @@ crea así es un ejercicio como cualquier otro: entra en el historial, en los ré
 las estadísticas. Se puede corregir después en Rutinas → *Mis ejercicios* (tocando la
 fila), sin perder el historial, porque el id no cambia.
 
+## Ejercicios por tiempo
+
+Un ejercicio puede registrarse por tiempo en vez de kg × reps (`trackingType:
+'duration'` en `src/data/exercises.ts`). La unidad la define `durationUnit`:
+minutos para el cardio (**Cinta** y **Cinta inclinada**, bicicleta) y segundos
+para los isométricos (plancha, plancha lateral, sentadilla contra la pared,
+plancha alta tocando hombros).
+
+En la rutina se configura el objetivo (`targetSeconds`), la pantalla de entreno
+muestra un solo campo con la unidad al lado, y el historial suma el tiempo en
+vez del volumen. Los ejercicios por tiempo no generan récords de peso.
+
+## Progresión (doble progresión)
+
+`src/utils/progression.ts` sugiere el peso de cada ejercicio: se mantiene el
+peso hasta completar **todas** las series en el tope del rango de reps y recién
+ahí se sube, volviendo al piso del rango. El salto sale del equipamiento (2,5 kg
+barra, 2 kg mancuernas, 5 kg máquina/polea) y se redondea a lo que hay en un
+gimnasio.
+
+Es una sugerencia, no una imposición: aparece como un cartel arriba de cada
+ejercicio en el entreno y prellena los kilos, que se pueden editar. Si pasaron
+más de tres semanas desde la última vez, propone arrancar un 10 % abajo.
+
+## Constancia (heatmap)
+
+En Progreso, arriba de todo, con dos zooms: **semanal** (últimas 12 semanas, día
+por día) y **mensual** (el último año). Cada celda es un día y la intensidad son
+las series efectivas; arranca mostrando lo más reciente.
+
+## Plan de Milena
+
+Las tres rutinas del plan de septiembre (`src/data/mileRoutines.ts`) vienen
+cargadas desde el primer arranque, repartidas en la semana (lunes piernas,
+miércoles brazos, viernes full body). Si ya usabas la app, el botón *"Cargar
+plan de Mile"* en Rutinas las agrega.
+
+Las series y reps son las de las semanas 1-2-3; la variante de las semanas 4-5-6,
+los descansos y las aclaraciones ("10 por pierna", "circuito de entrada",
+"tabata") quedan en la nota de cada ejercicio.
+
 ## Iconos
 
 ```bash

@@ -5,6 +5,7 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExercisePickerScreen } from './ExercisePickerScreen'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { CreateExerciseCard } from '../components/CreateExerciseCard'
+import { isDurationExercise, durationUnit, formatDuration, fromSeconds, toSeconds } from '../utils/duration'
 import type { Routine } from '../types'
 
 function BackIcon() {
@@ -251,6 +252,8 @@ export function RoutineDetailScreen() {
             const ex = exercises.find((e) => e.id === re.exerciseId)
             if (!ex) return null
             const config = muscleGroupConfig[ex.muscleGroup]
+            const byTime = isDurationExercise(ex)
+            const unit = durationUnit(ex)
 
             return (
               <div
@@ -302,7 +305,36 @@ export function RoutineDetailScreen() {
                     >
                       {config.label}
                     </span>
-                    {editMode ? (
+                    {editMode && byTime ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={re.sets}
+                          min={1}
+                          max={20}
+                          aria-label="Series"
+                          onChange={e => {
+                            const v = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
+                            updateExerciseConfig(re.exerciseId, { sets: v })
+                          }}
+                          className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>×</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={fromSeconds(re.targetSeconds ?? 0, unit)}
+                          min={0}
+                          aria-label={unit === 'min' ? 'Minutos' : 'Segundos'}
+                          onChange={e => {
+                            updateExerciseConfig(re.exerciseId, { targetSeconds: toSeconds(e.target.value, unit) })
+                          }}
+                          className="w-12 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
+                        />
+                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{unit}</span>
+                      </div>
+                    ) : editMode ? (
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
@@ -346,10 +378,17 @@ export function RoutineDetailScreen() {
                       </div>
                     ) : (
                       <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                        {re.sets} series · {re.repsMin}–{re.repsMax} reps
+                        {byTime
+                          ? `${re.sets > 1 ? `${re.sets} × ` : ''}${formatDuration(re.targetSeconds ?? 0)}`
+                          : `${re.sets} series · ${re.repsMin === re.repsMax ? re.repsMin : `${re.repsMin}–${re.repsMax}`} reps`}
                       </span>
                     )}
                   </div>
+                  {re.note && (
+                    <p className="text-[10px] mt-1 leading-snug" style={{ color: 'rgba(242,169,59,0.75)' }}>
+                      {re.note}
+                    </p>
+                  )}
                 </div>
 
                 {editMode ? (

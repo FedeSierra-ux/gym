@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
+import { TrainingHeatmap } from '../components/TrainingHeatmap'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import type { MuscleGroup } from '../types'
@@ -229,6 +230,11 @@ export function ProgresoScreen() {
       </div>
 
       <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 22px 24px' }}>
+        {/* Mapa de constancia: visible en las dos pestañas */}
+        <div style={{ marginBottom: 16 }}>
+          <TrainingHeatmap />
+        </div>
+
         {tab === 'volumen' ? (
           <MonthlyMuscleVolume />
         ) : (

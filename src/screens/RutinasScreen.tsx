@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { CustomExercisesScreen } from './CustomExercisesScreen'
+import { MILE_ROUTINE_IDS } from '../data/mileRoutines'
 import type { MuscleGroup } from '../types'
 
 function getRoutineMuscleGroups(exerciseIds: string[], exercises: { id: string; muscleGroup: MuscleGroup }[]) {
@@ -18,7 +19,7 @@ function getApproxDuration(sets: number[]) {
 }
 
 export function RutinasScreen() {
-  const { routines, exercises, workouts, customExercises, setActiveRoutineId, addRoutine } = useStore()
+  const { routines, exercises, workouts, customExercises, setActiveRoutineId, addRoutine, installMileRoutines, addToast } = useStore()
   const [showCustomExercises, setShowCustomExercises] = useState(false)
 
   const allExercises = [...exercises, ...customExercises]
@@ -37,6 +38,15 @@ export function RutinasScreen() {
       createdAt: Date.now(),
     })
     setActiveRoutineId(id)
+  }
+
+  // El plan de Mile viene prearmado; el botón sólo aparece si falta alguna
+  // (por ejemplo si la borró, o si ya usaba la app antes de que existieran).
+  const faltanMile = MILE_ROUTINE_IDS.some(id => !routines.some(r => r.id === id))
+
+  const handleInstallMile = () => {
+    const n = installMileRoutines()
+    addToast(n === 1 ? 'Se agregó 1 rutina del plan' : `Se agregaron ${n} rutinas del plan`, 'success')
   }
 
   if (showCustomExercises) {
@@ -142,6 +152,26 @@ export function RutinasScreen() {
           <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 700 }}>+</span> Crear nueva rutina
         </button>
       </div>
+
+      {/* Plan de Mile */}
+      {faltanMile && (
+        <div style={{ padding: '10px 22px 0' }}>
+          <button
+            onClick={handleInstallMile}
+            style={{
+              width: '100%', borderRadius: 18, padding: '14px 0',
+              border: '1px solid rgba(242,169,59,0.28)',
+              background: 'rgba(242,169,59,0.08)',
+              color: '#F2A93B',
+              fontFamily: 'DM Sans, system-ui, sans-serif',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>📋</span> Cargar plan de Mile (3 días)
+          </button>
+        </div>
+      )}
 
       {/* Custom exercises */}
       <div style={{ padding: '10px 22px 0' }}>

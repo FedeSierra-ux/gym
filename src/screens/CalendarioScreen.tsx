@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
+import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSeconds, toSeconds } from '../utils/duration'
 import type { CalendarSubTab, Routine, Workout } from '../types'
 
 function toDateInputValue(ts: number): string {
@@ -113,10 +114,13 @@ function DaySheet({
                             const ex = exercises.find((e) => e.id === we.exerciseId)
                             if (!ex) return null
                             const best = we.sets.length > 0 ? we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0]) : null
+                            const byTime = isDurationExercise(ex)
                             return (
                               <div key={we.exerciseId} className="flex items-center justify-between">
                                 <p style={{ color: S.dim, fontSize: 11 }}>{ex.nameEs}</p>
-                                {best && <p style={{ color: S.faint, fontSize: 11 }}>{best.kg}kg × {best.reps}</p>}
+                                {byTime
+                                  ? <p style={{ color: S.faint, fontSize: 11 }}>{formatDuration(totalSeconds(we.sets))}</p>
+                                  : best && <p style={{ color: S.faint, fontSize: 11 }}>{best.kg}kg × {best.reps}</p>}
                               </div>
                             )
                           })}
@@ -195,11 +199,16 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
   const [draftExercises, setDraftExercises] = useState(
     workout.exercises.map((we) => ({
       exerciseId: we.exerciseId,
-      sets: we.sets.map((s) => ({ kg: String(s.kg), reps: String(s.reps), isWarmup: s.isWarmup })),
+      sets: we.sets.map((s) => ({
+        kg: String(s.kg),
+        reps: String(s.reps),
+        isWarmup: s.isWarmup,
+        duration: s.durationSec ? fromSeconds(s.durationSec, durationUnit(exercises.find(e => e.id === we.exerciseId))) : '',
+      })),
     }))
   )
 
-  const setValue = (exIdx: number, setIdx: number, field: 'kg' | 'reps', value: string) => {
+  const setValue = (exIdx: number, setIdx: number, field: 'kg' | 'reps' | 'duration', value: string) => {
     setDraftExercises((prev) =>
       prev.map((ex, ei) => ei !== exIdx ? ex : {
         ...ex,
@@ -213,7 +222,15 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
       prev.map((ex, ei) => {
         if (ei !== exIdx) return ex
         const last = ex.sets[ex.sets.length - 1]
-        return { ...ex, sets: [...ex.sets, { kg: last?.kg ?? '0', reps: last?.reps ?? '0', isWarmup: undefined }] }
+        return {
+          ...ex,
+          sets: [...ex.sets, {
+            kg: last?.kg ?? '0',
+            reps: last?.reps ?? '0',
+            isWarmup: undefined as boolean | undefined,
+            duration: last?.duration ?? '',
+          }],
+        }
       })
     )
   }
@@ -233,8 +250,16 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
     const newExercises = draftExercises.map((ex) => ({
       exerciseId: ex.exerciseId,
       sets: ex.sets
-        .filter((s) => s.kg !== '' || s.reps !== '')
-        .map((s) => ({ kg: parseFloat(s.kg) || 0, reps: parseInt(s.reps) || 0, completedAt: finishedAt, isWarmup: s.isWarmup })),
+        .filter((s) => s.kg !== '' || s.reps !== '' || s.duration !== '')
+        .map((s) => ({
+          kg: parseFloat(s.kg) || 0,
+          reps: parseInt(s.reps) || 0,
+          completedAt: finishedAt,
+          isWarmup: s.isWarmup,
+          durationSec: s.duration
+            ? toSeconds(s.duration, durationUnit(exercises.find(e => e.id === ex.exerciseId)))
+            : undefined,
+        })),
     })).filter((ex) => ex.sets.length > 0)
 
     updateWorkout({
@@ -277,6 +302,8 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
 
           {draftExercises.map((ex, exIdx) => {
             const exInfo = exercises.find((e) => e.id === ex.exerciseId)
+            const byTime = isDurationExercise(exInfo)
+            const unit = durationUnit(exInfo)
             return (
               <div key={ex.exerciseId} style={{ background: S.surf2, borderRadius: 14, padding: 12, border: `1px solid ${S.line2}` }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: S.ink, marginBottom: 8 }}>{exInfo?.nameEs ?? ex.exerciseId}</p>
@@ -284,13 +311,24 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
                   {ex.sets.map((s, setIdx) => (
                     <div key={setIdx} className="flex items-center gap-2">
                       <span style={{ width: 18, fontSize: 11, color: S.faint }}>{setIdx + 1}</span>
-                      <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
-                        placeholder="kg"
-                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
-                      <span style={{ color: S.faint, fontSize: 11 }}>×</span>
-                      <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
-                        placeholder="reps"
-                        style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                      {byTime ? (
+                        <>
+                          <input type="number" value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
+                            placeholder={unit}
+                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                          <span style={{ color: S.faint, fontSize: 11 }}>{unit}</span>
+                        </>
+                      ) : (
+                        <>
+                          <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
+                            placeholder="kg"
+                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                          <span style={{ color: S.faint, fontSize: 11 }}>×</span>
+                          <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
+                            placeholder="reps"
+                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                        </>
+                      )}
                       <button onClick={() => removeSet(exIdx, setIdx)}
                         style={{ width: 24, height: 24, flexShrink: 0, color: S.dim, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </div>
