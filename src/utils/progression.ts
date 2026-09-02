@@ -65,7 +65,9 @@ function lastSessionFor(exerciseId: string, workouts: Workout[]): LastSession | 
 
   for (const workout of done) {
     const entry = workout.exercises.find(e => e.exerciseId === exerciseId)
-    const sets = entry?.sets.filter(s => !s.isWarmup && s.kg > 0 && s.reps > 0) ?? []
+    // El peso puede ser 0: abdominales, dominadas y todo lo que va a peso
+    // corporal progresa en repeticiones.
+    const sets = entry?.sets.filter(s => !s.isWarmup && s.reps > 0) ?? []
     if (!sets.length) continue
     const kg = Math.max(...sets.map(s => s.kg))
     return {
@@ -100,7 +102,10 @@ export function suggestNextWeight(
   const step = incrementFor(exercise)
   const daysAgo = (Date.now() - last.date) / 86400000
 
-  if (daysAgo > STALE_DAYS) {
+  // Sin peso (peso corporal) la referencia son las reps, no los kilos.
+  const bodyweight = last.kg <= 0
+
+  if (daysAgo > STALE_DAYS && !bodyweight) {
     const kg = roundToStep(last.kg * 0.9, step || 2.5)
     return {
       kg,
@@ -115,7 +120,7 @@ export function suggestNextWeight(
   const todasAlTope = last.reps.every(r => r >= routineExercise.repsMax)
 
   if (seriesCompletas && todasAlTope) {
-    if (step === 0) {
+    if (step === 0 || bodyweight) {
       return {
         kg: last.kg,
         reason: 'subir',
@@ -134,12 +139,13 @@ export function suggestNextWeight(
 
   const faltan = last.reps.filter(r => r < routineExercise.repsMax).length
   const seriesFaltantes = Math.max(0, routineExercise.sets - last.reps.length)
+  const carga = bodyweight ? 'el peso corporal' : `${last.kg} kg`
   return {
     kg: last.kg,
     reason: 'mantener',
     note: seriesFaltantes > 0
-      ? `Mantené ${last.kg} kg: te faltaron ${seriesFaltantes} serie${seriesFaltantes > 1 ? 's' : ''} la última vez.`
-      : `Mantené ${last.kg} kg hasta llegar a ${routineExercise.repsMax} en las ${routineExercise.sets} series (te falta${faltan > 1 ? 'n' : ''} ${faltan}).`,
+      ? `Mantené ${carga}: te faltaron ${seriesFaltantes} serie${seriesFaltantes > 1 ? 's' : ''} la última vez.`
+      : `Mantené ${carga} hasta llegar a ${routineExercise.repsMax} en las ${routineExercise.sets} series (te falta${faltan > 1 ? 'n' : ''} ${faltan}).`,
     targetReps: routineExercise.repsMax,
   }
 }

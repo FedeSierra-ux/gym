@@ -190,7 +190,11 @@ export function ProgresoScreen() {
     ep.changePct = ep.firstMax > 0 ? Math.round((ep.change / ep.firstMax) * 100) : 0
     progressList.push(ep)
   }
-  progressList.sort((a, b) => b.changePct - a.changePct || b.change - a.change)
+  // Orden alfabético: con muchos ejercicios es lo único que deja encontrarlos.
+  const exerciseName = (id: string) => exercises.find(e => e.id === id)?.nameEs ?? id
+  progressList.sort((a, b) =>
+    exerciseName(a.exerciseId).localeCompare(exerciseName(b.exerciseId), 'es', { sensitivity: 'base' })
+  )
 
   const muscleGroupsWithData = [...new Set(
     progressList.map(ep => exercises.find(e => e.id === ep.exerciseId)?.muscleGroup).filter(Boolean)

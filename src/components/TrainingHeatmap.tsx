@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore'
 import type { Workout } from '../types'
 
@@ -10,10 +10,12 @@ const S = {
 }
 
 const DAY = 86400000
-const DAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-type Range = 'semanal' | 'mensual'
+/** Semana que arranca en lunes, como el calendario de acá. */
+const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+const MONTHS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
 
 /** Clave YYYY-MM-DD en hora local (no UTC: si no, los entrenos de la noche caen al día siguiente). */
 function dayKey(ts: number): string {
@@ -21,19 +23,13 @@ function dayKey(ts: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/** Lunes de la semana de esa fecha, a las 00:00. */
-function startOfWeek(date: Date): Date {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const dow = (d.getDay() + 6) % 7 // 0 = lunes
-  d.setDate(d.getDate() - dow)
-  return d
-}
-
 interface DayCell {
-  ts: number
+  day: number
   key: string
+  ts: number
   sets: number
-  inRange: boolean
+  isFuture: boolean
+  isToday: boolean
 }
 
 /** Series efectivas (sin calentamiento) por día. */
@@ -68,54 +64,48 @@ const LEVEL_BG = [
 ]
 
 /**
- * Mapa de calor de entrenos. Dos zooms: "semanal" muestra las últimas 12
- * semanas con celdas grandes (se lee día a día) y "mensual" los últimos 12
- * meses de un vistazo. En los dos casos la columna es una semana y la fila un
- * día, que es lo que hace legible el patrón semanal de entrenamiento.
+ * Constancia mes a mes, con forma de calendario: los días de la semana van
+ * arriba en horizontal y cada fila es una semana, así se lee de un vistazo a
+ * qué días se fue. Se puede navegar a los meses anteriores.
  */
 export function TrainingHeatmap() {
   const workouts = useStore(s => s.workouts)
-  const [range, setRange] = useState<Range>('semanal')
-  // Una sola referencia de "ahora" para todo el cálculo: así el render es puro
-  // y no cambia la grilla a mitad de una re-renderización.
+  // Una sola referencia de "ahora" para todo el cálculo: así el render es puro.
   const [nowTs] = useState(() => Date.now())
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const today = new Date(nowTs)
+  const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
 
-  // El año entero no entra en pantalla: arrancamos mostrando lo más reciente.
-  useEffect(() => {
-    const el = scrollRef.current
-    if (el) el.scrollLeft = el.scrollWidth
-  }, [range])
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
 
-  const weeksToShow = range === 'semanal' ? 12 : 53
-  const cellSize = range === 'semanal' ? 20 : 8
-  const gap = range === 'semanal' ? 4 : 2
-
-  const { columns, trained, totalSets, streak } = useMemo(() => {
+  const { weeks, trained, totalSets, streak, daysCounted } = useMemo(() => {
     const byDay = setsByDay(workouts)
-    const today = new Date(nowTs)
     const todayKey = dayKey(nowTs)
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).getTime()
-    const firstMonday = startOfWeek(today)
-    firstMonday.setDate(firstMonday.getDate() - (weeksToShow - 1) * 7)
+    const now = new Date(nowTs)
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    // 0 = lunes.
+    const startDow = (new Date(year, month, 1).getDay() + 6) % 7
 
-    const cols: DayCell[][] = []
+    const cells: (DayCell | null)[] = Array.from({ length: startDow }, () => null)
     let trained = 0
     let totalSets = 0
+    let daysCounted = 0
 
-    for (let w = 0; w < weeksToShow; w++) {
-      const col: DayCell[] = []
-      for (let d = 0; d < 7; d++) {
-        const date = new Date(firstMonday.getFullYear(), firstMonday.getMonth(), firstMonday.getDate() + w * 7 + d)
-        const key = dayKey(date.getTime())
-        const sets = byDay.get(key) ?? 0
-        // Los días futuros de la semana en curso se dibujan vacíos.
-        const inRange = date.getTime() <= endOfToday
-        if (inRange && sets > 0) { trained++; totalSets += sets }
-        col.push({ ts: date.getTime(), key, sets, inRange })
-      }
-      cols.push(col)
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const key = dayKey(date.getTime())
+      const sets = byDay.get(key) ?? 0
+      const isFuture = date.getTime() > endOfToday
+      if (!isFuture) daysCounted++
+      if (!isFuture && sets > 0) { trained++; totalSets += sets }
+      cells.push({ day, key, ts: date.getTime(), sets, isFuture, isToday: key === todayKey })
     }
+    while (cells.length % 7 !== 0) cells.push(null)
+
+    const weeks: (DayCell | null)[][] = []
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
     // Racha: días consecutivos hacia atrás desde hoy (o desde ayer si hoy no entrenó).
     let streak = 0
@@ -127,94 +117,83 @@ export function TrainingHeatmap() {
       else if (i === start && start === 1) break
     }
 
-    return { columns: cols, trained, totalSets, streak }
-  }, [workouts, weeksToShow, nowTs])
+    return { weeks, trained, totalSets, streak, daysCounted }
+  }, [workouts, nowTs, year, month])
 
-  // Etiqueta de mes sobre la primera columna de cada mes.
-  const monthLabels = columns.map((col, i) => {
-    const first = new Date(col[0].ts)
-    const prev = i > 0 ? new Date(columns[i - 1][0].ts) : null
-    return !prev || prev.getMonth() !== first.getMonth() ? MONTHS[first.getMonth()] : ''
-  })
+  const attendance = daysCounted > 0 ? Math.round((trained / daysCounted) * 100) : 0
 
   return (
     <div style={{ background: S.surf, borderRadius: 18, padding: '16px 16px 14px', border: `1px solid ${S.line2}` }}>
-      <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
         <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13 }}>Constancia</h3>
-        <div style={{ display: 'flex', background: S.surf2, borderRadius: 10, padding: 2, border: `1px solid ${S.line2}` }}>
-          {(['semanal', 'mensual'] as Range[]).map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              style={{
-                padding: '5px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: 11, fontWeight: 600,
-                background: range === r ? 'rgba(232,99,74,0.16)' : 'transparent',
-                color: range === r ? S.acc : S.dim, textTransform: 'capitalize',
-              }}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex items-center" style={{ gap: 6 }}>
+          <button
+            onClick={() => setViewDate(new Date(year, month - 1, 1))}
+            aria-label="Mes anterior"
+            style={{
+              width: 28, height: 28, borderRadius: 9, background: S.surf2, border: `1px solid ${S.line2}`,
+              color: S.dim, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >‹</button>
+          <span style={{ fontSize: 12, fontWeight: 700, color: S.ink, minWidth: 96, textAlign: 'center' }}>
+            {MONTHS[month]} {year}
+          </span>
+          <button
+            onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }}
+            disabled={isCurrentMonth}
+            aria-label="Mes siguiente"
+            style={{
+              width: 28, height: 28, borderRadius: 9, background: S.surf2, border: `1px solid ${S.line2}`,
+              color: isCurrentMonth ? S.faint : S.dim, fontSize: 15, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', fontFamily: 'inherit',
+            }}
+          >›</button>
         </div>
       </div>
 
       <p style={{ fontSize: 11, color: S.dim, marginBottom: 12 }}>
-        {trained} día{trained === 1 ? '' : 's'} · {totalSets} series en {range === 'semanal' ? 'las últimas 12 semanas' : 'el último año'}
+        {trained} día{trained === 1 ? '' : 's'} · {totalSets} series · {attendance}% de asistencia
         {streak > 1 && <span style={{ color: S.acc }}> · 🔥 {streak} seguidos</span>}
       </p>
 
-      <div ref={scrollRef} style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
-        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 4, minWidth: '100%' }}>
-          {/* Meses */}
-          <div style={{ display: 'flex', gap, paddingLeft: cellSize + gap }}>
-            {monthLabels.map((label, i) => (
-              <div key={i} style={{ width: cellSize, fontSize: 9, color: S.faint, whiteSpace: 'nowrap' }}>
-                {label}
-              </div>
-            ))}
-          </div>
+      {/* Días de la semana, en horizontal */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+        {DAY_LABELS.map((d, i) => (
+          <div key={i} style={{ fontSize: 9, color: S.faint, textAlign: 'center', fontWeight: 600 }}>{d}</div>
+        ))}
+      </div>
 
-          <div style={{ display: 'flex', gap }}>
-            {/* Días de la semana */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap, marginRight: 0 }}>
-              {DAY_LABELS.map((d, i) => (
+      {/* Una fila por semana */}
+      <div className="flex flex-col" style={{ gap: 4 }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+            {week.map((cell, ci) => {
+              if (!cell) return <div key={`e-${ci}`} style={{ aspectRatio: '1' }} />
+              const level = cell.isFuture ? 0 : levelFor(cell.sets)
+              const date = new Date(cell.ts)
+              return (
                 <div
-                  key={i}
+                  key={cell.key}
+                  title={`${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: ${cell.sets} series`}
                   style={{
-                    width: cellSize, height: cellSize, fontSize: 9, color: S.faint,
+                    aspectRatio: '1', borderRadius: 8,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    // En la vista chica sólo dejamos L/M/V para que no se amontone.
-                    opacity: range === 'mensual' && i % 2 === 1 ? 0 : 1,
+                    background: LEVEL_BG[level],
+                    border: cell.isToday
+                      ? `1.5px solid ${S.acc}`
+                      : level === 0 ? `1px solid ${S.line2}` : '1px solid transparent',
+                    color: level >= 3 ? '#fff' : level > 0 ? S.ink : S.faint,
+                    fontSize: 10, fontWeight: level > 0 ? 700 : 500,
+                    opacity: cell.isFuture ? 0.35 : 1,
                   }}
                 >
-                  {d}
+                  {cell.day}
                 </div>
-              ))}
-            </div>
-
-            {columns.map((col, ci) => (
-              <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap }}>
-                {col.map(cell => {
-                  const level = cell.inRange ? levelFor(cell.sets) : 0
-                  const date = new Date(cell.ts)
-                  return (
-                    <div
-                      key={cell.key}
-                      title={`${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: ${cell.sets} series`}
-                      style={{
-                        width: cellSize, height: cellSize, borderRadius: range === 'semanal' ? 6 : 2,
-                        background: LEVEL_BG[level],
-                        border: level === 0 ? `1px solid ${S.line2}` : 'none',
-                        opacity: cell.inRange ? 1 : 0.25,
-                      }}
-                    />
-                  )
-                })}
-              </div>
-            ))}
+              )
+            })}
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Leyenda */}

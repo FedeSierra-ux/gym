@@ -10,6 +10,8 @@ import { vibrate } from '../utils/haptics'
 import { useWakeLock } from '../utils/useWakeLock'
 import { isDurationExercise, durationUnit, toSeconds } from '../utils/duration'
 import { suggestNextWeight } from '../utils/progression'
+import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
+import { toDateInputValue, fromDateInputValue } from '../utils/dates'
 import type { Exercise } from '../types'
 
 const S = {
@@ -117,12 +119,55 @@ function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
   )
 }
 
+/**
+ * Chip con la fecha a la que se imputa el entreno. Por defecto es hoy, pero se
+ * puede mover hacia atrás para cargar una sesión de otro día.
+ */
+function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChange: (ts: number) => void }) {
+  const value = toDateInputValue(startedAt)
+  // Una sola lectura del reloj por montaje: el render tiene que ser puro.
+  const [hoy] = useState(() => toDateInputValue(Date.now()))
+  const esHoy = value === hoy
+  const label = esHoy
+    ? 'Hoy'
+    : new Date(startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+  return (
+    <label
+      title="Cambiar la fecha del entreno"
+      style={{
+        position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5,
+        padding: '5px 10px', borderRadius: 10, cursor: 'pointer',
+        background: esHoy ? S.surf2 : 'rgba(242,169,59,0.14)',
+        border: `1px solid ${esHoy ? S.line2 : 'rgba(242,169,59,0.35)'}`,
+        color: esHoy ? S.dim : S.acc2, fontSize: 11, fontWeight: 600,
+      }}
+    >
+      <span aria-hidden="true">📅</span>
+      <span>{label}</span>
+      <input
+        type="date"
+        aria-label="Fecha del entreno"
+        value={value}
+        max={hoy}
+        onChange={(e) => {
+          const ts = fromDateInputValue(e.target.value)
+          if (ts !== null) onChange(ts)
+        }}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          opacity: 0, cursor: 'pointer', border: 'none', padding: 0, background: 'transparent',
+        }}
+      />
+    </label>
+  )
+}
+
 export function ActiveWorkoutScreen() {
   const { routines, workouts, prs } = useStore()
   const exercises = useAllExercises()
   const {
     activeWorkout, updateSetValue, toggleSetWarmup, completeSet, addSetToExercise, removeSetFromExercise,
-    dismissLivePr, finishWorkout, cancelWorkout,
+    dismissLivePr, finishWorkout, cancelWorkout, setWorkoutDate,
   } = useWorkoutStore()
 
   const [elapsed, setElapsed] = useState(0)
@@ -154,13 +199,13 @@ export function ActiveWorkoutScreen() {
 
   const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
     const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
-    const current = parseFloat(currentVal) || 0
+    const current = parseDecimal(currentVal) || 0
     updateSetValue(exIdx, setIdx, field, String(Math.max(0, current + delta)))
   }
 
   /** Los ± del campo de tiempo: de a 1 minuto o de a 5 segundos. */
   const adjustDuration = (exIdx: number, setIdx: number, delta: number) => {
-    const current = parseFloat(activeWorkout.exercises[exIdx]?.sets[setIdx]?.duration ?? '') || 0
+    const current = parseDecimal(activeWorkout.exercises[exIdx]?.sets[setIdx]?.duration ?? '') || 0
     updateSetValue(exIdx, setIdx, 'duration', String(Math.max(0, Math.round((current + delta) * 10) / 10)))
   }
 
@@ -174,8 +219,12 @@ export function ActiveWorkoutScreen() {
 
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '54px 22px 16px', borderBottom: `1px solid ${S.line2}` }}>
-        <div style={{ fontSize: 13, color: S.dim, fontWeight: 500 }}>
-          {routine?.emoji} {routine?.name}
+        <div className="flex items-center justify-between gap-3">
+          <div style={{ fontSize: 13, color: S.dim, fontWeight: 500, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {routine?.emoji} {routine?.name}
+          </div>
+          {/* Fecha del entreno: editable para cargar el de ayer. */}
+          <WorkoutDatePicker startedAt={activeWorkout.startedAt} onChange={setWorkoutDate} />
         </div>
         <div className="flex items-center justify-between" style={{ marginTop: 12 }}>
           <div className="flex items-center gap-4">
@@ -264,7 +313,7 @@ export function ActiveWorkoutScreen() {
               )}
 
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px', padding: '0 12px 6px', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) minmax(0,1fr) 76px', padding: '0 12px 6px', gap: 6 }}>
                 {['Set', byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG', byTime ? '' : 'Reps', ''].map((h, i) => (
                   <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i === 0 ? 'center' : i < 3 ? 'center' : 'center' }}>{h}</div>
                 ))}
@@ -275,7 +324,7 @@ export function ActiveWorkoutScreen() {
                 const isCompleted = set.completed
                 const isWarmup = !!set.isWarmup
                 const flashKey = `${exIdx}-${setIdx}`
-                const kg = parseFloat(set.kg) || 0
+                const kg = parseDecimal(set.kg) || 0
                 const reps = parseInt(set.reps) || 0
                 const orm = isCompleted && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
                 const plateKey = `${exIdx}-${setIdx}`
@@ -287,7 +336,7 @@ export function ActiveWorkoutScreen() {
                     <div
                       className={flashingSet === flashKey ? 'set-complete-flash' : ''}
                       style={{
-                        display: 'grid', gridTemplateColumns: '44px minmax(0,1fr) minmax(0,1fr) 56px',
+                        display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) minmax(0,1fr) 76px',
                         alignItems: 'stretch', padding: '0 12px', gap: 6,
                         background: isCompleted ? 'rgba(232,99,74,0.05)' : 'transparent',
                         borderTop: `1px solid ${S.line}`,
@@ -323,7 +372,7 @@ export function ActiveWorkoutScreen() {
                         <div className="flex items-center gap-1" style={{ gridColumn: 'span 2', paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                           {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir tiempo" onPress={() => adjustDuration(exIdx, setIdx, unit === 'min' ? -1 : -5)} />}
                           <input
-                            type="number" inputMode="decimal" value={set.duration ?? ''}
+                            {...decimalInputProps} value={set.duration ?? ''}
                             aria-label={`Tiempo en ${unit === 'min' ? 'minutos' : 'segundos'}, serie ${setIdx + 1}`}
                             onChange={(e) => updateSetValue(exIdx, setIdx, 'duration', e.target.value)}
                             placeholder="0" disabled={isCompleted}
@@ -345,7 +394,7 @@ export function ActiveWorkoutScreen() {
                       {/* KG */}
                       <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
-                        <input type="number" inputMode="decimal" value={set.kg}
+                        <input {...decimalInputProps} value={set.kg}
                           aria-label={`Peso en kg, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
                           onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
@@ -369,7 +418,7 @@ export function ActiveWorkoutScreen() {
                       {/* Reps */}
                       <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
                         {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
-                        <input type="number" inputMode="numeric" value={set.reps}
+                        <input {...integerInputProps} value={set.reps}
                           aria-label={`Repeticiones, serie ${setIdx + 1}`}
                           onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
                           placeholder="0" disabled={isCompleted}
@@ -390,26 +439,44 @@ export function ActiveWorkoutScreen() {
                       </>
                       )}
 
-                      {/* ✓ Completar — full height, prominent */}
-                      <button
-                        aria-label={isCompleted ? 'Desmarcar serie' : 'Completar serie'}
-                        onClick={() => {
-                          completeSet(exIdx, setIdx)
-                          if (!isCompleted && canComplete) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
-                        }}
-                        style={{
-                          width: '100%', minHeight: 52, borderRadius: 10,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.08)' : S.surf2,
-                          border: `2px solid ${isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.35)' : S.line2}`,
-                          color: isCompleted ? '#fff' : canComplete ? S.acc : S.faint,
-                          fontSize: 20, fontWeight: 700, cursor: canComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
-                          transition: 'all 0.15s',
-                          alignSelf: 'stretch',
-                          marginTop: 6, marginBottom: 6,
-                          opacity: canComplete ? 1 : 0.4,
-                        }}
-                      >✓</button>
+                      {/* Confirmar la serie: ✓ sola o ✓ con cronómetro de descanso */}
+                      <div style={{ display: 'flex', gap: 4, alignSelf: 'stretch', marginTop: 6, marginBottom: 6 }}>
+                        {([true, false] as const)
+                          .filter((soloConfirmar) => soloConfirmar || !isCompleted)
+                          .map((soloConfirmar) => (
+                            <button
+                              key={soloConfirmar ? 'check' : 'check-timer'}
+                              aria-label={
+                                isCompleted ? 'Desmarcar serie'
+                                  : soloConfirmar ? 'Confirmar serie sin descanso'
+                                  : 'Confirmar serie e iniciar descanso'
+                              }
+                              title={
+                                isCompleted ? 'Desmarcar serie'
+                                  : soloConfirmar ? 'Confirmar sin cronómetro'
+                                  : 'Confirmar y arrancar el descanso'
+                              }
+                              onClick={() => {
+                                completeSet(exIdx, setIdx, { startRest: !soloConfirmar })
+                                if (!isCompleted && canComplete) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
+                              }}
+                              style={{
+                                flex: 1, minWidth: 0, minHeight: 52, borderRadius: 10,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+                                background: isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.08)' : S.surf2,
+                                border: `2px solid ${isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.35)' : S.line2}`,
+                                color: isCompleted ? '#fff' : canComplete ? S.acc : S.faint,
+                                fontSize: soloConfirmar ? 18 : 13, fontWeight: 700,
+                                cursor: canComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+                                transition: 'all 0.15s',
+                                opacity: canComplete ? 1 : 0.4,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {soloConfirmar ? '✓' : <>✓<span style={{ fontSize: 12 }}>⏱</span></>}
+                            </button>
+                          ))}
+                      </div>
                     </div>
 
                     {/* Plate hint */}
@@ -435,7 +502,7 @@ export function ActiveWorkoutScreen() {
                   <span style={{ fontSize: 10, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
                   {prevSets.slice(0, 4).map((s, i) => (
                     <span key={i} style={{ fontSize: 10, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
-                      {s.kg}×{s.reps}
+                      {s.kg > 0 ? `${s.kg}×${s.reps}` : `${s.reps} reps`}
                     </span>
                   ))}
                 </div>

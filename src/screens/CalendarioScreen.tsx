@@ -2,13 +2,10 @@ import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSeconds, toSeconds } from '../utils/duration'
+import { toDateInputValue } from '../utils/dates'
+import { formatLoad } from '../utils/format'
+import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import type { CalendarSubTab, Routine, Workout } from '../types'
-
-function toDateInputValue(ts: number): string {
-  const d = new Date(ts)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -120,7 +117,7 @@ function DaySheet({
                                 <p style={{ color: S.dim, fontSize: 11 }}>{ex.nameEs}</p>
                                 {byTime
                                   ? <p style={{ color: S.faint, fontSize: 11 }}>{formatDuration(totalSeconds(we.sets))}</p>
-                                  : best && <p style={{ color: S.faint, fontSize: 11 }}>{best.kg}kg × {best.reps}</p>}
+                                  : best && <p style={{ color: S.faint, fontSize: 11 }}>{formatLoad(best.kg, best.reps, { conReps: false })}</p>}
                               </div>
                             )
                           })}
@@ -245,15 +242,15 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
     const [y, m, d] = dateStr.split('-').map(Number)
     const original = new Date(workout.startedAt)
     const newStartedAt = new Date(y, m - 1, d, original.getHours(), original.getMinutes(), original.getSeconds()).getTime()
-    const durationMin = Math.max(0, Math.round(parseFloat(durationStr)) || 0)
+    const durationMin = Math.max(0, Math.round(parseDecimal(durationStr)) || 0)
     const finishedAt = newStartedAt + durationMin * 60000
     const newExercises = draftExercises.map((ex) => ({
       exerciseId: ex.exerciseId,
       sets: ex.sets
         .filter((s) => s.kg !== '' || s.reps !== '' || s.duration !== '')
         .map((s) => ({
-          kg: parseFloat(s.kg) || 0,
-          reps: parseInt(s.reps) || 0,
+          kg: parseDecimal(s.kg) || 0,
+          reps: parseInt(s.reps.replace(/[^0-9]/g, '')) || 0,
           completedAt: finishedAt,
           isWarmup: s.isWarmup,
           durationSec: s.duration
@@ -295,7 +292,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
             </div>
             <div style={{ width: 120 }}>
               <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
-              <input type="number" min={0} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
+              <input {...integerInputProps} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
                 style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
             </div>
           </div>
@@ -313,18 +310,18 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
                       <span style={{ width: 18, fontSize: 11, color: S.faint }}>{setIdx + 1}</span>
                       {byTime ? (
                         <>
-                          <input type="number" value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
+                          <input {...decimalInputProps} value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
                             placeholder={unit}
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>{unit}</span>
                         </>
                       ) : (
                         <>
-                          <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
+                          <input {...decimalInputProps} value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
                             placeholder="kg"
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>×</span>
-                          <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
+                          <input {...integerInputProps} value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
                             placeholder="reps"
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                         </>

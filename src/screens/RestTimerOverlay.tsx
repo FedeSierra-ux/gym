@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { vibrate, playBeep } from '../utils/haptics'
+import { formatLoad } from '../utils/format'
 
 const PRESETS = [
   { label: '0:45', seconds: 45 },
@@ -161,7 +162,7 @@ export function RestTimerOverlay() {
               Serie {lastCompletedSet.setIdx + 1} completada · {lastExercise.nameEs}
             </p>
             <p className="text-white font-semibold text-lg">
-              {lastCompletedSet.kg}kg × {lastCompletedSet.reps} reps
+              {formatLoad(lastCompletedSet.kg, lastCompletedSet.reps)}
             </p>
           </div>
         )}
