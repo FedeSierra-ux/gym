@@ -29,30 +29,31 @@ export function BackupReminder() {
   if (dias < DIAS_ENTRE_AVISOS) return null
 
   return (
-    <div style={{ padding: '20px 22px 0' }}>
+    <div style={{ padding: '14px 22px 0' }}>
       <div
         style={{
           background: 'rgba(242,169,59,0.08)',
           border: '1px solid rgba(242,169,59,0.24)',
-          borderRadius: 16, padding: '14px 16px',
-          display: 'flex', alignItems: 'center', gap: 12,
+          borderRadius: 14, padding: '10px 12px',
+          display: 'flex', alignItems: 'center', gap: 10,
         }}
       >
-        <span style={{ fontSize: 22, flexShrink: 0 }} aria-hidden="true">💾</span>
+        <span style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true">💾</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: S.acc2 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: S.acc2, lineHeight: 1.3 }}>
             {lastBackupAt ? 'Hace un mes que no hacés copia' : 'Todavía no hiciste ninguna copia'}
           </p>
-          <p style={{ fontSize: 11, color: S.dim, marginTop: 2, lineHeight: 1.4 }}>
-            {terminados.length} entrenos guardados sólo en este teléfono.
+          <p style={{ fontSize: 11, color: S.dim, marginTop: 1, lineHeight: 1.3 }}>
+            {terminados.length} entrenos, sólo en este teléfono
           </p>
         </div>
         <button
           onClick={() => setActiveTab('perfil')}
           style={{
-            flexShrink: 0, minHeight: 40, padding: '0 14px', borderRadius: 12,
+            flexShrink: 0, minHeight: 36, padding: '0 12px', borderRadius: 10,
             background: 'rgba(242,169,59,0.16)', border: `1px solid rgba(242,169,59,0.4)`,
             color: S.acc2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            whiteSpace: 'nowrap',
           }}
         >
           Exportar
@@ -61,8 +62,8 @@ export function BackupReminder() {
           onClick={() => setOculto(true)}
           aria-label="Ocultar el recordatorio"
           style={{
-            flexShrink: 0, width: 32, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: 'none', color: S.dim, fontSize: 16, cursor: 'pointer',
+            flexShrink: 0, width: 28, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', color: S.dim, fontSize: 15, cursor: 'pointer',
           }}
         >×</button>
       </div>

@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
-import { muscleGroupConfig } from '../data/muscleGroups'
 import { CircularRing } from '../components/CircularRing'
 import { BackupReminder } from '../components/BackupReminder'
-import { getWorkoutStreak, MAX_GAP_DAYS } from '../utils/streak'
+import { getWorkoutStreak } from '../utils/streak'
 import { windowStats, plannedDowSet } from '../utils/trainingDays'
 import { tonelaje, formatTonelaje } from '../utils/volume'
 
@@ -84,11 +83,6 @@ export function HomeScreen() {
     const ex = allExercises.find(e => e.id === re.exerciseId)
     return ex ? { name: ex.nameEs, sets: re.sets } : null
   }).filter(Boolean) ?? []
-  const muscleGroups = [...new Set(
-    suggestedRoutine?.exercises
-      .map(re => allExercises.find(e => e.id === re.exerciseId)?.muscleGroup)
-      .filter(Boolean) ?? []
-  )] as string[]
 
   const userInitial = userName?.charAt(0)?.toUpperCase() ?? '?'
 
@@ -99,19 +93,19 @@ export function HomeScreen() {
         {/* Header */}
         <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
           <div className="flex justify-between items-center">
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--dim)', letterSpacing: 0.3 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--dim)', letterSpacing: 0.3 }}>
                 {formatDate()}
               </div>
-              <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, marginTop: 4, color: 'var(--ink)' }}>
-                Hola, {userName} 👋
+              <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: -0.4, marginTop: 2, color: 'var(--ink)' }}>
+                Hola, {userName}
               </div>
             </div>
             <button
               onClick={() => setActiveTab('perfil')}
               aria-label="Abrir perfil"
               style={{
-                width: 42, height: 42, borderRadius: 21,
+                flexShrink: 0, width: 44, height: 44, borderRadius: 22,
                 background: 'var(--surf2)', border: '2px solid var(--acc)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 700, color: 'var(--acc)',
@@ -124,146 +118,109 @@ export function HomeScreen() {
 
         <BackupReminder />
 
-        {/* Últimos 30 días */}
-        <div style={{ padding: '24px 22px 0' }}>
-          <div style={{
-            background: 'var(--surf)', borderRadius: 18, padding: '22px 20px',
-            display: 'flex', alignItems: 'center', gap: 20,
-            border: '1px solid var(--line2)',
-          }}>
-            <div className="relative flex-shrink-0">
-              <CircularRing value={ringPct} size={72} strokeWidth={6} color="var(--acc)" trackColor="var(--line2)">
-                <div className="flex flex-col items-center">
-                  <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
-                    {ventana.workouts}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--dim)', fontWeight: 500 }}>de {metaVentana}</span>
-                </div>
-              </CircularRing>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2, color: 'var(--ink)' }}>
-                Últimos 30 días
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4, lineHeight: 1.5 }}>
-                <span style={{ color: 'var(--acc)', fontWeight: 600 }}>{ventana.perWeek}</span> por semana ·{' '}
-                <span style={{ color: 'var(--acc)', fontWeight: 600 }}>{ventana.hours}h</span>
-                {windowPrCount > 0 && (
-                  <> · <span style={{ color: 'var(--acc2)', fontWeight: 600 }}>{windowPrCount} PRs</span></>
-                )}
-              </div>
-            </div>
-            <div
-              className="flex flex-col items-center gap-[2px]"
-              title={
-                streak.current > 0
-                  ? `${streak.current} entrenos seguidos · se mantiene si entrenás dentro de ${MAX_GAP_DAYS} días`
-                  : 'Entrená para arrancar una racha'
-              }
-            >
-              <span style={{ fontSize: 16 }}>🔥</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: streak.atRisk ? 'var(--acc)' : 'var(--acc2)' }}>
-                {streak.current}
-              </span>
-              <span style={{ fontSize: 11, color: 'var(--dim)', textAlign: 'center', lineHeight: 1.2 }}>
-                {streak.current === 1 ? 'entreno' : 'entrenos'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Next workout */}
-        <div style={{ padding: '20px 22px 0' }}>
-          <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3 }}>
-              {yaEntreneHoy ? 'Próximo entreno' : esDelPlan ? 'Hoy te toca' : esDescansoPlanificado ? 'Hoy descansás' : 'Próximo entreno'}
-            </div>
-            {esDelPlan && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--acc)', background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.22)', padding: '3px 9px', borderRadius: 20 }}>
-                según tu semana
-              </span>
-            )}
-            {esDescansoPlanificado && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dim)', background: 'var(--surf2)', border: '1px solid var(--line2)', padding: '3px 9px', borderRadius: 20 }}>
-                podés adelantar
-              </span>
-            )}
-          </div>
+        {/* Qué toca hoy — lo primero, con el botón de arrancar sobre el pliegue */}
+        <div style={{ padding: '16px 22px 0' }}>
           {suggestedRoutine ? (
-            <div style={{
-              background: 'var(--surf)', borderRadius: 18, overflow: 'hidden',
-              border: '1px solid var(--line2)',
-            }}>
-              <div style={{ padding: '18px 18px 14px' }}>
+            <div style={{ background: 'var(--surf)', borderRadius: 18, overflow: 'hidden', border: '1px solid var(--line2)' }}>
+              <div style={{ padding: '16px 18px 14px' }}>
+                <div className="flex items-center justify-between gap-2" style={{ marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3 }}>
+                    {yaEntreneHoy ? 'Próximo entreno' : esDelPlan ? 'Hoy te toca' : esDescansoPlanificado ? 'Hoy descansás' : 'Próximo entreno'}
+                  </span>
+                  {esDelPlan && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--acc)', background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.22)', padding: '3px 9px', borderRadius: 20 }}>
+                      según tu semana
+                    </span>
+                  )}
+                  {esDescansoPlanificado && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dim)', background: 'var(--surf2)', border: '1px solid var(--line2)', padding: '3px 9px', borderRadius: 20 }}>
+                      podés adelantar
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
                   {suggestedRoutine.emoji} {suggestedRoutine.name}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 5 }}>
-                  {suggestedExerciseCount} ejercicios · ~{approxMinutes} min
+                <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4 }}>
+                  {suggestedExerciseCount} ejercicios · ~{approxMinutes} min · {previewExercises.map(e => e?.name).filter(Boolean).slice(0, 2).join(', ')}
+                  {suggestedExerciseCount > 2 ? '…' : ''}
                 </div>
-                {muscleGroups.length > 0 && (
-                  <div className="flex flex-wrap gap-2" style={{ marginTop: 14 }}>
-                    {muscleGroups.slice(0, 4).map(mg => {
-                      const cfg = muscleGroupConfig[mg as keyof typeof muscleGroupConfig]
-                      if (!cfg) return null
-                      return (
-                        <span key={mg} style={{
-                          fontSize: 11, fontWeight: 600, color: 'var(--ink)',
-                          background: 'var(--surf2)', padding: '4px 10px', borderRadius: 20,
-                          border: '1px solid var(--line2)',
-                        }}>
-                          {cfg.emoji} {cfg.label}
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
-                {previewExercises.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    {previewExercises.map((ex, i) => ex && (
-                      <div key={ex.name} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '9px 0',
-                        borderTop: i > 0 ? '1px solid var(--line)' : undefined,
-                      }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, flex: 1, color: 'var(--ink)' }}>{ex.name}</span>
-                        <span style={{ fontSize: 12, color: 'var(--dim)' }}>{ex.sets} series</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
               <button
                 onClick={() => startWorkout(suggestedRoutine.id)}
                 style={{
                   width: '100%', background: 'linear-gradient(135deg, var(--acc) 0%, var(--primary-dim) 100%)', border: 'none',
-                  color: '#fff', fontSize: 15, fontWeight: 700,
-                  padding: '17px 0', cursor: 'pointer',
-                  fontFamily: 'DM Sans, system-ui, sans-serif',
-                  letterSpacing: 0.3,
+                  color: '#fff', fontSize: 16, fontWeight: 700, minHeight: 56,
+                  cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif', letterSpacing: 0.3,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: 'opacity 0.15s',
                 }}
               >
-                <span style={{ fontSize: 14 }}>▶</span> Iniciar entreno
+                <span style={{ fontSize: 13 }}>▶</span> Iniciar entreno
               </button>
+              {/* Cualquier otra rutina, sin pasar por la pestaña Rutinas */}
+              {routines.length > 1 && (
+                <div
+                  className="flex gap-2"
+                  style={{ padding: '10px 14px 12px', overflowX: 'auto', scrollbarWidth: 'none', borderTop: '1px solid var(--line)' }}
+                >
+                  {routines.filter(r => r.id !== suggestedRoutine.id).map(r => (
+                    <button
+                      key={r.id}
+                      onClick={() => startWorkout(r.id)}
+                      style={{
+                        flexShrink: 0, minHeight: 40, padding: '0 14px', borderRadius: 12,
+                        background: 'var(--surf2)', border: '1px solid var(--line2)',
+                        color: 'var(--dim)', fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {r.emoji} {r.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <div style={{
-              borderRadius: 18, padding: '20px',
-              border: '1.5px dashed var(--line2)',
-              textAlign: 'center',
-            }}>
+            <div style={{ borderRadius: 18, padding: 20, border: '1.5px dashed var(--line2)', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>🏋️</div>
               <p style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 14 }}>¡Tu primera sesión te espera!</p>
               <button
                 onClick={() => setActiveTab('rutinas')}
-                style={{ color: 'var(--acc)', fontSize: 13, fontWeight: 600, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: 'var(--acc)', fontSize: 13, fontWeight: 600, marginTop: 8, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Crear primera rutina →
               </button>
             </div>
           )}
+        </div>
+
+        {/* Últimos 30 días — una línea, no una tarjeta con un anillo en cero */}
+        <div style={{ padding: '12px 22px 0' }}>
+          <div
+            style={{
+              background: 'var(--surf)', borderRadius: 14, border: '1px solid var(--line2)',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
+            }}
+          >
+            <CircularRing value={ringPct} size={40} strokeWidth={4} color="var(--acc)" trackColor="var(--line2)">
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)' }}>{ventana.workouts}</span>
+            </CircularRing>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                {ventana.workouts} de {metaVentana} en 30 días
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 2 }}>
+                {ventana.perWeek} por semana · {ventana.hours}h
+                {windowPrCount > 0 && ` · ${windowPrCount} PRs`}
+              </div>
+            </div>
+            <div className="flex flex-col items-center" style={{ flexShrink: 0 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: streak.atRisk ? 'var(--acc)' : 'var(--acc2)' }}>
+                🔥 {streak.current}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--dim)' }}>seguidos</span>
+            </div>
+          </div>
         </div>
 
         {/* Last session */}
