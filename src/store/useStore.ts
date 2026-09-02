@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useMemo } from 'react'
-import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast, MuscleGroup } from '../types'
+import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTips, AppToast, MuscleGroup, BodyMeasure } from '../types'
 import { exercises as exerciseDb } from '../data/exercises'
 import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 import { buildMileRoutines, MILE_WEEK_PLAN } from '../data/mileRoutines'
+import { computeRecords } from '../utils/records'
 
 interface AppState {
   // Navigation
@@ -27,6 +28,12 @@ interface AppState {
   anthropicApiKey: string
   toasts: AppToast[]
   weekPlan: Record<number, string | null>
+  /** Entrenos por semana que se propone el usuario. null = los que pide la semana tipo. */
+  weeklyGoal: number | null
+  /** Peso corporal y circunferencias, de la medición más vieja a la más nueva. */
+  measures: BodyMeasure[]
+  /** Última vez que se exportó un backup, para poder recordarlo. */
+  lastBackupAt: number | null
   customExercises: Exercise[]
   archivedRoutineNames: Record<string, { name: string; emoji: string }>
 
@@ -46,8 +53,11 @@ interface AppState {
 
   // Workout history
   deleteWorkout: (id: string) => void
+  /** Vuelve a poner un entreno borrado (el botón "Deshacer" del aviso). */
+  restoreWorkout: (workout: Workout) => void
   updateWorkout: (workout: Workout) => void
-  deletePr: (exerciseId: string) => void
+  /** Vuelve a derivar todos los récords del historial. */
+  recomputeRecords: () => void
 
   // Tips
   setExerciseTip: (exerciseId: string, tip: string) => void
@@ -59,10 +69,21 @@ interface AppState {
 
   // Toasts
   addToast: (message: string, type: AppToast['type']) => void
+  /** Aviso con botón de deshacer: para borrados que no necesitan confirmación previa. */
+  addUndoToast: (message: string, undo: () => void) => void
   removeToast: (id: string) => void
 
   // Week plan
   setWeekPlanDay: (dow: number, routineId: string | null) => void
+  setWeeklyGoal: (goal: number | null) => void
+
+  // Medidas
+  addMeasure: (measure: Omit<BodyMeasure, 'id'>) => void
+  updateMeasure: (measure: BodyMeasure) => void
+  deleteMeasure: (id: string) => void
+
+  /** Marca que se acaba de exportar un backup. */
+  markBackupDone: () => void
 
   // Custom exercises
   addCustomExercise: (ex: Exercise) => void
@@ -100,6 +121,9 @@ export const useStore = create<AppState>()(
       anthropicApiKey: '',
       toasts: [],
       weekPlan: {},
+      weeklyGoal: null,
+      measures: [],
+      lastBackupAt: null,
       customExercises: [],
       archivedRoutineNames: {},
 
@@ -163,12 +187,27 @@ export const useStore = create<AppState>()(
           routines: s.routines.map((r) => (r.id === routineId ? { ...r, exercises } : r)),
         })),
 
-      deleteWorkout: (id) => set((s) => ({ workouts: s.workouts.filter((w) => w.id !== id) })),
+      deleteWorkout: (id) => set((s) => {
+        const workouts = s.workouts.filter((w) => w.id !== id)
+        // Los récords se derivan del historial: si se va el entreno, se va su marca.
+        return { workouts, prs: computeRecords(workouts, [...s.exercises, ...s.customExercises]) }
+      }),
+
+      restoreWorkout: (workout) =>
+        set((s) => {
+          if (s.workouts.some((w) => w.id === workout.id)) return {}
+          const workouts = [...s.workouts, workout].sort((a, b) => a.startedAt - b.startedAt)
+          return { workouts, prs: computeRecords(workouts, [...s.exercises, ...s.customExercises]) }
+        }),
 
       updateWorkout: (workout) =>
-        set((s) => ({ workouts: s.workouts.map((w) => (w.id === workout.id ? workout : w)) })),
+        set((s) => {
+          const workouts = s.workouts.map((w) => (w.id === workout.id ? workout : w))
+          return { workouts, prs: computeRecords(workouts, [...s.exercises, ...s.customExercises]) }
+        }),
 
-      deletePr: (exerciseId) => set((s) => ({ prs: s.prs.filter((p) => p.exerciseId !== exerciseId) })),
+      recomputeRecords: () =>
+        set((s) => ({ prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]) })),
 
       setExerciseTip: (exerciseId, tip) =>
         set((s) => ({ exerciseTips: { ...s.exerciseTips, [exerciseId]: tip } })),
@@ -180,10 +219,37 @@ export const useStore = create<AppState>()(
         set((s) => ({
           toasts: [...s.toasts, { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message, type }],
         })),
+      addUndoToast: (message, undo) =>
+        set((s) => ({
+          toasts: [
+            ...s.toasts,
+            { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message, type: 'info', undo },
+          ],
+        })),
+
       removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
       setWeekPlanDay: (dow, routineId) =>
         set((s) => ({ weekPlan: { ...s.weekPlan, [dow]: routineId } })),
+
+      setWeeklyGoal: (goal) => set({ weeklyGoal: goal }),
+
+      addMeasure: (measure) =>
+        set((s) => ({
+          measures: [
+            ...s.measures,
+            { ...measure, id: `medida-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` },
+          ].sort((a, b) => a.date - b.date),
+        })),
+
+      updateMeasure: (measure) =>
+        set((s) => ({
+          measures: s.measures.map((m) => (m.id === measure.id ? measure : m)).sort((a, b) => a.date - b.date),
+        })),
+
+      deleteMeasure: (id) => set((s) => ({ measures: s.measures.filter((m) => m.id !== id) })),
+
+      markBackupDone: () => set({ lastBackupAt: Date.now() }),
 
       addCustomExercise: (ex) =>
         set((s) => ({ customExercises: [...s.customExercises, ex] })),
@@ -283,9 +349,26 @@ export const useStore = create<AppState>()(
         onboarded: state.onboarded,
         anthropicApiKey: state.anthropicApiKey,
         weekPlan: state.weekPlan,
+        weeklyGoal: state.weeklyGoal,
+        measures: state.measures,
+        lastBackupAt: state.lastBackupAt,
         customExercises: state.customExercises,
         archivedRoutineNames: state.archivedRoutineNames,
       }),
+      // Los récords guardados por versiones anteriores pueden haber quedado
+      // huérfanos (entrenos borrados, pesos corregidos, marcas de ejercicios que
+      // ya no existen). Se recalculan una sola vez al abrir la app para que
+      // coincidan siempre con el historial.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return
+        // El set va en el próximo tick: durante la rehidratación el store
+        // todavía se está armando y escribirle acá no persiste ni redibuja.
+        queueMicrotask(() => {
+          useStore.setState((s) => ({
+            prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]),
+          }))
+        })
+      },
     }
   )
 )

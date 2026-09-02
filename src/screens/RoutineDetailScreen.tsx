@@ -126,7 +126,7 @@ export function RoutineDetailScreen() {
       <div
         className="flex-shrink-0 px-4 safe-top pb-4 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
+          background: 'linear-gradient(180deg, var(--surf) 0%, var(--bg) 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
@@ -260,7 +260,7 @@ export function RoutineDetailScreen() {
                 key={re.exerciseId}
                 className="rounded-2xl p-3 flex items-center gap-3"
                 style={{
-                  background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+                  background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
                   border: '1px solid rgba(255,255,255,0.06)',
                   boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 16px rgba(0,0,0,0.35)',
                 }}
@@ -300,7 +300,7 @@ export function RoutineDetailScreen() {
                   <p className="font-semibold text-white text-sm truncate mb-0.5">{ex.nameEs}</p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                      className="text-[11px] px-1.5 py-0.5 rounded font-medium"
                       style={{ color: config.color, backgroundColor: config.color + '18' }}
                     >
                       {config.label}
@@ -320,7 +320,7 @@ export function RoutineDetailScreen() {
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
-                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>×</span>
+                        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>×</span>
                         <input
                           type="number"
                           inputMode="decimal"
@@ -332,7 +332,7 @@ export function RoutineDetailScreen() {
                           }}
                           className="w-12 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
-                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{unit}</span>
+                        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{unit}</span>
                       </div>
                     ) : editMode ? (
                       <div className="flex items-center gap-1.5">
@@ -348,7 +348,7 @@ export function RoutineDetailScreen() {
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
-                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>s ·</span>
+                        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>s ·</span>
                         <input
                           type="number"
                           inputMode="numeric"
@@ -361,7 +361,7 @@ export function RoutineDetailScreen() {
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
-                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>–</span>
+                        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>–</span>
                         <input
                           type="number"
                           inputMode="numeric"
@@ -374,7 +374,7 @@ export function RoutineDetailScreen() {
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
-                        <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>r</span>
+                        <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>r</span>
                       </div>
                     ) : (
                       <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -385,7 +385,7 @@ export function RoutineDetailScreen() {
                     )}
                   </div>
                   {re.note && (
-                    <p className="text-[10px] mt-1 leading-snug" style={{ color: 'rgba(242,169,59,0.75)' }}>
+                    <p className="text-[11px] mt-1 leading-snug" style={{ color: 'rgba(242,169,59,0.75)' }}>
                       {re.note}
                     </p>
                   )}
@@ -466,7 +466,7 @@ export function RoutineDetailScreen() {
           <div
             className="w-full max-w-sm rounded-2xl p-6"
             style={{
-              background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+              background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
               border: '1px solid rgba(255,255,255,0.08)',
               boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
             }}

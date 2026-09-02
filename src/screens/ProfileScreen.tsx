@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { SettingsScreen } from './SettingsScreen'
+import { MedidasSheet } from './MedidasSheet'
+import { HistorialBuscadorSheet } from './HistorialBuscadorSheet'
 import { getWorkoutStreak } from '../utils/streak'
+import { tonelaje, formatTonelaje } from '../utils/volume'
 
 export function ProfileScreen() {
-  const { userName, updateUserName, workouts, prs } = useStore()
+  const { userName, updateUserName, workouts, prs, measures } = useStore()
   const allExercises = useAllExercises()
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(userName)
   const [showSettings, setShowSettings] = useState(false)
+  const [showMedidas, setShowMedidas] = useState(false)
+  const [showBuscador, setShowBuscador] = useState(false)
 
   const finished = useMemo(() => workouts.filter((w) => w.finishedAt), [workouts])
   const totalWorkouts = finished.length
@@ -17,6 +22,8 @@ export function ProfileScreen() {
   const streak = useMemo(() => getWorkoutStreak(finished), [finished])
 
   const initials = userName.slice(0, 2).toUpperCase()
+  const volumenTotal = useMemo(() => tonelaje(finished), [finished])
+  const ultimaMedida = measures.length > 0 ? measures[measures.length - 1] : null
 
   const handleSaveName = () => {
     if (nameDraft.trim()) updateUserName(nameDraft.trim())
@@ -77,18 +84,22 @@ export function ProfileScreen() {
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-primary">{totalWorkouts}</p>
-            <p className="text-[10px] text-dim mt-0.5">Entrenos</p>
+            <p className="text-[11px] text-dim mt-0.5">Entrenos</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-info">{Math.round(totalMinutes / 60)}h</p>
-            <p className="text-[10px] text-dim mt-0.5">Horas totales</p>
+            <p className="text-[11px] text-dim mt-0.5">Horas totales</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-gold">{prs.length}</p>
-            <p className="text-[10px] text-dim mt-0.5">Récords</p>
+            <p className="text-[11px] text-dim mt-0.5">Récords</p>
           </div>
         </div>
-        <div className="mt-2">
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="bg-card border border-border-hi rounded-xl p-3">
+            <p className="text-lg font-bold text-ink">{formatTonelaje(volumenTotal)}</p>
+            <p className="text-[11px] text-dim mt-0.5">Levantados en total</p>
+          </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 flex items-center gap-2">
             <span className="text-lg" aria-hidden="true">🔥</span>
             <span className="text-lg font-bold text-gold">{streak.current}</span>
@@ -98,6 +109,38 @@ export function ProfileScreen() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Peso y medidas · buscador del historial */}
+      <div className="px-4 mb-4 flex flex-col gap-2">
+        <button
+          onClick={() => setShowMedidas(true)}
+          className="w-full bg-card border border-border-hi rounded-2xl p-4 flex items-center gap-3"
+          style={{ minHeight: 64 }}
+        >
+          <span className="text-xl" aria-hidden="true">⚖️</span>
+          <span className="flex-1 text-left">
+            <span className="block font-semibold text-ink text-sm">Peso y medidas</span>
+            <span className="block text-dim text-xs mt-0.5">
+              {ultimaMedida?.weightKg
+                ? `${ultimaMedida.weightKg} kg · ${new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`
+                : 'Todavía sin anotar'}
+            </span>
+          </span>
+          <span className="text-dim text-lg" aria-hidden="true">›</span>
+        </button>
+        <button
+          onClick={() => setShowBuscador(true)}
+          className="w-full bg-card border border-border-hi rounded-2xl p-4 flex items-center gap-3"
+          style={{ minHeight: 64 }}
+        >
+          <span className="text-xl" aria-hidden="true">🔎</span>
+          <span className="flex-1 text-left">
+            <span className="block font-semibold text-ink text-sm">Buscar en el historial</span>
+            <span className="block text-dim text-xs mt-0.5">Cuándo hiciste un ejercicio y con cuánto</span>
+          </span>
+          <span className="text-dim text-lg" aria-hidden="true">›</span>
+        </button>
       </div>
 
       {/* Ajustes */}
@@ -134,6 +177,8 @@ export function ProfileScreen() {
       </div>
 
       {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
+      {showMedidas && <MedidasSheet onClose={() => setShowMedidas(false)} />}
+      {showBuscador && <HistorialBuscadorSheet onClose={() => setShowBuscador(false)} />}
     </div>
   )
 }

@@ -2,13 +2,8 @@ import { useMemo } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
+import { S } from '../theme'
 
-const S = {
-  bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
-  line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
-}
 
 function estimate1RM(kg: number, reps: number): number {
   if (reps <= 1) return kg
@@ -114,19 +109,19 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
             <div className="flex gap-2" style={{ marginBottom: 16 }}>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: S.ink, letterSpacing: -0.5 }}>{currentKg}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span></div>
-                <div style={{ fontSize: 10, color: S.dim, marginTop: 2 }}>Máx actual</div>
+                <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Máx actual</div>
               </div>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: S.acc2, letterSpacing: -0.5 }}>
                   {pr ? `${pr.kg}×${pr.reps}` : '—'}
                 </div>
-                <div style={{ fontSize: 10, color: S.dim, marginTop: 2 }}>🏆 Récord</div>
+                <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>🏆 Récord</div>
               </div>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: change > 0 ? S.good : change < 0 ? '#f87171' : S.ink }}>
                   {change > 0 ? '+' : ''}{change}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span>
                 </div>
-                <div style={{ fontSize: 10, color: S.dim, marginTop: 2 }}>Progreso</div>
+                <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Progreso</div>
               </div>
             </div>
 
@@ -139,7 +134,7 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
                   const h = Math.max(Math.round((s.bestKg / maxKg) * 100), 8)
                   return (
                     <div key={s.date} className="flex-1 flex flex-col items-center justify-end" style={{ minWidth: 0 }} title={`${fmtDate(s.date)} · ${s.bestKg}kg × ${s.bestReps}`}>
-                      <div style={{ fontSize: 9, color: isLast ? S.acc : S.faint, fontWeight: 600, marginBottom: 3 }}>{s.bestKg}</div>
+                      <div style={{ fontSize: 11, color: isLast ? S.acc : S.faint, fontWeight: 600, marginBottom: 3 }}>{s.bestKg}</div>
                       <div style={{
                         width: '100%', height: `${h}%`, minHeight: 4, borderRadius: '4px 4px 0 0',
                         background: isLast ? S.acc : 'rgba(232,99,74,0.28)', transition: 'height 0.4s ease',

@@ -58,7 +58,8 @@ function App() {
           prCount={summaryPrCount}
           onDismiss={dismissSummary}
         />
-        <ToastContainer />
+        {/* El resumen tiene su botón abajo: los avisos van arriba para no taparlo. */}
+        <ToastContainer arriba />
         <UpdatePrompt />
       </div>
     )

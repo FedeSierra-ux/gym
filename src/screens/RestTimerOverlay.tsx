@@ -169,7 +169,7 @@ export function RestTimerOverlay() {
 
         {nextExercise && nextExercise.exercise && (
           <div className="bg-card border border-border rounded-xl px-6 py-3 text-center">
-            <p className="text-[10px] text-gray-600 uppercase tracking-wider">Siguiente</p>
+            <p className="text-[11px] text-gray-600 uppercase tracking-wider">Siguiente</p>
             <p className="text-white font-semibold text-sm mt-0.5">{nextExercise.exercise.nameEs}</p>
             <p className="text-gray-500 text-xs">Serie {nextExercise.setNum}</p>
           </div>

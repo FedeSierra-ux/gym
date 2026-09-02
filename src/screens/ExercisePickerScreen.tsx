@@ -99,7 +99,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
       <div
         className="flex-shrink-0 px-4 safe-top pb-3 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
+          background: 'linear-gradient(180deg, var(--surf) 0%, var(--bg) 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
@@ -265,7 +265,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
                   <span className="text-base">{config.emoji}</span>
                   <h3 className="font-bold text-sm text-white">{config.label}</h3>
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                    className="text-[11px] px-1.5 py-0.5 rounded font-medium"
                     style={{ color: config.color, backgroundColor: config.color + '15' }}
                   >
                     {exs.length}
@@ -311,7 +311,7 @@ function ExerciseRow({
     <div
       className="rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all"
       style={{
-        background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+        background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
         border: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 2px 8px rgba(0,0,0,0.3)',
       }}

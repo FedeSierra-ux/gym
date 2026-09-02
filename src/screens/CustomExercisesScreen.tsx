@@ -64,7 +64,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
       <div
         className="flex-shrink-0 px-4 safe-top pb-4"
         style={{
-          background: 'linear-gradient(180deg, #0d0d1c 0%, #06060f 100%)',
+          background: 'linear-gradient(180deg, var(--surf) 0%, var(--bg) 100%)',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
@@ -117,7 +117,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
               key={ex.id}
               className="rounded-2xl p-3 flex items-center gap-3"
               style={{
-                background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+                background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
                 border: '1px solid rgba(255,255,255,0.06)',
                 boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 16px rgba(0,0,0,0.35)',
               }}
@@ -133,13 +133,13 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 <p className="font-semibold text-white text-sm truncate">{ex.nameEs}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                    className="text-[11px] px-1.5 py-0.5 rounded font-medium"
                     style={{ color: config.color, backgroundColor: config.color + '18' }}
                   >
                     {config.label}
                   </span>
                   {ex.equipment && (
-                    <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{ex.equipment}</span>
+                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{ex.equipment}</span>
                   )}
                 </div>
               </div>
@@ -165,7 +165,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
           <div
             className="rounded-2xl p-4 flex flex-col gap-3"
             style={{
-              background: 'linear-gradient(160deg, #111124 0%, #0d0d1c 100%)',
+              background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
               border: '1px solid rgba(232,99,74,0.2)',
               boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
             }}
@@ -203,7 +203,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 }}
               >
                 {muscleGroups.map((mg) => (
-                  <option key={mg} value={mg} style={{ background: '#0d0d1c' }}>
+                  <option key={mg} value={mg} style={{ background: 'var(--surf)' }}>
                     {muscleGroupConfig[mg].emoji} {muscleGroupConfig[mg].label}
                   </option>
                 ))}

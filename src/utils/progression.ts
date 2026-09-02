@@ -144,8 +144,8 @@ export function suggestNextWeight(
     kg: last.kg,
     reason: 'mantener',
     note: seriesFaltantes > 0
-      ? `Mantené ${carga}: te faltaron ${seriesFaltantes} serie${seriesFaltantes > 1 ? 's' : ''} la última vez.`
-      : `Mantené ${carga} hasta llegar a ${routineExercise.repsMax} en las ${routineExercise.sets} series (te falta${faltan > 1 ? 'n' : ''} ${faltan}).`,
+      ? `Mantené ${carga}: te ${seriesFaltantes > 1 ? `faltaron ${seriesFaltantes} series` : 'faltó 1 serie'} la última vez.`
+      : `Mantené ${carga} hasta llegar a ${routineExercise.repsMax} en las ${routineExercise.sets} series (te ${faltan > 1 ? `faltan ${faltan}` : 'falta 1'}).`,
     targetReps: routineExercise.repsMax,
   }
 }

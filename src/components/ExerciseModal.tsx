@@ -3,17 +3,13 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleBodyMap } from './MuscleBodyMap'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { exerciseDetails } from '../data/exerciseDetails'
+import { S } from '../theme'
 
 interface ExerciseModalProps {
   exercise: Exercise
   onClose: () => void
 }
 
-const S = {
-  surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  line2: 'rgba(236,238,244,0.12)',
-}
 
 export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
   const config = muscleGroupConfig[exercise.muscleGroup]
@@ -88,7 +84,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
             <div className="flex-1 min-w-0">
               {primaryMuscles.length > 0 && (
                 <div className="mb-2">
-                  <p style={{ fontSize: 10, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Principal</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Principal</p>
                   <div className="flex flex-wrap gap-1.5">
                     {primaryMuscles.map((m) => (
                       <span key={m} style={{ fontSize: 11, fontWeight: 600, color: config.color, background: config.color + '15', border: `1px solid ${config.color}30`, padding: '3px 8px', borderRadius: 8 }}>
@@ -100,7 +96,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
               )}
               {secondaryMuscles.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Secundario</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Secundario</p>
                   <div className="flex flex-wrap gap-1.5">
                     {secondaryMuscles.map((m) => (
                       <span key={m} style={{ fontSize: 11, color: S.dim, background: 'rgba(255,255,255,0.05)', border: `1px solid ${S.line2}`, padding: '3px 8px', borderRadius: 8 }}>

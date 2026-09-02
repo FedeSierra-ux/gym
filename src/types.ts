@@ -76,6 +76,7 @@ export interface Workout {
   finishedAt?: number
   durationMin?: number
   exercises: WorkoutExercise[]
+  /** @deprecated Se calculaba como minutos × 6,5 para cualquier persona. Sólo queda para leer entrenos viejos. */
   kcal?: number
 }
 
@@ -83,9 +84,32 @@ export interface PR {
   exerciseId: string
   kg: number
   reps: number
+  /** Marca de los ejercicios por tiempo (plancha, cinta). */
+  durationSec?: number
   date: number
-  history?: Array<{ kg: number; reps: number; date: number }>
+  history?: Array<{ kg: number; reps: number; durationSec?: number; date: number }>
 }
+
+/**
+ * Una medición del cuerpo. El peso es el único campo obligatorio; el resto se
+ * carga si a uno le interesa seguirlo.
+ */
+export interface BodyMeasure {
+  id: string
+  /** Fecha a la que corresponde la medición (mediodía local). */
+  date: number
+  /** Peso corporal en kg. */
+  weightKg?: number
+  /** Circunferencias en cm. */
+  cintura?: number
+  pecho?: number
+  brazo?: number
+  pierna?: number
+  cadera?: number
+  note?: string
+}
+
+export type MedidaKey = 'weightKg' | 'cintura' | 'pecho' | 'brazo' | 'pierna' | 'cadera'
 
 export type NavTab = 'home' | 'rutinas' | 'calendario' | 'progreso' | 'perfil'
 export type CalendarSubTab = 'calendario' | 'records'
@@ -94,6 +118,12 @@ export interface AppToast {
   id: string
   message: string
   type: 'success' | 'pr' | 'info'
+  /**
+   * Si está, el aviso muestra un botón "Deshacer" que llama a esta función.
+   * Es la red de seguridad de los borrados: más rápida y más amable que un
+   * modal de confirmación, y sirve también cuando el error se nota después.
+   */
+  undo?: () => void
 }
 
 export interface ActiveWorkoutSet {

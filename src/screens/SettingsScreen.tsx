@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { exportBackup, readBackupFile, applyBackup } from '../utils/backup'
 import { MILE_ROUTINE_IDS } from '../data/mileRoutines'
+import { plannedDowSet } from '../utils/trainingDays'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
-  const { anthropicApiKey, setAnthropicApiKey, userName, updateUserName, addToast, routines, installMileRoutines } = useStore()
+  const {
+    anthropicApiKey, setAnthropicApiKey, userName, updateUserName, addToast,
+    routines, installMileRoutines, weekPlan, weeklyGoal, setWeeklyGoal, markBackupDone,
+  } = useStore()
   const [key, setKey] = useState(anthropicApiKey ?? '')
   const [name, setName] = useState(userName)
   const [saved, setSaved] = useState(false)
@@ -23,6 +27,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     setExportando(true)
     try {
       const resultado = await exportBackup()
+      if (resultado !== 'cancelado') markBackupDone()
       if (resultado === 'compartido') addToast('Backup listo: guardalo donde quieras', 'success')
       else if (resultado === 'descargado') addToast('Backup descargado', 'success')
     } catch (e) {
@@ -35,6 +40,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   // El plan de Mile se instala una sola vez: vive acá y no en Mis Rutinas,
   // que es una pantalla de uso diario.
   const mileFaltantes = MILE_ROUTINE_IDS.filter(id => !routines.some(r => r.id === id)).length
+  const diasDelPlan = plannedDowSet(weekPlan).size
 
   const handleInstallMile = () => {
     const n = installMileRoutines()
@@ -74,12 +80,55 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           />
         </div>
 
+        {/* Meta semanal */}
+        <div>
+          <p className="section-label mb-2">Tu meta</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Cuántos entrenos por semana te proponés. Es contra esto que Inicio mide los últimos 30 días.
+          </p>
+          <div className="flex gap-2">
+            {[null, 2, 3, 4, 5, 6].map((n) => {
+              const activo = weeklyGoal === n
+              const auto = n === null
+              return (
+                <button
+                  key={String(n)}
+                  onClick={() => setWeeklyGoal(n)}
+                  className="flex-1 rounded-xl text-sm font-bold"
+                  style={{
+                    minHeight: 48,
+                    border: `1px solid ${activo ? 'rgba(232,99,74,0.5)' : 'rgba(236,238,244,0.12)'}`,
+                    background: activo ? 'rgba(232,99,74,0.12)' : '#161821',
+                    color: activo ? '#E8634A' : '#8A91A3',
+                  }}
+                >
+                  {auto ? 'Auto' : n}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-gray-600 mt-2">
+            {weeklyGoal === null
+              ? diasDelPlan > 0
+                ? `Auto: ${diasDelPlan} por semana, los días que cargaste en tu semana tipo.`
+                : 'Auto: 3 por semana hasta que armes tu semana tipo en Agenda.'
+              : `${weeklyGoal} entrenos por semana.`}
+          </p>
+        </div>
+
         {/* Anthropic API Key */}
         <div>
           <p className="section-label mb-2">API Key de Anthropic</p>
           <p className="text-xs text-gray-500 mb-3">
             Necesaria para las sugerencias de IA personalizadas. Se guarda solo en tu dispositivo.{' '}
-            <span className="text-primary">Conseguí tu key en console.anthropic.com</span>
+            <a
+              href="https://console.anthropic.com/settings/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              Conseguí tu key en console.anthropic.com
+            </a>
           </p>
           <input
             type="password"
