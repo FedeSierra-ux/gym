@@ -48,8 +48,8 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
     <div style={{ borderTop: `1px solid ${S.line}` }}>
       {!open ? (
         <button onClick={() => { setDraft(tip ?? ''); setOpen(true) }}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+          className="w-full flex items-center gap-2 px-3 text-left"
+          style={{ minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
           <span style={{ fontSize: 13 }}>📝</span>
           <span style={{ flex: 1, fontSize: 11, color: tip ? S.dim : S.faint }}>{tip || 'Agregar tip / recordatorio de técnica...'}</span>
           <span style={{ fontSize: 11, color: S.faint }}>{tip ? '✏️' : '+'}</span>
@@ -157,6 +157,14 @@ function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChang
  * botones de 32×32, imposibles de acertar con las manos transpiradas.
  */
 const SET_GRID = '34px minmax(0,1fr) minmax(0,1fr) 64px'
+
+/** Fila de un menú de acciones (serie o ejercicio). */
+const opcionMenu: React.CSSProperties = {
+  width: '100%', textAlign: 'left', minHeight: 52,
+  background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 14,
+  padding: '12px 16px', color: S.ink, fontSize: 14, fontWeight: 600,
+  cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
+}
 const SET_GRID_TIEMPO = '34px minmax(0,1fr) 64px'
 
 function estiloCampo(completada: boolean): React.CSSProperties {
@@ -198,6 +206,7 @@ function SetRow({
 }) {
   const [destello, setDestello] = useState(false)
   const [verDiscos, setVerDiscos] = useState(false)
+  const [acciones, setAcciones] = useState(false)
 
   const completada = set.completed
   const calentamiento = !!set.isWarmup
@@ -230,32 +239,30 @@ function SetRow({
           borderTop: `1px solid ${S.line}`,
         }}
       >
-        {/* Número de serie · calentamiento · borrar */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: calentamiento ? S.acc2 : completada ? S.acc : S.dim }}>
+        {/*
+          El número de la serie es un solo botón que abre las acciones
+          secundarias. Antes esta columna tenía tres objetivos apilados de
+          26×22 y 26×20, imposibles de acertar; ahora es uno de 34×48 y las
+          opciones salen en filas grandes.
+        */}
+        <button
+          onClick={() => setAcciones(true)}
+          aria-label={`Serie ${setIdx + 1}${calentamiento ? ', de calentamiento' : ''}. Opciones`}
+          style={{
+            width: '100%', minHeight: 48, borderRadius: 10,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+            background: calentamiento ? 'rgba(242,169,59,0.12)' : 'none',
+            border: `1px solid ${calentamiento ? 'rgba(242,169,59,0.35)' : 'transparent'}`,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ fontSize: 15, fontWeight: 700, color: calentamiento ? S.acc2 : completada ? S.acc : S.dim, lineHeight: 1 }}>
             {setIdx + 1}
           </span>
-          <button
-            onClick={() => onToggleWarmup(exIdx, setIdx)}
-            aria-label={calentamiento ? 'Quitar calentamiento' : 'Marcar como calentamiento'}
-            title="Serie de calentamiento (no cuenta para volumen ni récords)"
-            style={{
-              fontSize: 11, fontWeight: 700, width: 26, height: 22, borderRadius: 6,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: calentamiento ? 'rgba(242,169,59,0.18)' : 'none',
-              border: `1px solid ${calentamiento ? 'rgba(242,169,59,0.4)' : S.line2}`,
-              color: calentamiento ? S.acc2 : S.faint,
-              cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
-            }}
-          >W</button>
-          {puedeBorrar && (
-            <button
-              onClick={() => onRemove(exIdx, setIdx)}
-              aria-label={`Borrar la serie ${setIdx + 1}`}
-              style={{ width: 26, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: S.faint, fontSize: 12, fontFamily: 'inherit', lineHeight: 1 }}
-            >✕</button>
+          {calentamiento && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: S.acc2, lineHeight: 1 }}>W</span>
           )}
-        </div>
+        </button>
 
         {byTime ? (
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
@@ -318,15 +325,43 @@ function SetRow({
           <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(52,211,153,0.55)' }}>~1RM: {orm}kg</span>
         </div>
       )}
+
+      {acciones && (
+        <div className="fixed inset-0 z-[58] flex items-end" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setAcciones(false)}>
+          <div
+            className="w-full rounded-t-3xl px-4 pt-4 sheet-enter"
+            style={{ background: S.surf, borderTop: `1px solid ${S.line2}`, paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 14px' }} />
+            <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 14 }}>Serie {setIdx + 1}</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { onToggleWarmup(exIdx, setIdx); setAcciones(false) }}
+                style={{ ...opcionMenu, color: calentamiento ? S.acc2 : S.ink }}
+              >
+                {calentamiento ? '☑ Serie de calentamiento' : '☐ Marcar como calentamiento'}
+                <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
+                  No cuenta para el volumen ni para los récords
+                </span>
+              </button>
+              {puedeBorrar && (
+                <button
+                  onClick={() => { onRemove(exIdx, setIdx); setAcciones(false) }}
+                  style={{ ...opcionMenu, color: S.bad }}
+                >
+                  🗑 Borrar esta serie
+                </button>
+              )}
+              <button onClick={() => setAcciones(false)} style={{ ...opcionMenu, textAlign: 'center', color: S.dim, background: 'none' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
-}
-
-const opcionMenu: React.CSSProperties = {
-  width: '100%', textAlign: 'left', minHeight: 52,
-  background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 14,
-  padding: '12px 16px', color: S.ink, fontSize: 14, fontWeight: 600,
-  cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
 }
 
 export function ActiveWorkoutScreen() {
@@ -439,8 +474,12 @@ export function ActiveWorkoutScreen() {
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
                   {exIdx + 1}
                 </div>
-                <button onClick={() => setModalExercise(ex)} aria-label={`Ver ${ex.nameEs}`} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  <ExerciseThumbnail exercise={ex} size={36} />
+                <button
+                  onClick={() => setModalExercise(ex)}
+                  aria-label={`Ver ${ex.nameEs}`}
+                  style={{ flexShrink: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <ExerciseThumbnail exercise={ex} size={40} />
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.nameEs}</div>
@@ -519,7 +558,7 @@ export function ActiveWorkoutScreen() {
               {/* Add set button */}
               <div style={{ padding: '10px 16px 14px' }}>
                 <button onClick={() => addSetToExercise(exIdx)}
-                  style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, color: S.dim, fontSize: 12, fontWeight: 600, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, color: S.dim, fontSize: 13, fontWeight: 600, minHeight: 44, padding: '0 18px', cursor: 'pointer', fontFamily: 'inherit' }}>
                   + Serie
                 </button>
               </div>

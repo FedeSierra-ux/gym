@@ -361,7 +361,13 @@ export const useStore = create<AppState>()(
       // coincidan siempre con el historial.
       onRehydrateStorage: () => (state) => {
         if (!state) return
-        state.prs = computeRecords(state.workouts, [...state.exercises, ...state.customExercises])
+        // El set va en el próximo tick: durante la rehidratación el store
+        // todavía se está armando y escribirle acá no persiste ni redibuja.
+        queueMicrotask(() => {
+          useStore.setState((s) => ({
+            prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]),
+          }))
+        })
       },
     }
   )
