@@ -1,23 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { SettingsScreen } from './SettingsScreen'
-
-function getWeekStreak(workouts: Array<{ startedAt: number; finishedAt?: number }>) {
-  const now = new Date()
-  let streak = 0
-  for (let i = 0; i < 60; i++) {
-    const day = new Date(now)
-    day.setDate(now.getDate() - i)
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
-    const end = start + 86400000
-    if (workouts.some((w) => w.finishedAt && w.startedAt >= start && w.startedAt < end)) {
-      streak++
-    } else if (i !== 0) {
-      break
-    }
-  }
-  return streak
-}
+import { getWorkoutStreak } from '../utils/streak'
 
 export function ProfileScreen() {
   const { userName, updateUserName, workouts, prs } = useStore()
@@ -30,7 +14,7 @@ export function ProfileScreen() {
   const finished = useMemo(() => workouts.filter((w) => w.finishedAt), [workouts])
   const totalWorkouts = finished.length
   const totalMinutes = finished.reduce((a, w) => a + (w.durationMin ?? 0), 0)
-  const streak = useMemo(() => getWeekStreak(finished), [finished])
+  const streak = useMemo(() => getWorkoutStreak(finished), [finished])
 
   const initials = userName.slice(0, 2).toUpperCase()
 
@@ -107,8 +91,11 @@ export function ProfileScreen() {
         <div className="mt-2">
           <div className="bg-card border border-border-hi rounded-xl p-3 flex items-center gap-2">
             <span className="text-lg" aria-hidden="true">🔥</span>
-            <span className="text-lg font-bold text-gold">{streak}</span>
-            <span className="text-xs text-dim">días de racha</span>
+            <span className="text-lg font-bold text-gold">{streak.current}</span>
+            <span className="text-xs text-dim">
+              {streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos'}
+              {streak.best > streak.current && ` · mejor: ${streak.best}`}
+            </span>
           </div>
         </div>
       </div>

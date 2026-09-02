@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { ActiveWorkoutExercise, AppToast, Workout, PR } from '../types'
 import { useStore } from '../store/useStore'
 import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
+import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
 import { suggestNextWeight } from '../utils/progression'
 
 export interface ActiveWorkout {
@@ -30,9 +31,15 @@ interface WorkoutState {
   summaryPrCount: number
 
   startWorkout: (routineId: string, dateOverride?: number) => void
+  /** Cambia el día al que se imputa el entreno en curso (cargar el de ayer). */
+  setWorkoutDate: (timestamp: number) => void
   updateSetValue: (exerciseIdx: number, setIdx: number, field: 'kg' | 'reps' | 'duration', value: string) => void
   toggleSetWarmup: (exerciseIdx: number, setIdx: number) => void
-  completeSet: (exerciseIdx: number, setIdx: number) => void
+  /**
+   * Marca/desmarca la serie. `startRest` decide si además arranca el
+   * cronómetro de descanso: el ✓ sólo confirma y el ✓⏱ confirma y cuenta.
+   */
+  completeSet: (exerciseIdx: number, setIdx: number, options?: { startRest?: boolean }) => void
   addSetToExercise: (exerciseIdx: number) => void
   removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
   /** `auto` marca el cierre automático: guarda sin abrir el resumen. */
@@ -66,17 +73,15 @@ const AUTO_CLOSE_AFTER_MIN = 240
 
 function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
   if (value === '') return ''
-  const num = parseFloat(value.replace(',', '.'))
-  if (isNaN(num)) return ''
-  if (field === 'kg') {
-    return String(Math.min(500, Math.max(0, num)))
-  } else if (field === 'duration') {
-    // Sirve para minutos (cinta) y para segundos (planchas): el tope alto cubre
-    // los dos casos y la unidad la resuelve la pantalla.
-    return String(Math.min(600, Math.max(0, Math.round(num * 10) / 10)))
-  } else {
-    return String(Math.min(100, Math.max(0, Math.round(num))))
+  if (field === 'reps') {
+    const digits = normalizeIntegerInput(value)
+    if (digits === '') return ''
+    return String(Math.min(100, Math.max(0, parseInt(digits, 10))))
   }
+  // kg y duration aceptan decimales escritos con coma o con punto. El tope alto
+  // de duration cubre minutos (cinta) y segundos (planchas): la unidad la
+  // resuelve la pantalla.
+  return clampDecimalInput(value, field === 'kg' ? 500 : 600)
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -92,16 +97,35 @@ export const useWorkoutStore = create<WorkoutState>()(
         const routine = routines.find((r) => r.id === routineId)
         if (!routine) return
 
-        // Find previous workout once, outside the exercise map
-        const prevWorkout = [...workouts]
-          .filter((w) => w.routineId === routineId && w.finishedAt)
-          .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
+        // Sesiones terminadas, de la más reciente a la más vieja. Se usan para
+        // prellenar cada ejercicio con lo que se hizo la última vez.
+        const finishedWorkouts = [...workouts]
+          .filter((w) => w.finishedAt)
+          .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
+
+        /**
+         * Series de la última vez que se hizo ese ejercicio. Se prioriza la
+         * misma rutina, pero si el ejercicio se hizo en otra (o la rutina se
+         * editó) igual se traen esos valores en vez de dejar el campo vacío.
+         */
+        const lastSetsFor = (exerciseId: string) => {
+          const sameRoutine = finishedWorkouts.find((w) =>
+            w.routineId === routineId && w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
+          )
+          const source = sameRoutine ?? finishedWorkouts.find((w) =>
+            w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
+          )
+          const sets = source?.exercises.find((e) => e.exerciseId === exerciseId)?.sets ?? []
+          // El calentamiento no sirve como referencia salvo que sea lo único.
+          const working = sets.filter((s) => !s.isWarmup)
+          return working.length > 0 ? working : sets
+        }
 
         const { exercises: exerciseDb, customExercises } = useStore.getState()
         const allExercises = [...exerciseDb, ...customExercises]
 
         const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === re.exerciseId)?.sets ?? []
+          const prevSets = lastSetsFor(re.exerciseId)
           const exercise = allExercises.find((e) => e.id === re.exerciseId)
 
           if (isDurationExercise(exercise)) {
@@ -113,7 +137,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               sets: Array.from({ length: re.sets }, (_, i) => ({
                 kg: '',
                 reps: '',
-                duration: fromSeconds(prevSets[i]?.durationSec ?? target, unit),
+                duration: fromSeconds(prevSets[i]?.durationSec ?? prevSets[prevSets.length - 1]?.durationSec ?? target, unit),
                 completed: false,
               })),
             }
@@ -123,13 +147,21 @@ export const useWorkoutStore = create<WorkoutState>()(
           // la sesión anterior, así el objetivo del día queda cargado solo.
           const suggestion = suggestNextWeight(exercise, re, workouts, re.exerciseId)
           const suggestedKg = suggestion && suggestion.kg > 0 ? String(suggestion.kg) : ''
+          // Si la sesión anterior tuvo menos series que la rutina, las de más
+          // se prellenan con la última serie registrada.
+          const lastPrevSet = prevSets[prevSets.length - 1]
           return {
             exerciseId: re.exerciseId,
-            sets: Array.from({ length: re.sets }, (_, i) => ({
-              kg: suggestedKg || (prevSets[i] ? String(prevSets[i].kg) : ''),
-              reps: prevSets[i] ? String(prevSets[i].reps) : '',
-              completed: false,
-            })),
+            sets: Array.from({ length: re.sets }, (_, i) => {
+              const prev = prevSets[i] ?? lastPrevSet
+              const prevKg = prev && prev.kg > 0 ? String(prev.kg) : ''
+              const prevReps = prev && prev.reps > 0 ? String(prev.reps) : ''
+              return {
+                kg: suggestedKg || prevKg,
+                reps: prevReps,
+                completed: false,
+              }
+            }),
           }
         })
 
@@ -147,6 +179,19 @@ export const useWorkoutStore = create<WorkoutState>()(
           },
         })
       },
+
+      setWorkoutDate: (timestamp) =>
+        set((s) => {
+          if (!s.activeWorkout) return {}
+          // Se conserva la hora original: sólo se mueve el día al que se imputa.
+          const previous = new Date(s.activeWorkout.startedAt)
+          const target = new Date(timestamp)
+          const startedAt = new Date(
+            target.getFullYear(), target.getMonth(), target.getDate(),
+            previous.getHours(), previous.getMinutes(), previous.getSeconds(),
+          ).getTime()
+          return { activeWorkout: { ...s.activeWorkout, startedAt } }
+        }),
 
       updateSetValue: (exerciseIdx, setIdx, field, value) =>
         set((s) => {
@@ -175,7 +220,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { activeWorkout: { ...s.activeWorkout, exercises } }
         }),
 
-      completeSet: (exerciseIdx, setIdx) =>
+      completeSet: (exerciseIdx, setIdx, options) =>
         set((s) => {
           if (!s.activeWorkout) return {}
           const targetSet = s.activeWorkout.exercises[exerciseIdx]?.sets[setIdx]
@@ -197,13 +242,13 @@ export const useWorkoutStore = create<WorkoutState>()(
                 return {}
               }
             } else {
-              const kg = parseFloat(targetSet.kg)
               const reps = parseInt(targetSet.reps)
               if (isNaN(reps) || reps <= 0) {
                 useStore.getState().addToast('Ingresá la cantidad de reps antes de completar', 'info')
                 return {}
               }
-              if (isNaN(kg)) return {}
+              // El peso es opcional: abdominales, dominadas o cualquier
+              // ejercicio a peso corporal se registran sólo con reps.
             }
           }
           const exercises = s.activeWorkout.exercises.map((ex, ei) => {
@@ -214,11 +259,12 @@ export const useWorkoutStore = create<WorkoutState>()(
             }
           })
           const completedSet = exercises[exerciseIdx].sets[setIdx]
+          const startRest = completedSet.completed && options?.startRest === true
           const lastCompletedSet = completedSet.completed
             ? {
                 exerciseId: exercises[exerciseIdx].exerciseId,
                 setIdx,
-                kg: parseFloat(completedSet.kg) || 0,
+                kg: parseDecimal(completedSet.kg) || 0,
                 reps: parseInt(completedSet.reps) || 0,
               }
             : s.activeWorkout.lastCompletedSet
@@ -228,7 +274,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           if (completedSet.completed && !completedSet.isWarmup) {
             const { prs } = useStore.getState()
             const exerciseId = exercises[exerciseIdx].exerciseId
-            const kg = parseFloat(completedSet.kg) || 0
+            const kg = parseDecimal(completedSet.kg) || 0
             const reps = parseInt(completedSet.reps) || 0
             if (kg > 0) {
               const existing = prs.find((p) => p.exerciseId === exerciseId)
@@ -245,10 +291,11 @@ export const useWorkoutStore = create<WorkoutState>()(
               exercises,
               lastCompletedSet,
               livePr,
-              restTimerVisible: completedSet.completed,
+              // El descanso arranca sólo si se confirmó con el ✓⏱.
+              restTimerVisible: startRest,
               restSecondsLeft: s.activeWorkout.restTotalSeconds,
               restTotalSeconds: s.activeWorkout.restTotalSeconds,
-              restEndsAt: completedSet.completed
+              restEndsAt: startRest
                 ? Date.now() + s.activeWorkout.restTotalSeconds * 1000
                 : s.activeWorkout.restEndsAt,
             },
@@ -332,7 +379,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             sets: ex.sets
               .filter((s) => s.completed)
               .map((s) => ({
-                kg: parseFloat(s.kg) || 0,
+                kg: parseDecimal(s.kg) || 0,
                 reps: parseInt(s.reps) || 0,
                 completedAt: finishedAt,
                 isWarmup: s.isWarmup || undefined,
@@ -357,7 +404,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         for (const ex of activeWorkout.exercises) {
           for (const s of ex.sets) {
             if (!s.completed || s.isWarmup) continue
-            const kg = parseFloat(s.kg) || 0
+            const kg = parseDecimal(s.kg) || 0
             const reps = parseInt(s.reps) || 0
             if (kg <= 0) continue
             const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)

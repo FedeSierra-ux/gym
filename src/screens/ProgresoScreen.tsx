@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
-import { TrainingHeatmap } from '../components/TrainingHeatmap'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import type { MuscleGroup } from '../types'
@@ -190,7 +189,11 @@ export function ProgresoScreen() {
     ep.changePct = ep.firstMax > 0 ? Math.round((ep.change / ep.firstMax) * 100) : 0
     progressList.push(ep)
   }
-  progressList.sort((a, b) => b.changePct - a.changePct || b.change - a.change)
+  // Orden alfabético: con muchos ejercicios es lo único que deja encontrarlos.
+  const exerciseName = (id: string) => exercises.find(e => e.id === id)?.nameEs ?? id
+  progressList.sort((a, b) =>
+    exerciseName(a.exerciseId).localeCompare(exerciseName(b.exerciseId), 'es', { sensitivity: 'base' })
+  )
 
   const muscleGroupsWithData = [...new Set(
     progressList.map(ep => exercises.find(e => e.id === ep.exerciseId)?.muscleGroup).filter(Boolean)
@@ -230,11 +233,6 @@ export function ProgresoScreen() {
       </div>
 
       <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 22px 24px' }}>
-        {/* Mapa de constancia: visible en las dos pestañas */}
-        <div style={{ marginBottom: 16 }}>
-          <TrainingHeatmap />
-        </div>
-
         {tab === 'volumen' ? (
           <MonthlyMuscleVolume />
         ) : (

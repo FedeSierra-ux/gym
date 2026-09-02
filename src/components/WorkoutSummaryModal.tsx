@@ -3,6 +3,7 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
 import type { Workout } from '../types'
+import { formatLoad } from '../utils/format'
 
 const S = {
   bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
@@ -168,7 +169,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
                       <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
                         {byTime
                           ? `${sets.length} × ${formatDuration(totalSeconds(sets) / Math.max(1, sets.length))} · total ${formatDuration(totalSeconds(sets))}`
-                          : `${sets.length} series · mejor: ${best.kg}kg × ${best.reps} reps`}
+                          : `${sets.length} series · mejor: ${formatLoad(best.kg, best.reps)}`}
                       </div>
                     </div>
                     {!byTime && (

@@ -2,19 +2,18 @@ import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSeconds, toSeconds } from '../utils/duration'
+import { toDateInputValue } from '../utils/dates'
+import { formatLoad } from '../utils/format'
+import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
+import { getWorkoutStreak } from '../utils/streak'
+import { MonthCalendar } from '../components/MonthCalendar'
+import { monthStats } from '../utils/trainingDays'
 import type { CalendarSubTab, Routine, Workout } from '../types'
-
-function toDateInputValue(ts: number): string {
-  const d = new Date(ts)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
-const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 type SelectedDay = { day: number; month: number; year: number }
@@ -120,7 +119,7 @@ function DaySheet({
                                 <p style={{ color: S.dim, fontSize: 11 }}>{ex.nameEs}</p>
                                 {byTime
                                   ? <p style={{ color: S.faint, fontSize: 11 }}>{formatDuration(totalSeconds(we.sets))}</p>
-                                  : best && <p style={{ color: S.faint, fontSize: 11 }}>{best.kg}kg × {best.reps}</p>}
+                                  : best && <p style={{ color: S.faint, fontSize: 11 }}>{formatLoad(best.kg, best.reps, { conReps: false })}</p>}
                               </div>
                             )
                           })}
@@ -245,15 +244,15 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
     const [y, m, d] = dateStr.split('-').map(Number)
     const original = new Date(workout.startedAt)
     const newStartedAt = new Date(y, m - 1, d, original.getHours(), original.getMinutes(), original.getSeconds()).getTime()
-    const durationMin = Math.max(0, Math.round(parseFloat(durationStr)) || 0)
+    const durationMin = Math.max(0, Math.round(parseDecimal(durationStr)) || 0)
     const finishedAt = newStartedAt + durationMin * 60000
     const newExercises = draftExercises.map((ex) => ({
       exerciseId: ex.exerciseId,
       sets: ex.sets
         .filter((s) => s.kg !== '' || s.reps !== '' || s.duration !== '')
         .map((s) => ({
-          kg: parseFloat(s.kg) || 0,
-          reps: parseInt(s.reps) || 0,
+          kg: parseDecimal(s.kg) || 0,
+          reps: parseInt(s.reps.replace(/[^0-9]/g, '')) || 0,
           completedAt: finishedAt,
           isWarmup: s.isWarmup,
           durationSec: s.duration
@@ -295,7 +294,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
             </div>
             <div style={{ width: 120 }}>
               <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
-              <input type="number" min={0} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
+              <input {...integerInputProps} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
                 style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 10, padding: '10px 12px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
             </div>
           </div>
@@ -313,18 +312,18 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
                       <span style={{ width: 18, fontSize: 11, color: S.faint }}>{setIdx + 1}</span>
                       {byTime ? (
                         <>
-                          <input type="number" value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
+                          <input {...decimalInputProps} value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
                             placeholder={unit}
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>{unit}</span>
                         </>
                       ) : (
                         <>
-                          <input type="number" value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
+                          <input {...decimalInputProps} value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
                             placeholder="kg"
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>×</span>
-                          <input type="number" value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
+                          <input {...integerInputProps} value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
                             placeholder="reps"
                             style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                         </>
@@ -350,88 +349,6 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
         }}>
           Guardar cambios
         </button>
-      </div>
-    </div>
-  )
-}
-
-function getStreaks(workouts: Array<{ startedAt: number; finishedAt?: number }>) {
-  const days = new Set<string>()
-  for (const w of workouts) {
-    if (!w.finishedAt) continue
-    const d = new Date(w.startedAt)
-    days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`)
-  }
-  const today = new Date()
-  let current = 0
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today); d.setDate(today.getDate() - i)
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-    if (days.has(key)) { current++ } else { if (i === 0) continue; break }
-  }
-  let best = 0; let streak = 0
-  const sorted = Array.from(days).map(k => {
-    const [y, m, d] = k.split('-').map(Number)
-    return new Date(y, m, d).getTime()
-  }).sort((a, b) => a - b)
-  for (let i = 0; i < sorted.length; i++) {
-    if (i === 0) { streak = 1; continue }
-    if ((sorted[i] - sorted[i - 1]) / 86400000 === 1) { streak++ } else { streak = 1 }
-    if (streak > best) best = streak
-  }
-  if (streak > best) best = streak
-  return { current, best }
-}
-
-function ActivityHeatmap({ workouts }: { workouts: Array<{ startedAt: number; finishedAt?: number }> }) {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const WEEKS = 16; const TOTAL_DAYS = WEEKS * 7
-  const startDate = new Date(today); startDate.setDate(today.getDate() - (TOTAL_DAYS - 1))
-  const countByDay = new Map<string, number>()
-  for (const w of workouts) {
-    if (!w.finishedAt) continue
-    const d = new Date(w.startedAt); d.setHours(0, 0, 0, 0)
-    const key = d.getTime().toString()
-    countByDay.set(key, (countByDay.get(key) ?? 0) + 1)
-  }
-  const cells: { date: Date; count: number }[] = []
-  for (let i = 0; i < TOTAL_DAYS; i++) {
-    const d = new Date(startDate); d.setDate(startDate.getDate() + i)
-    cells.push({ date: d, count: countByDay.get(d.getTime().toString()) ?? 0 })
-  }
-  const weeks: typeof cells[] = []
-  for (let w = 0; w < WEEKS; w++) weeks.push(cells.slice(w * 7, (w + 1) * 7))
-  const getColor = (count: number) => {
-    if (count === 0) return S.surf2
-    if (count === 1) return 'rgba(232,99,74,0.30)'
-    if (count === 2) return 'rgba(232,99,74,0.60)'
-    return S.acc
-  }
-  return (
-    <div>
-      <div className="flex gap-0.5">
-        {/* Day of week labels */}
-        <div className="flex flex-col gap-0.5" style={{ width: 14, flexShrink: 0, marginRight: 2 }}>
-          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-            <div key={d} className="flex-1 flex items-center" style={{ minHeight: 0, minWidth: 0 }}>
-              <span style={{ fontSize: 7, color: S.faint, lineHeight: 1 }}>{d}</span>
-            </div>
-          ))}
-        </div>
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-0.5 flex-1">
-            {week.map((cell, di) => (
-              <div key={di} className="aspect-square rounded-sm"
-                style={{ background: getColor(cell.count), outline: cell.date.getTime() === today.getTime() ? `1.5px solid ${S.acc}` : undefined, outlineOffset: 1 }}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-end gap-1.5 mt-2">
-        <span style={{ fontSize: 10, color: S.faint }}>Menos</span>
-        {[0, 1, 2, 3].map(c => <div key={c} className="w-3 h-3 rounded-sm" style={{ background: getColor(c) }} />)}
-        <span style={{ fontSize: 10, color: S.faint }}>Más</span>
       </div>
     </div>
   )
@@ -463,66 +380,27 @@ function WeekPlanner() {
   )
 }
 
-function CalendarioTab() {
+function CalendarioTab({ year, month }: { year: number; month: number }) {
   const { workouts, routines, weekPlan, deleteWorkout, getArchivedRoutineName } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
-  const [viewDate, setViewDate] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
   const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<Workout | null>(null)
-  const today = new Date()
-  const year = viewDate.getFullYear(); const month = viewDate.getMonth()
-  const firstDay = new Date(year, month, 1); const lastDay = new Date(year, month + 1, 0)
-  const daysInMonth = lastDay.getDate()
-  let startDow = firstDay.getDay() - 1; if (startDow < 0) startDow = 6
 
-  const gymDayWorkouts = new Map<number, Workout[]>()
-  workouts.filter((w) => {
-    if (!w.finishedAt) return false
-    const d = new Date(w.startedAt)
-    return d.getFullYear() === year && d.getMonth() === month
-  }).forEach((w) => {
-    const day = new Date(w.startedAt).getDate()
-    if (!gymDayWorkouts.has(day)) gymDayWorkouts.set(day, [])
-    gymDayWorkouts.get(day)!.push(w)
-  })
-
-  const gymDays = new Set(gymDayWorkouts.keys())
-  const gymDaysCount = gymDays.size
-  const todayInMonth = today.getFullYear() === year && today.getMonth() === month ? today.getDate() : -1
-  const daysPassed = todayInMonth > 0 ? todayInMonth : daysInMonth
-  const restDays = daysPassed - gymDaysCount
-  const attendance = Math.round((gymDaysCount / Math.max(daysPassed, 1)) * 100)
+  // Una sola lectura del reloj por montaje: el render tiene que ser puro.
+  const [nowTs] = useState(() => Date.now())
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
-  const { current: currentStreak } = getStreaks(finishedWorkouts)
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
-  const recentWorkouts = [...workouts].filter((w) => w.finishedAt).sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
+  const { trained: gymDaysCount, daysCounted, attendance } = monthStats(finishedWorkouts, year, month, nowTs)
+  const restDays = daysCounted - gymDaysCount
+  const streak = getWorkoutStreak(finishedWorkouts, nowTs)
+  const plannedDows = new Set(
+    Object.entries(weekPlan).filter(([, id]) => !!id).map(([dow]) => Number(dow))
+  )
+  const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Heatmap */}
-      <div style={{ background: S.surf, borderRadius: 18, padding: '14px 14px', border: `1px solid ${S.line2}` }}>
-        <div className="flex items-center justify-between mb-3">
-          <p style={{ fontSize: 12, fontWeight: 600, color: S.dim }}>Actividad · 16 semanas</p>
-          {currentStreak > 0 && (
-            <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: 'rgba(232,99,74,0.12)', color: S.acc, border: `1px solid rgba(232,99,74,0.2)` }}>
-              🔥 {currentStreak}d racha
-            </span>
-          )}
-        </div>
-        <ActivityHeatmap workouts={finishedWorkouts} />
-      </div>
-
-      {/* Month nav */}
-      <div className="flex items-center justify-between">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))}
-          style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'inherit' }}>‹</button>
-        <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.2, color: S.ink }}>{MONTH_NAMES[month]} {year}</span>
-        <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth}
-          style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: isCurrentMonth ? S.faint : S.dim, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', fontFamily: 'inherit' }}>›</button>
-      </div>
-
-      {/* 3-stat strip */}
+      {/* Resumen del mes */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         {([
           [gymDaysCount, 'Días gym', S.acc],
@@ -536,38 +414,29 @@ function CalendarioTab() {
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div style={{ background: S.surf, borderRadius: 18, padding: '14px 10px', border: `1px solid ${S.line2}` }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
-          {DAY_NAMES.map((d) => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: S.faint, padding: '3px 0' }}>{d}</div>
-          ))}
+      {/* Calendario del mes: cada día pintado según las series que hiciste */}
+      <div style={{ background: S.surf, borderRadius: 18, padding: '14px 14px', border: `1px solid ${S.line2}` }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: S.dim }}>Tocá un día para ver el detalle</p>
+          {streak.current > 0 && (
+            <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: 'rgba(232,99,74,0.12)', color: S.acc, border: `1px solid rgba(232,99,74,0.2)`, flexShrink: 0 }}>
+              🔥 {streak.current} seguidos
+            </span>
+          )}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-          {Array.from({ length: startDow }).map((_, i) => <div key={`e-${i}`} style={{ aspectRatio: '1' }} />)}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1
-            const isGym = gymDays.has(day)
-            const isToday = day === todayInMonth
-            const isFuture = todayInMonth > 0 && day > todayInMonth
-            const cellDow = (new Date(year, month, day).getDay() + 6) % 7
-            const plannedRoutineId = isFuture ? (weekPlan[cellDow] ?? null) : null
-            const plannedRoutine = plannedRoutineId ? routines.find(r => r.id === plannedRoutineId) : null
-            return (
-              <div key={day} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '1' }}
-                onClick={() => setSelectedDay({ day, month, year })}>
-                <div style={{ width: 28, height: 28, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer', background: isToday ? S.acc : 'transparent', color: isToday ? '#fff' : isFuture ? S.faint : isGym ? S.ink : S.dim, fontWeight: isToday || isGym ? 700 : 400 }}>
-                  <span style={{ fontSize: 11 }}>{day}</span>
-                  {isGym && !isToday && <div style={{ position: 'absolute', bottom: 2, width: 4, height: 4, borderRadius: 2, background: S.acc }} />}
-                  {plannedRoutine && !isGym && <div style={{ position: 'absolute', bottom: 2, width: 4, height: 4, borderRadius: 2, background: 'rgba(56,189,248,0.7)' }} title={plannedRoutine.name} />}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <MonthCalendar
+          year={year}
+          month={month}
+          workouts={finishedWorkouts}
+          plannedDows={plannedDows}
+          onSelectDay={(ts) => {
+            const d = new Date(ts)
+            setSelectedDay({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() })
+          }}
+        />
       </div>
 
-      {/* Consistency bar */}
+      {/* Consistencia */}
       <div style={{ background: S.surf, borderRadius: 14, padding: '12px 14px', border: `1px solid ${S.line2}` }}>
         <div className="flex justify-between items-center mb-2">
           <span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>Consistencia del mes</span>
@@ -736,10 +605,34 @@ function RecordsTab() {
 
 export function CalendarioScreen() {
   const { calendarSubTab, setCalendarSubTab } = useStore()
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const hoy = new Date()
+  const isCurrentMonth = hoy.getFullYear() === year && hoy.getMonth() === month
+  const enCalendario = calendarSubTab === 'calendario'
+
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div style={{ flexShrink: 0, paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
-        <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>Seguimiento</div>
+        {/* El mes manda: es lo primero de la pantalla y lo que filtra todo lo de abajo. */}
+        {enCalendario ? (
+          <div className="flex items-center justify-between">
+            <button onClick={() => setViewDate(new Date(year, month - 1, 1))} aria-label="Mes anterior"
+              style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>‹</button>
+            <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.5, color: S.ink, textAlign: 'center' }}>
+              {MONTH_NAMES[month]} <span style={{ color: S.dim, fontWeight: 600 }}>{year}</span>
+            </div>
+            <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth} aria-label="Mes siguiente"
+              style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: isCurrentMonth ? S.faint : S.dim, fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>›</button>
+          </div>
+        ) : (
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: -0.5, color: S.ink, textAlign: 'center' }}>Récords</div>
+        )}
+
         <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 16 }}>
           {([['calendario', '📅 Calendario'], ['records', '🏆 Récords']] as [CalendarSubTab, string][]).map(([id, label]) => (
             <button key={id} onClick={() => setCalendarSubTab(id)}
@@ -750,7 +643,7 @@ export function CalendarioScreen() {
         </div>
       </div>
       <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 22px 24px' }}>
-        {calendarSubTab === 'calendario' ? <CalendarioTab /> : <RecordsTab />}
+        {enCalendario ? <CalendarioTab year={year} month={month} /> : <RecordsTab />}
       </div>
     </div>
   )
