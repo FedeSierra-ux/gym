@@ -2,6 +2,7 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { CircularRing } from '../components/CircularRing'
+import { getWorkoutStreak, MAX_GAP_DAYS } from '../utils/streak'
 
 function formatDate() {
   const now = new Date()
@@ -9,24 +10,6 @@ function formatDate() {
   const day = now.getDate()
   const month = now.toLocaleDateString('es-AR', { month: 'long' })
   return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${day} ${month.charAt(0).toUpperCase() + month.slice(1)}`
-}
-
-function getWeekStreak(workouts: Array<{ startedAt: number; finishedAt?: number }>) {
-  const now = new Date()
-  let streak = 0
-  for (let i = 0; i < 60; i++) {
-    const day = new Date(now)
-    day.setDate(now.getDate() - i)
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime()
-    const end = start + 86400000
-    if (workouts.some(w => w.finishedAt && w.startedAt >= start && w.startedAt < end)) {
-      streak++
-    } else {
-      if (i === 0) continue
-      break
-    }
-  }
-  return streak
 }
 
 export function HomeScreen() {
@@ -47,7 +30,9 @@ export function HomeScreen() {
   const monthWorkouts = finishedWorkouts.filter(w => w.startedAt >= monthStart)
   const monthHours = parseFloat((monthWorkouts.reduce((a, w) => a + (w.durationMin ?? 0), 0) / 60).toFixed(1))
   const monthPrCount = prs.filter(p => p.date >= monthStart).length
-  const streak = getWeekStreak(finishedWorkouts)
+  // Racha por entrenos encadenados, no por días corridos: entrenar día por
+  // medio (o tres veces por semana cambiando los días) no la corta.
+  const streak = getWorkoutStreak(finishedWorkouts)
   const MONTHLY_GOAL = 15
   const ringPct = Math.min(Math.round((monthWorkouts.length / MONTHLY_GOAL) * 100), 100)
 
@@ -141,10 +126,21 @@ export function HomeScreen() {
                 <span style={{ color: 'var(--acc2)', fontWeight: 600 }}>{monthPrCount} PRs</span> nuevos
               </div>
             </div>
-            <div className="flex flex-col items-center gap-[2px]">
+            <div
+              className="flex flex-col items-center gap-[2px]"
+              title={
+                streak.current > 0
+                  ? `${streak.current} entrenos seguidos · se mantiene si entrenás dentro de ${MAX_GAP_DAYS} días`
+                  : 'Entrená para arrancar una racha'
+              }
+            >
               <span style={{ fontSize: 16 }}>🔥</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--acc2)' }}>{streak}</span>
-              <span style={{ fontSize: 9, color: 'var(--dim)' }}>días</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: streak.atRisk ? 'var(--acc)' : 'var(--acc2)' }}>
+                {streak.current}
+              </span>
+              <span style={{ fontSize: 9, color: 'var(--dim)', textAlign: 'center', lineHeight: 1.2 }}>
+                {streak.current === 1 ? 'entreno' : 'entrenos'}
+              </span>
             </div>
           </div>
         </div>

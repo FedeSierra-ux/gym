@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { exportBackup, readBackupFile, applyBackup } from '../utils/backup'
+import { MILE_ROUTINE_IDS } from '../data/mileRoutines'
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
-  const { anthropicApiKey, setAnthropicApiKey, userName, updateUserName, addToast } = useStore()
+  const { anthropicApiKey, setAnthropicApiKey, userName, updateUserName, addToast, routines, installMileRoutines } = useStore()
   const [key, setKey] = useState(anthropicApiKey ?? '')
   const [name, setName] = useState(userName)
   const [saved, setSaved] = useState(false)
@@ -29,6 +30,16 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     } finally {
       setExportando(false)
     }
+  }
+
+  // El plan de Mile se instala una sola vez: vive acá y no en Mis Rutinas,
+  // que es una pantalla de uso diario.
+  const mileFaltantes = MILE_ROUTINE_IDS.filter(id => !routines.some(r => r.id === id)).length
+
+  const handleInstallMile = () => {
+    const n = installMileRoutines()
+    if (n === 0) addToast('Ya tenías todas las rutinas del plan', 'info')
+    else addToast(n === 1 ? 'Se agregó 1 rutina del plan' : `Se agregaron ${n} rutinas del plan`, 'success')
   }
 
   const handleConfirmImport = async () => {
@@ -103,6 +114,29 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               Sin API key, la app usa sugerencias algorítmicas basadas en tu historial.
             </p>
           )}
+        </div>
+
+        {/* Plan de Mile */}
+        <div>
+          <p className="section-label mb-2">Plan de Mile</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Las 3 rutinas del plan (piernas, empuje y tirón) con su semana tipo. Se cargan una sola vez; si ya las
+            tenés, no se duplican.
+          </p>
+          <button
+            onClick={handleInstallMile}
+            disabled={mileFaltantes === 0}
+            className="w-full py-3 rounded-xl text-sm font-bold"
+            style={{
+              border: `1px solid ${mileFaltantes === 0 ? 'rgba(236,238,244,0.12)' : 'rgba(242,169,59,0.28)'}`,
+              background: mileFaltantes === 0 ? '#161821' : 'rgba(242,169,59,0.08)',
+              color: mileFaltantes === 0 ? '#8A91A3' : '#F2A93B',
+            }}
+          >
+            {mileFaltantes === 0
+              ? '✓ El plan ya está cargado'
+              : `📋 Cargar plan de Mile (${mileFaltantes} rutina${mileFaltantes === 1 ? '' : 's'})`}
+          </button>
         </div>
 
         {/* Backup */}
