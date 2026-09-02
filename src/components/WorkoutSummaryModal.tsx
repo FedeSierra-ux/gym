@@ -2,20 +2,16 @@ import { useEffect, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
-import type { Workout } from '../types'
+import type { NavTab, Workout } from '../types'
+import { tonelaje, formatTonelaje } from '../utils/volume'
 import { formatLoad } from '../utils/format'
+import { S } from '../theme'
 
-const S = {
-  bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
-  line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
-}
 
 interface Props {
   workout: Workout
   prCount: number
-  onDismiss: () => void
+  onDismiss: (destino?: NavTab) => void
 }
 
 export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
@@ -24,7 +20,6 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
   const routine = routines.find(r => r.id === workout.routineId)
 
   const totalSets = workout.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
-  const kcal = workout.kcal ?? Math.round((workout.durationMin ?? 0) * 6.5)
 
   const topExercises = workout.exercises
     .map(we => {
@@ -70,10 +65,12 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workout.id, anthropicApiKey])
 
+  // Las calorías eran minutos × 6,5 para cualquier persona, así que salieron:
+  // un número inventado le resta credibilidad a los que sí se miden.
   const stats: [string | number, string, string, string][] = [
     [workout.durationMin ?? 0, 'min', 'Tiempo', S.acc],
-    [totalSets, 'series', 'Volumen', S.acc2],
-    [kcal, 'kcal', 'Calorías', S.good],
+    [totalSets, totalSets === 1 ? 'serie' : 'series', 'Series', S.acc2],
+    [formatTonelaje(tonelaje([workout])), '', 'Volumen', S.good],
     [prCount, prCount === 1 ? 'récord' : 'récords', 'PRs', S.ink],
   ]
 
@@ -105,8 +102,8 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
           {stats.map(([val, unit, label, color]) => (
             <div key={label} style={{ background: S.surf2, borderRadius: 14, padding: '12px 6px', textAlign: 'center', border: `1px solid ${S.line2}` }}>
               <div style={{ fontSize: 19, fontWeight: 800, color, letterSpacing: -0.5, lineHeight: 1 }}>{val}</div>
-              <div style={{ fontSize: 9, color: S.dim, marginTop: 2, fontWeight: 600 }}>{unit}</div>
-              <div style={{ fontSize: 9, color: S.faint, marginTop: 1 }}>{label}</div>
+              <div style={{ fontSize: 11, color: S.dim, marginTop: 2, fontWeight: 600 }}>{unit}</div>
+              <div style={{ fontSize: 11, color: S.faint, marginTop: 1 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -150,7 +147,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
         {/* Top exercises */}
         {topExercises.length > 0 && (
           <div style={{ padding: '0 20px 16px', flexShrink: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>
               Ejercicios destacados
             </div>
             <div className="flex flex-col gap-2">
@@ -184,13 +181,24 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
           </div>
         )}
 
-        {/* CTA */}
-        <div style={{ padding: '4px 20px 48px', flexShrink: 0 }}>
+        {/* CTA — dos salidas, y cada una va adonde dice */}
+        <div style={{ padding: '4px 20px 48px', flexShrink: 0, display: 'flex', gap: 10 }}>
           <button
-            onClick={onDismiss}
+            onClick={() => onDismiss('home')}
             style={{
-              width: '100%', padding: '17px 0', borderRadius: 16,
-              background: `linear-gradient(135deg, ${S.acc} 0%, #d4553e 100%)`,
+              flex: 1, minHeight: 54, borderRadius: 16,
+              background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink,
+              fontFamily: 'DM Sans, system-ui, sans-serif',
+              fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Listo
+          </button>
+          <button
+            onClick={() => onDismiss('progreso')}
+            style={{
+              flex: 1.4, minHeight: 54, borderRadius: 16,
+              background: `linear-gradient(135deg, ${S.acc} 0%, ${S.accDim} 100%)`,
               border: 'none', color: '#fff',
               fontFamily: 'DM Sans, system-ui, sans-serif',
               fontSize: 16, fontWeight: 700, cursor: 'pointer',

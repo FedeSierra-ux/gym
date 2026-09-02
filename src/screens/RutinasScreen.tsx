@@ -1,59 +1,15 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { CustomExercisesScreen } from './CustomExercisesScreen'
-import { vibrate } from '../utils/haptics'
 import type { MuscleGroup, Routine } from '../types'
+import { useLongPress } from '../utils/useLongPress'
 
 /**
  * Detecta el "mantener apretado" sobre una tarjeta. Se usa pointer events para
  * que funcione igual con dedo y con mouse, y se cancela si el dedo se mueve
  * (si no, arrastrar para scrollear abriría el menú).
  */
-function useLongPress(onLongPress: () => void, ms = 500) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const disparado = useRef(false)
-  const origen = useRef<{ x: number; y: number } | null>(null)
-
-  const cancelar = () => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null }
-    origen.current = null
-  }
-
-  return {
-    /** true si el último gesto fue un long-press: sirve para no abrir la rutina. */
-    consumioElTap: () => {
-      const valor = disparado.current
-      disparado.current = false
-      return valor
-    },
-    handlers: {
-      onPointerDown: (e: React.PointerEvent) => {
-        disparado.current = false
-        origen.current = { x: e.clientX, y: e.clientY }
-        timer.current = setTimeout(() => {
-          disparado.current = true
-          vibrate(30)
-          onLongPress()
-        }, ms)
-      },
-      onPointerMove: (e: React.PointerEvent) => {
-        if (!origen.current) return
-        const dx = Math.abs(e.clientX - origen.current.x)
-        const dy = Math.abs(e.clientY - origen.current.y)
-        if (dx > 10 || dy > 10) cancelar()
-      },
-      onPointerUp: cancelar,
-      onPointerLeave: cancelar,
-      onPointerCancel: cancelar,
-      onContextMenu: (e: React.MouseEvent) => {
-        // En el celular el menú nativo de "copiar/seleccionar" tapa el nuestro.
-        e.preventDefault()
-      },
-    },
-  }
-}
-
 function RoutineCard({ routine, children, onOpen, onLongPress }: {
   routine: Routine
   children: React.ReactNode
@@ -171,7 +127,7 @@ export function RutinasScreen() {
                     <span style={{ fontSize: 16, fontWeight: 700, color: '#ECEEF4' }}>{routine.name}</span>
                     {isLast && (
                       <span style={{
-                        fontSize: 10, fontWeight: 700, color: '#E8634A',
+                        fontSize: 11, fontWeight: 700, color: '#E8634A',
                         background: 'rgba(232,99,74,0.15)', padding: '2px 7px', borderRadius: 6, flexShrink: 0,
                       }}>
                         ÚLTIMO
@@ -241,7 +197,7 @@ export function RutinasScreen() {
           <span style={{ fontSize: 16, lineHeight: 1 }}>💪</span> Mis ejercicios
           {customExercises.length > 0 && (
             <span style={{
-              fontSize: 10, padding: '2px 6px', borderRadius: 20, fontWeight: 700,
+              fontSize: 11, padding: '2px 6px', borderRadius: 20, fontWeight: 700,
               background: 'rgba(236,238,244,0.08)', color: '#ECEEF4',
             }}>
               {customExercises.length}

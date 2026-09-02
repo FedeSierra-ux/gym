@@ -6,20 +6,17 @@ import { RestTimerOverlay } from './RestTimerOverlay'
 import { CircularRing } from '../components/CircularRing'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { ExerciseModal } from '../components/ExerciseModal'
-import { vibrate } from '../utils/haptics'
+import { vibrate, primeAudio } from '../utils/haptics'
 import { useWakeLock } from '../utils/useWakeLock'
 import { isDurationExercise, durationUnit, toSeconds } from '../utils/duration'
 import { suggestNextWeight } from '../utils/progression'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { toDateInputValue, fromDateInputValue } from '../utils/dates'
+import { useLongPress } from '../utils/useLongPress'
+import { ExercisePickerSheet } from '../components/ExercisePickerSheet'
 import type { Exercise } from '../types'
+import { S } from '../theme'
 
-const S = {
-  bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A', acc2: '#F2A93B', good: '#34D399',
-  line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
-}
 
 function estimate1RM(kg: number, reps: number): number {
   if (reps === 1) return kg
@@ -55,7 +52,7 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
           <span style={{ fontSize: 13 }}>📝</span>
           <span style={{ flex: 1, fontSize: 11, color: tip ? S.dim : S.faint }}>{tip || 'Agregar tip / recordatorio de técnica...'}</span>
-          <span style={{ fontSize: 10, color: S.faint }}>{tip ? '✏️' : '+'}</span>
+          <span style={{ fontSize: 11, color: S.faint }}>{tip ? '✏️' : '+'}</span>
         </button>
       ) : (
         <div style={{ padding: '8px 12px 12px' }} className="flex flex-col gap-2">
@@ -71,16 +68,6 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
         </div>
       )}
     </div>
-  )
-}
-
-function AdjustButton({ label, onPress, ariaLabel }: { label: string; onPress: () => void; ariaLabel?: string }) {
-  return (
-    <button onClick={onPress} aria-label={ariaLabel}
-      style={{ width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, fontWeight: 700, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-    >
-      {label}
-    </button>
   )
 }
 
@@ -111,7 +98,7 @@ function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
           <p style={{ fontSize: 13, fontWeight: 600, color: S.ink, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {ex?.nameEs ?? ''} — {kg}kg × {reps} reps
           </p>
-          {reps > 1 && <p style={{ fontSize: 10, color: S.acc2, opacity: 0.75, marginTop: 2 }}>~1RM estimado: {estimate1RM(kg, reps)}kg</p>}
+          {reps > 1 && <p style={{ fontSize: 11, color: S.acc2, opacity: 0.75, marginTop: 2 }}>~1RM estimado: {estimate1RM(kg, reps)}kg</p>}
         </div>
         <button onClick={onDismiss} style={{ color: S.dim, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>✕</button>
       </div>
@@ -162,20 +149,202 @@ function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChang
   )
 }
 
+
+/**
+ * Ancho de las columnas de una serie: número, kg, reps y el tilde.
+ * Los ± se sacaron: ocupaban más de la mitad de la fila para algo que casi no
+ * se usa (el peso se escribe), y dejaban los campos en unos 48 px de ancho con
+ * botones de 32×32, imposibles de acertar con las manos transpiradas.
+ */
+const SET_GRID = '34px minmax(0,1fr) minmax(0,1fr) 64px'
+const SET_GRID_TIEMPO = '34px minmax(0,1fr) 64px'
+
+function estiloCampo(completada: boolean): React.CSSProperties {
+  return {
+    width: '100%', minWidth: 0, textAlign: 'center',
+    // 16px es el mínimo con el que iOS no hace zoom al enfocar el campo.
+    fontSize: 17, fontWeight: 700, minHeight: 48,
+    borderRadius: 10, padding: '8px 4px',
+    background: completada ? 'rgba(232,99,74,0.1)' : S.surf2,
+    border: `1px solid ${completada ? 'rgba(232,99,74,0.25)' : S.line2}`,
+    color: completada ? S.acc : S.ink,
+    fontFamily: 'DM Sans, system-ui, sans-serif',
+    outline: 'none',
+  }
+}
+
+/**
+ * Una serie del entreno.
+ *
+ * Un solo tilde: un toque confirma, y mantenerlo apretado confirma y arranca el
+ * cronómetro de descanso. Antes había dos botones casi idénticos de 36 px al
+ * lado, y había que decidir entre ellos en el medio de la serie.
+ */
+function SetRow({
+  exIdx, setIdx, set, byTime, unit, isBarbellLike, puedeBorrar,
+  onUpdate, onToggleWarmup, onRemove, onComplete,
+}: {
+  exIdx: number
+  setIdx: number
+  set: import('../types').ActiveWorkoutSet
+  byTime: boolean
+  unit: 'min' | 'seg'
+  isBarbellLike: boolean
+  puedeBorrar: boolean
+  onUpdate: (e: number, s: number, f: 'kg' | 'reps' | 'duration', v: string) => void
+  onToggleWarmup: (e: number, s: number) => void
+  onRemove: (e: number, s: number) => void
+  onComplete: (e: number, s: number, o?: { startRest?: boolean }) => void
+}) {
+  const [destello, setDestello] = useState(false)
+  const [verDiscos, setVerDiscos] = useState(false)
+
+  const completada = set.completed
+  const calentamiento = !!set.isWarmup
+  const kg = parseDecimal(set.kg) || 0
+  const reps = parseInt(set.reps) || 0
+  const orm = completada && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+  const sePuede = completada || (byTime ? toSeconds(set.duration ?? '', unit) > 0 : reps > 0)
+
+  const confirmar = (conDescanso: boolean) => {
+    // El audio de iOS sólo arranca desde un gesto del usuario: este es el gesto.
+    primeAudio()
+    onComplete(exIdx, setIdx, { startRest: conDescanso })
+    if (!completada && sePuede) {
+      vibrate(conDescanso ? [40, 20, 40, 20, 40] : [40, 20, 40])
+      setDestello(true)
+      setTimeout(() => setDestello(false), 600)
+    }
+  }
+
+  const { consumioElTap, handlers } = useLongPress(() => { if (!completada && sePuede) confirmar(true) })
+
+  return (
+    <div>
+      <div
+        className={destello ? 'set-complete-flash' : ''}
+        style={{
+          display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID,
+          alignItems: 'center', padding: '6px 14px', gap: 8,
+          background: completada ? 'rgba(232,99,74,0.05)' : 'transparent',
+          borderTop: `1px solid ${S.line}`,
+        }}
+      >
+        {/* Número de serie · calentamiento · borrar */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: calentamiento ? S.acc2 : completada ? S.acc : S.dim }}>
+            {setIdx + 1}
+          </span>
+          <button
+            onClick={() => onToggleWarmup(exIdx, setIdx)}
+            aria-label={calentamiento ? 'Quitar calentamiento' : 'Marcar como calentamiento'}
+            title="Serie de calentamiento (no cuenta para volumen ni récords)"
+            style={{
+              fontSize: 11, fontWeight: 700, width: 26, height: 22, borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: calentamiento ? 'rgba(242,169,59,0.18)' : 'none',
+              border: `1px solid ${calentamiento ? 'rgba(242,169,59,0.4)' : S.line2}`,
+              color: calentamiento ? S.acc2 : S.faint,
+              cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
+            }}
+          >W</button>
+          {puedeBorrar && (
+            <button
+              onClick={() => onRemove(exIdx, setIdx)}
+              aria-label={`Borrar la serie ${setIdx + 1}`}
+              style={{ width: 26, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: S.faint, fontSize: 12, fontFamily: 'inherit', lineHeight: 1 }}
+            >✕</button>
+          )}
+        </div>
+
+        {byTime ? (
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <input
+              {...decimalInputProps} value={set.duration ?? ''}
+              aria-label={`Tiempo en ${unit === 'min' ? 'minutos' : 'segundos'}, serie ${setIdx + 1}`}
+              onChange={(e) => onUpdate(exIdx, setIdx, 'duration', e.target.value)}
+              placeholder="0" disabled={completada}
+              style={estiloCampo(completada)}
+            />
+            <span style={{ fontSize: 11, color: S.faint, flexShrink: 0, width: 24 }}>{unit}</span>
+          </div>
+        ) : (
+          <>
+            <input
+              {...decimalInputProps} value={set.kg}
+              aria-label={`Peso en kg, serie ${setIdx + 1}`}
+              onChange={(e) => onUpdate(exIdx, setIdx, 'kg', e.target.value)}
+              onFocus={() => { if (isBarbellLike) setVerDiscos(true) }}
+              onBlur={() => setTimeout(() => setVerDiscos(false), 200)}
+              placeholder="0" disabled={completada}
+              style={estiloCampo(completada)}
+            />
+            <input
+              {...integerInputProps} value={set.reps}
+              aria-label={`Repeticiones, serie ${setIdx + 1}`}
+              onChange={(e) => onUpdate(exIdx, setIdx, 'reps', e.target.value)}
+              placeholder="0" disabled={completada}
+              style={estiloCampo(completada)}
+            />
+          </>
+        )}
+
+        {/* Un solo tilde: tap confirma, mantener apretado arranca el descanso */}
+        <button
+          {...handlers}
+          aria-label={completada ? 'Desmarcar serie' : 'Confirmar serie. Mantené apretado para arrancar el descanso'}
+          title={completada ? 'Desmarcar' : 'Tocá para confirmar · mantené apretado para el descanso'}
+          onClick={() => { if (consumioElTap()) return; confirmar(false) }}
+          style={{
+            width: '100%', minHeight: 48, borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: completada ? S.acc : sePuede ? 'rgba(232,99,74,0.10)' : S.surf2,
+            border: `2px solid ${completada ? S.acc : sePuede ? 'rgba(232,99,74,0.4)' : S.line2}`,
+            color: completada ? '#fff' : sePuede ? S.acc : S.faint,
+            fontSize: 22, fontWeight: 700, lineHeight: 1,
+            cursor: sePuede ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+            transition: 'all 0.15s', opacity: sePuede ? 1 : 0.4,
+            touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
+          }}
+        >✓</button>
+      </div>
+
+      {/* Pista de discos y 1RM, debajo de la fila */}
+      {(verDiscos && isBarbellLike && kg >= BAR_KG) && (
+        <div style={{ padding: '4px 14px 6px', fontSize: 11, color: S.dim }}>🏋️ {getPlates(kg)}</div>
+      )}
+      {orm !== null && (
+        <div style={{ padding: '0 14px 6px' }}>
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(52,211,153,0.55)' }}>~1RM: {orm}kg</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const opcionMenu: React.CSSProperties = {
+  width: '100%', textAlign: 'left', minHeight: 52,
+  background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 14,
+  padding: '12px 16px', color: S.ink, fontSize: 14, fontWeight: 600,
+  cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
+}
+
 export function ActiveWorkoutScreen() {
   const { routines, workouts, prs } = useStore()
   const exercises = useAllExercises()
   const {
     activeWorkout, updateSetValue, toggleSetWarmup, completeSet, addSetToExercise, removeSetFromExercise,
     dismissLivePr, finishWorkout, cancelWorkout, setWorkoutDate,
+    addExerciseToWorkout, replaceExerciseInWorkout, removeExerciseFromWorkout,
   } = useWorkoutStore()
 
   const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
-  const [flashingSet, setFlashingSet] = useState<string | null>(null)
-  const [plateHintFor, setPlateHintFor] = useState<string | null>(null)
+  // Índice del ejercicio cuyo menú está abierto, y qué se eligió hacer con él.
+  const [menuEjercicio, setMenuEjercicio] = useState<number | null>(null)
+  const [pickerPara, setPickerPara] = useState<{ modo: 'cambiar' | 'agregar'; exIdx: number } | null>(null)
 
   // Pantalla encendida mientras el entreno está abierto.
   useWakeLock(!!activeWorkout)
@@ -197,17 +366,7 @@ export function ActiveWorkoutScreen() {
     .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
 
-  const adjust = (exIdx: number, setIdx: number, field: 'kg' | 'reps', delta: number) => {
-    const currentVal = activeWorkout.exercises[exIdx]?.sets[setIdx]?.[field] ?? ''
-    const current = parseDecimal(currentVal) || 0
-    updateSetValue(exIdx, setIdx, field, String(Math.max(0, current + delta)))
-  }
 
-  /** Los ± del campo de tiempo: de a 1 minuto o de a 5 segundos. */
-  const adjustDuration = (exIdx: number, setIdx: number, delta: number) => {
-    const current = parseDecimal(activeWorkout.exercises[exIdx]?.sets[setIdx]?.duration ?? '') || 0
-    updateSetValue(exIdx, setIdx, 'duration', String(Math.max(0, Math.round((current + delta) * 10) / 10)))
-  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col screen-enter relative" style={{ background: S.bg }}>
@@ -275,30 +434,36 @@ export function ActiveWorkoutScreen() {
           return (
             <div key={activeEx.exerciseId} style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px solid ${S.line2}` }}>
 
-              {/* Exercise header */}
-              <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
+              {/* Encabezado del ejercicio */}
+              <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
                   {exIdx + 1}
                 </div>
-                <button onClick={() => setModalExercise(ex)} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <button onClick={() => setModalExercise(ex)} aria-label={`Ver ${ex.nameEs}`} style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                   <ExerciseThumbnail exercise={ex} size={36} />
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: S.ink }}>{ex.nameEs}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.nameEs}</div>
                   <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
                     <span style={{ color: config.color }}>{config.label}</span>
-                    {pr && <span style={{ color: S.acc2 }}> · 🏆 {pr.kg}×{pr.reps}</span>}
+                    {pr && <span style={{ color: S.acc2 }}> · 🏆 {pr.kg > 0 ? `${pr.kg}×${pr.reps}` : `${pr.reps} reps`}</span>}
                   </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: completedCount === activeEx.sets.length && activeEx.sets.length > 0 ? S.acc : S.dim }}>
                   {completedCount}/{activeEx.sets.length}
                 </div>
+                {/* Menú del ejercicio: cambiarlo o sacarlo sin salir del entreno */}
+                <button
+                  onClick={() => setMenuEjercicio(exIdx)}
+                  aria-label={`Opciones de ${ex.nameEs}`}
+                  style={{ width: 44, height: 44, flexShrink: 0, marginRight: -8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: S.dim, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}
+                >⋯</button>
               </div>
 
               {/* Sugerencia de doble progresión */}
               {suggestion && (
                 <div style={{
-                  margin: '0 16px 10px', padding: '8px 10px', borderRadius: 10,
+                  margin: '0 14px 10px', padding: '8px 10px', borderRadius: 10,
                   display: 'flex', alignItems: 'center', gap: 8,
                   background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.035)',
                   border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.30)' : S.line2}`,
@@ -312,196 +477,37 @@ export function ActiveWorkoutScreen() {
                 </div>
               )}
 
-              {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) minmax(0,1fr) 76px', padding: '0 12px 6px', gap: 6 }}>
-                {['Set', byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG', byTime ? '' : 'Reps', ''].map((h, i) => (
-                  <div key={h + i} style={{ fontSize: 10, fontWeight: 600, color: S.faint, textAlign: i === 0 ? 'center' : i < 3 ? 'center' : 'center' }}>{h}</div>
-                ))}
+              {/* Encabezado de la tabla */}
+              <div style={{ display: 'grid', gridTemplateColumns: SET_GRID, padding: '0 14px 6px', gap: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>Set</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>
+                  {byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG'}
+                </div>
+                {!byTime && <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>Reps</div>}
+                <div />
               </div>
 
-              {/* Sets */}
-              {activeEx.sets.map((set, setIdx) => {
-                const isCompleted = set.completed
-                const isWarmup = !!set.isWarmup
-                const flashKey = `${exIdx}-${setIdx}`
-                const kg = parseDecimal(set.kg) || 0
-                const reps = parseInt(set.reps) || 0
-                const orm = isCompleted && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
-                const plateKey = `${exIdx}-${setIdx}`
-                const showPlate = plateHintFor === plateKey && isBarbellLike && kg >= BAR_KG
-                const canDelete = !isCompleted && activeEx.sets.length > 1
-                const canComplete = isCompleted || (byTime ? toSeconds(set.duration ?? '', unit) > 0 : reps > 0)
-                return (
-                  <div key={setIdx}>
-                    <div
-                      className={flashingSet === flashKey ? 'set-complete-flash' : ''}
-                      style={{
-                        display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) minmax(0,1fr) 76px',
-                        alignItems: 'stretch', padding: '0 12px', gap: 6,
-                        background: isCompleted ? 'rgba(232,99,74,0.05)' : 'transparent',
-                        borderTop: `1px solid ${S.line}`,
-                        minHeight: 52,
-                      }}
-                    >
-                      {/* Set # + warm-up toggle + delete */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: isWarmup ? S.acc2 : isCompleted ? S.acc : S.dim }}>{setIdx + 1}</span>
-                        <button
-                          onClick={() => toggleSetWarmup(exIdx, setIdx)}
-                          aria-label={isWarmup ? 'Quitar calentamiento' : 'Marcar como calentamiento'}
-                          title="Serie de calentamiento (no cuenta para volumen/PRs)"
-                          style={{
-                            fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
-                            background: isWarmup ? 'rgba(242,169,59,0.18)' : 'none',
-                            border: `1px solid ${isWarmup ? 'rgba(242,169,59,0.4)' : S.line2}`,
-                            color: isWarmup ? S.acc2 : S.faint,
-                            cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1.4,
-                          }}>
-                          W
-                        </button>
-                        {canDelete && (
-                          <button onClick={() => removeSetFromExercise(exIdx, setIdx)}
-                            style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: S.faint, fontSize: 9, fontFamily: 'inherit', lineHeight: 1 }}>
-                            ✕
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Tiempo (cinta, planchas): un solo campo que ocupa las dos columnas */}
-                      {byTime ? (
-                        <div className="flex items-center gap-1" style={{ gridColumn: 'span 2', paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
-                          {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir tiempo" onPress={() => adjustDuration(exIdx, setIdx, unit === 'min' ? -1 : -5)} />}
-                          <input
-                            {...decimalInputProps} value={set.duration ?? ''}
-                            aria-label={`Tiempo en ${unit === 'min' ? 'minutos' : 'segundos'}, serie ${setIdx + 1}`}
-                            onChange={(e) => updateSetValue(exIdx, setIdx, 'duration', e.target.value)}
-                            placeholder="0" disabled={isCompleted}
-                            style={{
-                              flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
-                              borderRadius: 8, padding: '7px 2px',
-                              background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
-                              border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
-                              color: isCompleted ? S.acc : S.ink,
-                              fontFamily: 'DM Sans, system-ui, sans-serif',
-                              outline: 'none', minWidth: 0,
-                            }}
-                          />
-                          <span style={{ fontSize: 11, color: S.faint, flexShrink: 0, width: 26 }}>{unit}</span>
-                          {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar tiempo" onPress={() => adjustDuration(exIdx, setIdx, unit === 'min' ? 1 : 5)} />}
-                        </div>
-                      ) : (
-                      <>
-                      {/* KG */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
-                        {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir kg" onPress={() => adjust(exIdx, setIdx, 'kg', -5)} />}
-                        <input {...decimalInputProps} value={set.kg}
-                          aria-label={`Peso en kg, serie ${setIdx + 1}`}
-                          onChange={(e) => updateSetValue(exIdx, setIdx, 'kg', e.target.value)}
-                          onFocus={() => { if (isBarbellLike) setPlateHintFor(plateKey) }}
-                          onBlur={() => setTimeout(() => setPlateHintFor(null), 200)}
-                          placeholder="0" disabled={isCompleted}
-                          style={{
-                            // 16px es el mínimo con el que iOS no hace zoom al
-                            // enfocar el campo en medio de la serie.
-                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
-                            borderRadius: 8, padding: '7px 2px',
-                            background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
-                            border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
-                            color: isCompleted ? S.acc : S.ink,
-                            fontFamily: 'DM Sans, system-ui, sans-serif',
-                            outline: 'none', minWidth: 0,
-                          }}
-                        />
-                        {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar kg" onPress={() => adjust(exIdx, setIdx, 'kg', 2.5)} />}
-                      </div>
-
-                      {/* Reps */}
-                      <div className="flex items-center gap-1" style={{ paddingTop: 8, paddingBottom: 8, minWidth: 0 }}>
-                        {!isCompleted && <AdjustButton label="−" ariaLabel="Reducir reps" onPress={() => adjust(exIdx, setIdx, 'reps', -1)} />}
-                        <input {...integerInputProps} value={set.reps}
-                          aria-label={`Repeticiones, serie ${setIdx + 1}`}
-                          onChange={(e) => updateSetValue(exIdx, setIdx, 'reps', e.target.value)}
-                          placeholder="0" disabled={isCompleted}
-                          style={{
-                            // 16px es el mínimo con el que iOS no hace zoom al
-                            // enfocar el campo en medio de la serie.
-                            flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
-                            borderRadius: 8, padding: '7px 2px',
-                            background: isCompleted ? 'rgba(232,99,74,0.1)' : S.surf2,
-                            border: `1px solid ${isCompleted ? 'rgba(232,99,74,0.2)' : S.line2}`,
-                            color: isCompleted ? S.acc : S.ink,
-                            fontFamily: 'DM Sans, system-ui, sans-serif',
-                            outline: 'none', minWidth: 0,
-                          }}
-                        />
-                        {!isCompleted && <AdjustButton label="+" ariaLabel="Aumentar reps" onPress={() => adjust(exIdx, setIdx, 'reps', 1)} />}
-                      </div>
-                      </>
-                      )}
-
-                      {/* Confirmar la serie: ✓ sola o ✓ con cronómetro de descanso */}
-                      <div style={{ display: 'flex', gap: 4, alignSelf: 'stretch', marginTop: 6, marginBottom: 6 }}>
-                        {([true, false] as const)
-                          .filter((soloConfirmar) => soloConfirmar || !isCompleted)
-                          .map((soloConfirmar) => (
-                            <button
-                              key={soloConfirmar ? 'check' : 'check-timer'}
-                              aria-label={
-                                isCompleted ? 'Desmarcar serie'
-                                  : soloConfirmar ? 'Confirmar serie sin descanso'
-                                  : 'Confirmar serie e iniciar descanso'
-                              }
-                              title={
-                                isCompleted ? 'Desmarcar serie'
-                                  : soloConfirmar ? 'Confirmar sin cronómetro'
-                                  : 'Confirmar y arrancar el descanso'
-                              }
-                              onClick={() => {
-                                completeSet(exIdx, setIdx, { startRest: !soloConfirmar })
-                                if (!isCompleted && canComplete) { vibrate([40, 20, 40]); setFlashingSet(flashKey); setTimeout(() => setFlashingSet(null), 600) }
-                              }}
-                              style={{
-                                flex: 1, minWidth: 0, minHeight: 52, borderRadius: 10,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-                                background: isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.08)' : S.surf2,
-                                border: `2px solid ${isCompleted ? S.acc : canComplete ? 'rgba(232,99,74,0.35)' : S.line2}`,
-                                color: isCompleted ? '#fff' : canComplete ? S.acc : S.faint,
-                                fontSize: soloConfirmar ? 18 : 13, fontWeight: 700,
-                                cursor: canComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
-                                transition: 'all 0.15s',
-                                opacity: canComplete ? 1 : 0.4,
-                                lineHeight: 1,
-                              }}
-                            >
-                              {soloConfirmar ? '✓' : <>✓<span style={{ fontSize: 12 }}>⏱</span></>}
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Plate hint */}
-                    {showPlate && (
-                      <div style={{ padding: '6px 16px', fontSize: 10, color: S.dim, background: 'rgba(236,238,244,0.02)', borderTop: `1px solid ${S.line}` }}>
-                        🏋️ {getPlates(kg)}
-                      </div>
-                    )}
-
-                    {/* 1RM hint */}
-                    {orm !== null && (
-                      <div style={{ paddingLeft: 16, paddingBottom: 4, marginTop: -2 }}>
-                        <span style={{ fontSize: 10, fontWeight: 500, color: 'rgba(52,211,153,0.5)' }}>~1RM: {orm}kg</span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+              {/* Series */}
+              {activeEx.sets.map((set, setIdx) => (
+                <SetRow
+                  key={setIdx}
+                  exIdx={exIdx} setIdx={setIdx} set={set}
+                  byTime={byTime} unit={unit}
+                  isBarbellLike={isBarbellLike}
+                  puedeBorrar={!set.completed && activeEx.sets.length > 1}
+                  onUpdate={updateSetValue}
+                  onToggleWarmup={toggleSetWarmup}
+                  onRemove={removeSetFromExercise}
+                  onComplete={completeSet}
+                />
+              ))}
 
               {/* Previous session hint */}
               {prevSets.length > 0 && (
                 <div style={{ padding: '8px 16px 6px', borderTop: `1px solid ${S.line}`, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
+                  <span style={{ fontSize: 11, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
                   {prevSets.slice(0, 4).map((s, i) => (
-                    <span key={i} style={{ fontSize: 10, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
+                    <span key={i} style={{ fontSize: 11, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
                       {s.kg > 0 ? `${s.kg}×${s.reps}` : `${s.reps} reps`}
                     </span>
                   ))}
@@ -520,6 +526,21 @@ export function ActiveWorkoutScreen() {
             </div>
           )
         })}
+
+        {/* Sumar un ejercicio que no estaba en la rutina */}
+        <div style={{ padding: '12px 16px 0' }}>
+          <button
+            onClick={() => setPickerPara({ modo: 'agregar', exIdx: activeWorkout.exercises.length - 1 })}
+            style={{
+              width: '100%', minHeight: 48, borderRadius: 14,
+              background: 'none', border: `1.5px dashed ${S.line2}`,
+              color: S.dim, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            + Agregar un ejercicio
+          </button>
+        </div>
         <div style={{ height: 16 }} />
       </div>
 
@@ -534,6 +555,74 @@ export function ActiveWorkoutScreen() {
           Terminar entreno
         </button>
       </div>
+
+      {/* Menú del ejercicio: cambiarlo por otro o sacarlo de esta sesión */}
+      {menuEjercicio !== null && (() => {
+        const activeEx = activeWorkout.exercises[menuEjercicio]
+        const ex = exercises.find((e) => e.id === activeEx?.exerciseId)
+        const hechas = activeEx?.sets.filter((st) => st.completed).length ?? 0
+        return (
+          <div className="fixed inset-0 z-[55] flex items-end" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setMenuEjercicio(null)}>
+            <div
+              className="w-full rounded-t-3xl px-4 pt-4 sheet-enter"
+              style={{ background: S.surf, borderTop: `1px solid ${S.line2}`, paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 14px' }} />
+              <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 2 }}>{ex?.nameEs}</p>
+              <p style={{ fontSize: 12, color: S.dim, marginBottom: 14 }}>
+                {hechas > 0 ? `${hechas} ${hechas === 1 ? 'serie hecha' : 'series hechas'} en esta sesión` : 'Todavía sin series'}
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { setPickerPara({ modo: 'cambiar', exIdx: menuEjercicio }); setMenuEjercicio(null) }}
+                  style={opcionMenu}
+                >
+                  ↔️ Cambiar por otro ejercicio
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
+                    Sólo por hoy: la rutina queda igual
+                  </span>
+                </button>
+                <button
+                  onClick={() => { setPickerPara({ modo: 'agregar', exIdx: menuEjercicio }); setMenuEjercicio(null) }}
+                  style={opcionMenu}
+                >
+                  ➕ Agregar uno después de este
+                </button>
+                <button
+                  onClick={() => { removeExerciseFromWorkout(menuEjercicio); setMenuEjercicio(null) }}
+                  style={{ ...opcionMenu, color: S.bad }}
+                >
+                  ⤼ Saltear este ejercicio
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
+                    {hechas > 0 ? `Se pierden las ${hechas} series cargadas` : 'Lo saca del entreno de hoy'}
+                  </span>
+                </button>
+                <button onClick={() => setMenuEjercicio(null)} style={{ ...opcionMenu, textAlign: 'center', color: S.dim, background: 'none' }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {pickerPara && (
+        <ExercisePickerSheet
+          titulo={pickerPara.modo === 'cambiar' ? 'Cambiar por…' : 'Agregar al entreno'}
+          sugeridoGrupo={
+            pickerPara.modo === 'cambiar'
+              ? exercises.find((e) => e.id === activeWorkout.exercises[pickerPara.exIdx]?.exerciseId)?.muscleGroup
+              : undefined
+          }
+          excluir={activeWorkout.exercises.map((e) => e.exerciseId)}
+          onPick={(id) => {
+            if (pickerPara.modo === 'cambiar') replaceExerciseInWorkout(pickerPara.exIdx, id)
+            else addExerciseToWorkout(id, pickerPara.exIdx)
+          }}
+          onClose={() => setPickerPara(null)}
+        />
+      )}
 
       {activeWorkout.restTimerVisible && <RestTimerOverlay />}
 

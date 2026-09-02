@@ -1,3 +1,5 @@
+import { colors as t } from './design-tokens.js'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -7,42 +9,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Aurora design tokens
-        bg: '#0C0E14',
-        surf: '#161821',
-        surf2: '#1C1F2A',
-        ink: '#ECEEF4',
-        dim: '#8A91A3',
-        faint: '#3B3F4E',
-        acc: '#E8634A',
-        acc2: '#F2A93B',
-        good: '#34D399',
-        line: 'rgba(236,238,244,0.07)',
-        line2: 'rgba(236,238,244,0.12)',
-        // Legacy aliases for non-migrated screens
-        background: '#0C0E14',
-        surface: {
-          DEFAULT: '#161821',
-          elevated: '#1C1F2A',
-        },
-        card: '#161821',
-        border: {
-          DEFAULT: 'rgba(236,238,244,0.07)',
-          hi: 'rgba(236,238,244,0.12)',
-        },
-        primary: {
-          DEFAULT: '#E8634A',
-          dim: '#d4553e',
-          muted: 'rgba(232,99,74,0.15)',
-        },
-        info: {
-          DEFAULT: '#38BDF8',
-          muted: 'rgba(56,189,248,0.15)',
-        },
-        gold: {
-          DEFAULT: '#F2A93B',
-          muted: 'rgba(242,169,59,0.15)',
-        },
+        // Tokens de diseño — definidos una sola vez en design-tokens.js
+        bg: t.bg,
+        surf: t.surf,
+        surf2: t.surf2,
+        ink: t.ink,
+        dim: t.dim,
+        faint: t.faint,
+        acc: t.acc,
+        acc2: t.acc2,
+        good: t.good,
+        bad: t.bad,
+        line: t.line,
+        line2: t.line2,
+        // Alias con los nombres que usan las pantallas escritas con clases
+        background: t.bg,
+        surface: { DEFAULT: t.surf, elevated: t.surf2 },
+        card: t.surf,
+        border: { DEFAULT: t.line, hi: t.line2 },
+        primary: { DEFAULT: t.acc, dim: t.accDim, muted: 'rgba(232,99,74,0.15)' },
+        info: { DEFAULT: t.info, muted: 'rgba(56,189,248,0.15)' },
+        gold: { DEFAULT: t.acc2, muted: 'rgba(242,169,59,0.15)' },
       },
       fontFamily: {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],

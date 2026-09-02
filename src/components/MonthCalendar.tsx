@@ -1,12 +1,7 @@
 import { useState } from 'react'
-import type { Workout } from '../types'
-import { dayKey, setsByDay, levelFor, LEVEL_BG } from '../utils/trainingDays'
-
-const S = {
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A',
-  line2: 'rgba(236,238,244,0.12)',
-}
+import type { Routine, Workout } from '../types'
+import { dayKey, setsByDay, routineByDay, routineColor } from '../utils/trainingDays'
+import { S } from '../theme'
 
 /** Semana que arranca en lunes, como el calendario de acá. */
 const DAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -16,22 +11,24 @@ interface DayCell {
   key: string
   ts: number
   sets: number
+  routineId?: string
   isFuture: boolean
   isToday: boolean
 }
 
 /**
- * Calendario del mes con la intensidad de cada día pintada en la celda: los
+ * Calendario del mes con cada día entrenado pintado del color de su rutina: los
  * días de la semana van arriba en horizontal y cada fila es una semana, así se
- * lee de un vistazo a qué días se fue. Reemplaza al heatmap de columnas
- * verticales, que obligaba a girar la cabeza para entenderlo.
+ * lee de un vistazo qué días se fue y si se están alternando bien las rutinas.
  */
 export function MonthCalendar({
-  year, month, workouts, onSelectDay, plannedDows,
+  year, month, workouts, routines, onSelectDay, plannedDows,
 }: {
   year: number
   month: number
   workouts: Workout[]
+  /** Para el color y la leyenda: el orden de la lista fija el color de cada rutina. */
+  routines: Routine[]
   /** Si se pasa, cada día es clickeable y devuelve su timestamp al mediodía. */
   onSelectDay?: (ts: number) => void
   /** Días de la semana (0 = lunes) con rutina planificada: se marcan a futuro. */
@@ -40,6 +37,8 @@ export function MonthCalendar({
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
   const byDay = setsByDay(workouts)
+  const rutinaDelDia = routineByDay(workouts)
+  const routineIds = routines.map((r) => r.id)
   const todayKey = dayKey(nowTs)
   const now = new Date(nowTs)
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime()
@@ -54,6 +53,7 @@ export function MonthCalendar({
     cells.push({
       day, key, ts: date.getTime(),
       sets: byDay.get(key) ?? 0,
+      routineId: rutinaDelDia.get(key),
       isFuture: date.getTime() > endOfToday,
       isToday: key === todayKey,
     })
@@ -63,12 +63,18 @@ export function MonthCalendar({
   const weeks: (DayCell | null)[][] = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
+  // Sólo las rutinas que aparecen este mes entran en la leyenda.
+  const rutinasDelMes = routines.filter((r) =>
+    cells.some((c) => c && !c.isFuture && c.routineId === r.id)
+  )
+  const hayBorradas = cells.some((c) => c?.routineId && !routineIds.includes(c.routineId))
+
   return (
     <div>
       {/* Días de la semana, en horizontal */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
         {DAY_LABELS.map((d, i) => (
-          <div key={i} style={{ fontSize: 9, color: S.faint, textAlign: 'center', fontWeight: 600 }}>{d}</div>
+          <div key={i} style={{ fontSize: 11, color: S.faint, textAlign: 'center', fontWeight: 600 }}>{d}</div>
         ))}
       </div>
 
@@ -78,11 +84,17 @@ export function MonthCalendar({
           <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
             {week.map((cell, ci) => {
               if (!cell) return <div key={`e-${ci}`} style={{ aspectRatio: '1' }} />
-              const level = cell.isFuture ? 0 : levelFor(cell.sets)
+              const entrenado = !cell.isFuture && cell.sets > 0
+              const color = entrenado && cell.routineId ? routineColor(cell.routineId, routineIds) : null
               const date = new Date(cell.ts)
               const dow = (date.getDay() + 6) % 7
               const planned = cell.isFuture && plannedDows?.has(dow)
-              const etiqueta = `${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: ${cell.sets} series`
+              const nombreRutina = cell.routineId
+                ? routines.find((r) => r.id === cell.routineId)?.name ?? 'rutina eliminada'
+                : null
+              const etiqueta = `${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: ${
+                entrenado ? `${nombreRutina}, ${cell.sets} series` : 'sin entrenar'
+              }`
               return (
                 <div
                   key={cell.key}
@@ -100,12 +112,12 @@ export function MonthCalendar({
                   style={{
                     aspectRatio: '1', borderRadius: 8, position: 'relative',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: LEVEL_BG[level],
+                    background: color ?? S.surf2,
                     border: cell.isToday
                       ? `1.5px solid ${S.acc}`
-                      : level === 0 ? `1px solid ${S.line2}` : '1px solid transparent',
-                    color: level >= 3 ? '#fff' : level > 0 ? S.ink : S.faint,
-                    fontSize: 10, fontWeight: level > 0 ? 700 : 500,
+                      : entrenado ? '1px solid transparent' : `1px solid ${S.line2}`,
+                    color: entrenado ? '#0C0E14' : S.faint,
+                    fontSize: 11, fontWeight: entrenado ? 700 : 500,
                     opacity: cell.isFuture ? 0.35 : 1,
                     cursor: onSelectDay ? 'pointer' : 'default',
                   }}
@@ -124,14 +136,23 @@ export function MonthCalendar({
         ))}
       </div>
 
-      {/* Leyenda */}
-      <div className="flex items-center justify-end gap-1.5" style={{ marginTop: 10 }}>
-        <span style={{ fontSize: 9, color: S.faint }}>Menos</span>
-        {LEVEL_BG.map((bg, i) => (
-          <div key={i} style={{ width: 10, height: 10, borderRadius: 3, background: bg, border: i === 0 ? `1px solid ${S.line2}` : 'none' }} />
-        ))}
-        <span style={{ fontSize: 9, color: S.faint }}>Más</span>
-      </div>
+      {/* Leyenda: qué rutina es cada color */}
+      {(rutinasDelMes.length > 0 || hayBorradas) && (
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5" style={{ marginTop: 12 }}>
+          {rutinasDelMes.map((r) => (
+            <span key={r.id} className="flex items-center gap-1.5" style={{ fontSize: 11, color: S.dim }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: routineColor(r.id, routineIds), flexShrink: 0 }} />
+              {r.name}
+            </span>
+          ))}
+          {hayBorradas && (
+            <span className="flex items-center gap-1.5" style={{ fontSize: 11, color: S.dim }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: '#6B7280', flexShrink: 0 }} />
+              Rutina eliminada
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

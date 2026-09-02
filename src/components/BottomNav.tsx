@@ -37,7 +37,7 @@ export function BottomNav() {
               <span style={{ fontSize: 18, opacity: isActive ? 1 : 0.35, transition: 'opacity 0.15s' }}>{emoji}</span>
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: isActive ? 700 : 500,
                   color: isActive ? '#E8634A' : '#8A91A3',
                   transition: 'color 0.15s',

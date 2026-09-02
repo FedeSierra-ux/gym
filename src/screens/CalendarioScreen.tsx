@@ -7,8 +7,9 @@ import { formatLoad } from '../utils/format'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { getWorkoutStreak } from '../utils/streak'
 import { MonthCalendar } from '../components/MonthCalendar'
-import { monthStats } from '../utils/trainingDays'
+import { monthStats, plannedDowSet } from '../utils/trainingDays'
 import type { CalendarSubTab, Routine, Workout } from '../types'
+import { S } from '../theme'
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -18,12 +19,6 @@ const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 type SelectedDay = { day: number; month: number; year: number }
 
-const S = {
-  bg: '#0C0E14', surf: '#161821', surf2: '#1C1F2A',
-  ink: '#ECEEF4', dim: '#8A91A3', faint: '#3B3F4E',
-  acc: '#E8634A', acc2: '#F2A93B',
-  line: 'rgba(236,238,244,0.07)', line2: 'rgba(236,238,244,0.12)',
-}
 
 function DaySheet({
   selectedDay, allWorkouts, routines, onClose, onStartWorkout,
@@ -31,11 +26,10 @@ function DaySheet({
   selectedDay: SelectedDay; allWorkouts: Workout[]; routines: Routine[]
   onClose: () => void; onStartWorkout: (routineId: string, dateOverride?: number) => void
 }) {
-  const { deleteWorkout, getArchivedRoutineName } = useStore()
+  const { deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
   const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
-  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<Workout | null>(null)
   const { day, month, year } = selectedDay
   const dayWorkouts = allWorkouts.filter((w) => {
     if (!w.finishedAt) return false
@@ -47,6 +41,16 @@ function DaySheet({
   const isToday = date.toDateString() === new Date().toDateString()
   const isFuture = date.getTime() > todayMidnight.getTime()
   const dateLabel = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+  /**
+   * Borrar deja un aviso con "Deshacer" en vez de pedir confirmación antes.
+   * Es más rápido para el caso normal y sigue habiendo red si te equivocaste.
+   */
+  const borrarConDeshacer = (w: Workout) => {
+    const nombre = (routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId))?.name ?? 'el entreno'
+    deleteWorkout(w.id)
+    addUndoToast(`Se borró ${nombre} del ${new Date(w.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`, () => restoreWorkout(w))
+  }
+
   const handleStart = (routineId: string) => {
     const dateOverride = isToday ? undefined : new Date(year, month, day, 12, 0, 0).getTime()
     onStartWorkout(routineId, dateOverride)
@@ -105,8 +109,16 @@ function DaySheet({
                             <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
                             <p style={{ fontSize: 11, color: S.dim }}>{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
                           </div>
-                          <button onClick={() => setEditingWorkout(w)} style={{ padding: 6, color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
-                          <button onClick={() => setConfirmDeleteWorkout(w)} style={{ padding: 6, color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                          <button
+                            onClick={() => setEditingWorkout(w)}
+                            aria-label="Editar este entreno"
+                            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}
+                          >✏️</button>
+                          <button
+                            onClick={() => borrarConDeshacer(w)}
+                            aria-label="Borrar este entreno"
+                            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}
+                          >🗑</button>
                         </div>
                         <div className="flex flex-col gap-1">
                           {w.exercises.slice(0, 4).map((we) => {
@@ -150,40 +162,6 @@ function DaySheet({
       {editingWorkout && (
         <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
       )}
-      {confirmDeleteWorkout && (
-        <ConfirmDeleteWorkoutModal
-          workout={confirmDeleteWorkout}
-          routineName={(routines.find(r => r.id === confirmDeleteWorkout.routineId) ?? getArchivedRoutineName(confirmDeleteWorkout.routineId))?.name}
-          onCancel={() => setConfirmDeleteWorkout(null)}
-          onConfirm={() => { deleteWorkout(confirmDeleteWorkout.id); setConfirmDeleteWorkout(null) }}
-        />
-      )}
-    </div>
-  )
-}
-
-function ConfirmDeleteWorkoutModal({
-  workout, routineName, onCancel, onConfirm,
-}: { workout: Workout; routineName?: string; onCancel: () => void; onConfirm: () => void }) {
-  const date = new Date(workout.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onCancel}>
-      <div style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Eliminar este entreno?</h3>
-        <p style={{ color: S.dim, fontSize: 13, marginBottom: 20 }}>
-          Se eliminará el entreno de <strong style={{ color: S.ink }}>{routineName ?? 'rutina eliminada'}</strong> del {date}. Esta acción no se puede deshacer.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={onCancel}
-            style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-            Cancelar
-          </button>
-          <button onClick={onConfirm}
-            style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
-            Eliminar
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -266,7 +244,6 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
       startedAt: newStartedAt,
       finishedAt,
       durationMin,
-      kcal: Math.round(durationMin * 6.5),
       exercises: newExercises,
     })
     onClose()
@@ -314,22 +291,23 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
                         <>
                           <input {...decimalInputProps} value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
                             placeholder={unit}
-                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>{unit}</span>
                         </>
                       ) : (
                         <>
                           <input {...decimalInputProps} value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
                             placeholder="kg"
-                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                           <span style={{ color: S.faint, fontSize: 11 }}>×</span>
                           <input {...integerInputProps} value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
                             placeholder="reps"
-                            style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
+                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 16, color: S.ink, fontFamily: 'inherit' }} />
                         </>
                       )}
                       <button onClick={() => removeSet(exIdx, setIdx)}
-                        style={{ width: 24, height: 24, flexShrink: 0, color: S.dim, fontSize: 14, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                        aria-label={`Borrar la serie ${setIdx + 1}`}
+                        style={{ width: 40, height: 40, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </div>
                   ))}
                 </div>
@@ -381,53 +359,51 @@ function WeekPlanner() {
 }
 
 function CalendarioTab({ year, month }: { year: number; month: number }) {
-  const { workouts, routines, weekPlan, deleteWorkout, getArchivedRoutineName } = useStore()
+  const { workouts, routines, weekPlan, deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
-  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState<Workout | null>(null)
+
+  const borrarConDeshacer = (w: Workout) => {
+    const nombre = (routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId))?.name ?? 'el entreno'
+    deleteWorkout(w.id)
+    addUndoToast(`Se borró ${nombre} del ${new Date(w.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`, () => restoreWorkout(w))
+  }
 
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
-  const { trained: gymDaysCount, daysCounted, attendance } = monthStats(finishedWorkouts, year, month, nowTs)
-  const restDays = daysCounted - gymDaysCount
+  const plannedDows = plannedDowSet(weekPlan)
+  // La asistencia se mide contra los días que la semana tipo pedía entrenar, no
+  // contra los 31 del mes: ir tres veces por semana es cumplir el plan, no un 42%.
+  const { trained: gymDaysCount, planned, attendance } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
-  const plannedDows = new Set(
-    Object.entries(weekPlan).filter(([, id]) => !!id).map(([dow]) => Number(dow))
-  )
   const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Resumen del mes */}
+      {/* Resumen del mes — cumplimiento del plan, no días del calendario */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
         {([
-          [gymDaysCount, 'Días gym', S.acc],
-          [restDays, 'Descanso', S.dim],
-          [`${attendance}%`, 'Asistencia', S.acc2],
+          [gymDaysCount, planned > 0 ? `de ${planned} planificados` : 'días de gym', S.acc],
+          [`${attendance}%`, planned > 0 ? 'del plan' : 'de los días', attendance >= 100 ? S.good : S.acc2],
+          [streak.current, streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos', S.acc2],
         ] as [string | number, string, string][]).map(([v, l, col]) => (
           <div key={l} style={{ background: S.surf2, borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: `1px solid ${S.line2}` }}>
             <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5, color: col }}>{v}</div>
-            <div style={{ fontSize: 10, color: S.dim, marginTop: 3 }}>{l}</div>
+            <div style={{ fontSize: 11, color: S.dim, marginTop: 3, lineHeight: 1.25 }}>{l}</div>
           </div>
         ))}
       </div>
 
       {/* Calendario del mes: cada día pintado según las series que hiciste */}
       <div style={{ background: S.surf, borderRadius: 18, padding: '14px 14px', border: `1px solid ${S.line2}` }}>
-        <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: S.dim }}>Tocá un día para ver el detalle</p>
-          {streak.current > 0 && (
-            <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: 'rgba(232,99,74,0.12)', color: S.acc, border: `1px solid rgba(232,99,74,0.2)`, flexShrink: 0 }}>
-              🔥 {streak.current} seguidos
-            </span>
-          )}
-        </div>
+        <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 10 }}>Tocá un día para ver el detalle</p>
         <MonthCalendar
           year={year}
           month={month}
           workouts={finishedWorkouts}
+          routines={routines}
           plannedDows={plannedDows}
           onSelectDay={(ts) => {
             const d = new Date(ts)
@@ -439,12 +415,19 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
       {/* Consistencia */}
       <div style={{ background: S.surf, borderRadius: 14, padding: '12px 14px', border: `1px solid ${S.line2}` }}>
         <div className="flex justify-between items-center mb-2">
-          <span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>Consistencia del mes</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: S.acc }}>{attendance}%</span>
+          <span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>
+            {planned > 0 ? 'Cumplimiento del plan' : 'Consistencia del mes'}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: attendance >= 100 ? S.good : S.acc }}>{attendance}%</span>
         </div>
         <div style={{ height: 6, background: S.surf2, borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ width: `${attendance}%`, height: '100%', background: S.acc, borderRadius: 3, transition: 'width 0.4s ease' }} />
+          <div style={{ width: `${Math.min(100, attendance)}%`, height: '100%', background: attendance >= 100 ? S.good : S.acc, borderRadius: 3, transition: 'width 0.4s ease' }} />
         </div>
+        {planned > 0 && (
+          <p style={{ fontSize: 11, color: S.faint, marginTop: 6 }}>
+            {gymDaysCount} de {planned} días que pedía tu semana tipo
+          </p>
+        )}
       </div>
 
       {/* Week planner */}
@@ -465,14 +448,22 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
               >
                 <div style={{ background: 'rgba(232,99,74,0.10)', border: `1px solid rgba(232,99,74,0.2)`, borderRadius: 10, padding: '8px 10px', textAlign: 'center', flexShrink: 0, minWidth: 44 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: S.acc, lineHeight: 1 }}>{date.getDate()}</div>
-                  <div style={{ fontSize: 9, color: S.acc, opacity: 0.7, marginTop: 1 }}>{MONTH_NAMES[date.getMonth()].slice(0, 3)}</div>
+                  <div style={{ fontSize: 11, color: S.acc, opacity: 0.7, marginTop: 1 }}>{MONTH_NAMES[date.getMonth()].slice(0, 3)}</div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{routine?.emoji} {routine?.name}</p>
                   <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{w.exercises.length} ej · {totalSets} series · {w.durationMin}min</p>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); setEditingWorkout(w) }} style={{ padding: 8, color: S.dim, fontSize: 13, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>✏️</button>
-                <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteWorkout(w) }} style={{ padding: 8, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditingWorkout(w) }}
+                  aria-label="Editar este entreno"
+                  style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+                >✏️</button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); borrarConDeshacer(w) }}
+                  aria-label="Borrar este entreno"
+                  style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+                >🗑</button>
               </div>
             )
           })}
@@ -482,15 +473,6 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
 
       {editingWorkout && (
         <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
-      )}
-
-      {confirmDeleteWorkout && (
-        <ConfirmDeleteWorkoutModal
-          workout={confirmDeleteWorkout}
-          routineName={(routines.find(r => r.id === confirmDeleteWorkout.routineId) ?? getArchivedRoutineName(confirmDeleteWorkout.routineId))?.name}
-          onCancel={() => setConfirmDeleteWorkout(null)}
-          onConfirm={() => { deleteWorkout(confirmDeleteWorkout.id); setConfirmDeleteWorkout(null) }}
-        />
       )}
 
       {selectedDay && (
@@ -503,28 +485,44 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
   )
 }
 
+/**
+ * Una marca escrita con la unidad que le corresponde: kilos por repeticiones en
+ * los ejercicios con peso, repeticiones solas en los de peso corporal y tiempo
+ * en los isométricos y el cardio.
+ */
+function formatMarca(m: { kg: number; reps: number; durationSec?: number }): string {
+  if (m.durationSec) return formatDuration(m.durationSec)
+  if (m.kg > 0) return `${m.kg} kg × ${m.reps}`
+  return `${m.reps} reps`
+}
+
 function RecordsTab() {
-  const { prs, deletePr } = useStore()
+  const { prs } = useStore()
   const exercises = useAllExercises()
   const [expandedPr, setExpandedPr] = useState<string | null>(null)
-  const [confirmDeletePrId, setConfirmDeletePrId] = useState<string | null>(null)
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
+  // Últimos 30 días en vez del mes calendario: todos los días 1 este contador
+  // volvía a cero aunque vinieras rompiendo marcas.
+  const [nowTs] = useState(() => Date.now())
+  const startOfMonth = nowTs - 30 * 86400000
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
-  const sortedPrs = [...prs].sort((a, b) => b.kg * b.reps - a.kg * a.reps)
-  const medals: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' }
+  // Ordenados por lo más reciente: mezclar kilos, repeticiones y segundos en un
+  // solo ranking no significaba nada.
+  const sortedPrs = [...prs].sort((a, b) => b.date - a.date)
 
   return (
     <div className="flex flex-col gap-3">
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(242,169,59,0.08)', border: `1px solid rgba(242,169,59,0.22)`, borderRadius: 18, padding: 16 }}>
         <span style={{ fontSize: 32, lineHeight: 1 }}>🏆</span>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: S.acc2 }}>{monthPrs.length} nuevos PRs este mes</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: S.acc2 }}>
+            {monthPrs.length} {monthPrs.length === 1 ? 'récord nuevo' : 'récords nuevos'} en 30 días
+          </div>
           <div style={{ fontSize: 12, color: S.dim, marginTop: 3 }}>{prs.length} récords personales en total</div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        {sortedPrs.map((pr, idx) => {
+        {sortedPrs.map((pr) => {
           const ex = exercises.find((e) => e.id === pr.exerciseId)
           if (!ex) return null
           const isNew = pr.date >= startOfMonth
@@ -534,19 +532,21 @@ function RecordsTab() {
           return (
             <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 14, border: `1px solid ${isNew ? 'rgba(232,99,74,0.22)' : S.line2}` }}>
               <div className="flex items-center gap-3" style={{ padding: '12px 14px' }}>
-                <div style={{ width: 32, textAlign: 'center', flexShrink: 0, fontSize: idx < 3 ? 20 : 13, fontWeight: idx < 3 ? 400 : 700, color: idx < 3 ? undefined : S.dim }}>
-                  {idx < 3 ? medals[idx] : idx + 1}
+                <div style={{ width: 30, textAlign: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 18 }} aria-hidden="true">🏆</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span style={{ fontSize: 13, fontWeight: 700, color: S.ink, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ex.nameEs}</span>
-                    {isNew && <span style={{ fontSize: 9, fontWeight: 700, color: S.acc, background: 'rgba(232,99,74,0.15)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>NEW</span>}
+                    {isNew && <span style={{ fontSize: 11, fontWeight: 700, color: S.acc, background: 'rgba(232,99,74,0.15)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>NEW</span>}
                   </div>
                   <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{prDate}</p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>{pr.kg}kg × {pr.reps}</div>
-                  <div style={{ fontSize: 10, color: S.dim, marginTop: 2 }}>Vol: {pr.kg * pr.reps}kg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>{formatMarca(pr)}</div>
+                  {pr.kg > 0 && !pr.durationSec && (
+                    <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{Math.round(pr.kg * pr.reps)} kg de volumen</div>
+                  )}
                 </div>
                 {hasHistory && (
                   <button onClick={() => setExpandedPr(isExpanded ? null : pr.exerciseId)}
@@ -554,17 +554,15 @@ function RecordsTab() {
                     {isExpanded ? '▲' : '▼'}
                   </button>
                 )}
-                <button onClick={() => setConfirmDeletePrId(pr.exerciseId)}
-                  style={{ padding: 6, color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}>🗑</button>
               </div>
               {isExpanded && hasHistory && (
                 <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${S.line}` }}>
-                  <p style={{ fontSize: 10, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
                   <div className="flex flex-col gap-1.5">
                     {[...pr.history!].reverse().map((h, hi) => (
                       <div key={hi} className="flex items-center justify-between">
                         <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{h.kg}kg × {h.reps}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
                       </div>
                     ))}
                   </div>
@@ -576,30 +574,7 @@ function RecordsTab() {
         {prs.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No hay récords aún. ¡A entrenar!</p>}
       </div>
 
-      {confirmDeletePrId && (() => {
-        const prEx = exercises.find(e => e.id === confirmDeletePrId)
-        return (
-          <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
-            <div style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }}>
-              <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Eliminar este PR?</h3>
-              <p style={{ color: S.dim, fontSize: 13, marginBottom: 20 }}>
-                Se eliminará el récord de <strong style={{ color: S.ink }}>{prEx?.nameEs}</strong>. Esta acción no se puede deshacer.
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setConfirmDeletePrId(null)}
-                  style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Cancelar
-                </button>
-                <button onClick={() => { deletePr(confirmDeletePrId); setConfirmDeletePrId(null) }}
-                  style={{ flex: 1, padding: '12px 0', borderRadius: 14, border: 'none', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', background: 'rgba(239,68,68,0.15)', color: '#f87171' }}>
-                  Eliminar
-                </button>
-              </div>
-            </div>
           </div>
-        )
-      })()}
-    </div>
   )
 }
 

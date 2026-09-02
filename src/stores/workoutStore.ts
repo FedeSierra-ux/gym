@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ActiveWorkoutExercise, AppToast, Workout, PR } from '../types'
+import type { ActiveWorkoutExercise, AppToast, Workout } from '../types'
 import { useStore } from '../store/useStore'
 import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
 import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
 import { suggestNextWeight } from '../utils/progression'
+import { computeRecords, newRecords } from '../utils/records'
 
 export interface ActiveWorkout {
   routineId: string
@@ -41,6 +42,12 @@ interface WorkoutState {
    */
   completeSet: (exerciseIdx: number, setIdx: number, options?: { startRest?: boolean }) => void
   addSetToExercise: (exerciseIdx: number) => void
+  /** Agrega un ejercicio al entreno en curso, al final o después de otro. */
+  addExerciseToWorkout: (exerciseId: string, afterIdx?: number) => void
+  /** Cambia un ejercicio por otro sólo en esta sesión; la rutina no se toca. */
+  replaceExerciseInWorkout: (exerciseIdx: number, exerciseId: string) => void
+  /** Saca un ejercicio del entreno en curso (la máquina ocupada, una molestia). */
+  removeExerciseFromWorkout: (exerciseIdx: number) => void
   removeSetFromExercise: (exerciseIdx: number, setIdx: number) => void
   /** `auto` marca el cierre automático: guarda sin abrir el resumen. */
   finishWorkout: (options?: { auto?: boolean }) => void
@@ -55,7 +62,8 @@ interface WorkoutState {
   adjustRestTimer: (delta: number) => void
   setRestPreset: (seconds: number) => void
   dismissLivePr: () => void
-  dismissSummary: () => void
+  /** Cierra el resumen y navega adonde dice el botón que se tocó. */
+  dismissSummary: (destino?: import('../types').NavTab) => void
 }
 
 // A real workout rarely exceeds ~2h; if more than 3h elapse before the user
@@ -84,6 +92,76 @@ function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
   return clampDecimalInput(value, field === 'kg' ? 500 : 600)
 }
 
+
+/**
+ * Arma las series iniciales de un ejercicio dentro de un entreno.
+ *
+ * Se usa al arrancar la rutina y también al agregar o cambiar un ejercicio en
+ * el medio del entreno, para que en los dos casos se prellene igual: el peso
+ * sugerido por la doble progresión, y las reps de la última vez que se hizo.
+ */
+function buildActiveExercise(
+  exerciseId: string,
+  routineId: string,
+  setsOverride?: number,
+): ActiveWorkoutExercise {
+  const { routines, workouts, exercises: exerciseDb, customExercises } = useStore.getState()
+  const allExercises = [...exerciseDb, ...customExercises]
+  const exercise = allExercises.find((e) => e.id === exerciseId)
+  const routine = routines.find((r) => r.id === routineId)
+  const routineEx = routine?.exercises.find((re) => re.exerciseId === exerciseId)
+
+  const finishedWorkouts = [...workouts]
+    .filter((w) => w.finishedAt)
+    .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
+
+  // Se prioriza la misma rutina, pero si el ejercicio se hizo en otra (o la
+  // rutina se editó) igual se traen esos valores en vez de dejar el campo vacío.
+  const sameRoutine = finishedWorkouts.find((w) =>
+    w.routineId === routineId && w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
+  )
+  const source = sameRoutine ?? finishedWorkouts.find((w) =>
+    w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
+  )
+  const sets = source?.exercises.find((e) => e.exerciseId === exerciseId)?.sets ?? []
+  // El calentamiento no sirve como referencia salvo que sea lo único.
+  const working = sets.filter((s) => !s.isWarmup)
+  const prevSets = working.length > 0 ? working : sets
+
+  // Cuántas series: lo que dice la rutina, lo que se pidió, o lo de la última vez.
+  const cantidad = setsOverride ?? routineEx?.sets ?? Math.max(1, prevSets.length || 3)
+
+  if (isDurationExercise(exercise)) {
+    const unit = durationUnit(exercise)
+    const target = routineEx?.targetSeconds ?? prevSets[0]?.durationSec ?? 0
+    return {
+      exerciseId,
+      sets: Array.from({ length: cantidad }, (_, i) => ({
+        kg: '',
+        reps: '',
+        duration: fromSeconds(prevSets[i]?.durationSec ?? prevSets[prevSets.length - 1]?.durationSec ?? target, unit),
+        completed: false,
+      })),
+    }
+  }
+
+  // Doble progresión: el peso que se prellena es el sugerido, no el de la
+  // sesión anterior, así el objetivo del día queda cargado solo.
+  const rango = routineEx ?? { sets: cantidad, repsMin: 8, repsMax: 12 }
+  const suggestion = suggestNextWeight(exercise, rango, workouts, exerciseId)
+  const suggestedKg = suggestion && suggestion.kg > 0 ? String(suggestion.kg) : ''
+  const lastPrevSet = prevSets[prevSets.length - 1]
+  return {
+    exerciseId,
+    sets: Array.from({ length: cantidad }, (_, i) => {
+      const prev = prevSets[i] ?? lastPrevSet
+      const prevKg = prev && prev.kg > 0 ? String(prev.kg) : ''
+      const prevReps = prev && prev.reps > 0 ? String(prev.reps) : ''
+      return { kg: suggestedKg || prevKg, reps: prevReps, completed: false }
+    }),
+  }
+}
+
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
@@ -92,78 +170,13 @@ export const useWorkoutStore = create<WorkoutState>()(
       summaryPrCount: 0,
 
       startWorkout: (routineId, dateOverride) => {
-        const { routines, workouts } = useStore.getState()
-
+        const { routines } = useStore.getState()
         const routine = routines.find((r) => r.id === routineId)
         if (!routine) return
 
-        // Sesiones terminadas, de la más reciente a la más vieja. Se usan para
-        // prellenar cada ejercicio con lo que se hizo la última vez.
-        const finishedWorkouts = [...workouts]
-          .filter((w) => w.finishedAt)
-          .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
-
-        /**
-         * Series de la última vez que se hizo ese ejercicio. Se prioriza la
-         * misma rutina, pero si el ejercicio se hizo en otra (o la rutina se
-         * editó) igual se traen esos valores en vez de dejar el campo vacío.
-         */
-        const lastSetsFor = (exerciseId: string) => {
-          const sameRoutine = finishedWorkouts.find((w) =>
-            w.routineId === routineId && w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
-          )
-          const source = sameRoutine ?? finishedWorkouts.find((w) =>
-            w.exercises.some((e) => e.exerciseId === exerciseId && e.sets.length > 0)
-          )
-          const sets = source?.exercises.find((e) => e.exerciseId === exerciseId)?.sets ?? []
-          // El calentamiento no sirve como referencia salvo que sea lo único.
-          const working = sets.filter((s) => !s.isWarmup)
-          return working.length > 0 ? working : sets
-        }
-
-        const { exercises: exerciseDb, customExercises } = useStore.getState()
-        const allExercises = [...exerciseDb, ...customExercises]
-
-        const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) => {
-          const prevSets = lastSetsFor(re.exerciseId)
-          const exercise = allExercises.find((e) => e.id === re.exerciseId)
-
-          if (isDurationExercise(exercise)) {
-            const unit = durationUnit(exercise)
-            // El objetivo del plan manda; si no hay, se repite lo de la última vez.
-            const target = re.targetSeconds ?? prevSets[0]?.durationSec ?? 0
-            return {
-              exerciseId: re.exerciseId,
-              sets: Array.from({ length: re.sets }, (_, i) => ({
-                kg: '',
-                reps: '',
-                duration: fromSeconds(prevSets[i]?.durationSec ?? prevSets[prevSets.length - 1]?.durationSec ?? target, unit),
-                completed: false,
-              })),
-            }
-          }
-
-          // Doble progresión: el peso que se prellena es el sugerido, no el de
-          // la sesión anterior, así el objetivo del día queda cargado solo.
-          const suggestion = suggestNextWeight(exercise, re, workouts, re.exerciseId)
-          const suggestedKg = suggestion && suggestion.kg > 0 ? String(suggestion.kg) : ''
-          // Si la sesión anterior tuvo menos series que la rutina, las de más
-          // se prellenan con la última serie registrada.
-          const lastPrevSet = prevSets[prevSets.length - 1]
-          return {
-            exerciseId: re.exerciseId,
-            sets: Array.from({ length: re.sets }, (_, i) => {
-              const prev = prevSets[i] ?? lastPrevSet
-              const prevKg = prev && prev.kg > 0 ? String(prev.kg) : ''
-              const prevReps = prev && prev.reps > 0 ? String(prev.reps) : ''
-              return {
-                kg: suggestedKg || prevKg,
-                reps: prevReps,
-                completed: false,
-              }
-            }),
-          }
-        })
+        const activeExercises: ActiveWorkoutExercise[] = routine.exercises.map((re) =>
+          buildActiveExercise(re.exerciseId, routineId)
+        )
 
         const now = Date.now()
         set({
@@ -317,6 +330,50 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { activeWorkout: { ...s.activeWorkout, exercises } }
         }),
 
+      /**
+       * Series iniciales de un ejercicio que se suma al entreno en curso: se
+       * prellenan igual que al arrancar, con lo que se hizo la última vez.
+       */
+      addExerciseToWorkout: (exerciseId, afterIdx) =>
+        set((s) => {
+          if (!s.activeWorkout) return {}
+          if (s.activeWorkout.exercises.some((e) => e.exerciseId === exerciseId)) {
+            useStore.getState().addToast('Ese ejercicio ya está en el entreno', 'info')
+            return {}
+          }
+          const nuevo = buildActiveExercise(exerciseId, s.activeWorkout.routineId)
+          const exercises = [...s.activeWorkout.exercises]
+          const pos = afterIdx === undefined ? exercises.length : afterIdx + 1
+          exercises.splice(pos, 0, nuevo)
+          return { activeWorkout: { ...s.activeWorkout, exercises } }
+        }),
+
+      replaceExerciseInWorkout: (exerciseIdx, exerciseId) =>
+        set((s) => {
+          if (!s.activeWorkout) return {}
+          const actual = s.activeWorkout.exercises[exerciseIdx]
+          if (!actual) return {}
+          if (s.activeWorkout.exercises.some((e, i) => i !== exerciseIdx && e.exerciseId === exerciseId)) {
+            useStore.getState().addToast('Ese ejercicio ya está en el entreno', 'info')
+            return {}
+          }
+          // Se conserva la cantidad de series que ya tenía planificadas.
+          const nuevo = buildActiveExercise(exerciseId, s.activeWorkout.routineId, actual.sets.length)
+          const exercises = s.activeWorkout.exercises.map((e, i) => (i === exerciseIdx ? nuevo : e))
+          return { activeWorkout: { ...s.activeWorkout, exercises } }
+        }),
+
+      removeExerciseFromWorkout: (exerciseIdx) =>
+        set((s) => {
+          if (!s.activeWorkout) return {}
+          if (s.activeWorkout.exercises.length <= 1) {
+            useStore.getState().addToast('Es el único ejercicio del entreno', 'info')
+            return {}
+          }
+          const exercises = s.activeWorkout.exercises.filter((_, i) => i !== exerciseIdx)
+          return { activeWorkout: { ...s.activeWorkout, exercises } }
+        }),
+
       removeSetFromExercise: (exerciseIdx, setIdx) =>
         set((s) => {
           if (!s.activeWorkout) return {}
@@ -396,35 +453,15 @@ export const useWorkoutStore = create<WorkoutState>()(
           startedAt: activeWorkout.startedAt,
           finishedAt,
           durationMin,
-          kcal: Math.round(durationMin * 6.5),
           exercises: workoutExercises,
         }
 
-        const newPrs = [...prs]
-        for (const ex of activeWorkout.exercises) {
-          for (const s of ex.sets) {
-            if (!s.completed || s.isWarmup) continue
-            const kg = parseDecimal(s.kg) || 0
-            const reps = parseInt(s.reps) || 0
-            if (kg <= 0) continue
-            const existing = newPrs.find((p) => p.exerciseId === ex.exerciseId)
-            const isNewPr = !existing || kg > existing.kg || (kg === existing.kg && reps > existing.reps)
-            if (isNewPr) {
-              const idx = newPrs.findIndex((p) => p.exerciseId === ex.exerciseId)
-              const history = existing
-                ? [...(existing.history ?? []), { kg: existing.kg, reps: existing.reps, date: existing.date }]
-                : []
-              const pr: PR = { exerciseId: ex.exerciseId, kg, reps, date: activeWorkout.startedAt, history }
-              if (idx >= 0) newPrs[idx] = pr
-              else newPrs.push(pr)
-            }
-          }
-        }
-
-        const newPrCount = newPrs.filter((np) => {
-          const old = prs.find((p) => p.exerciseId === np.exerciseId)
-          return !old || np.kg > (old.kg) || (np.kg === old.kg && np.reps > old.reps)
-        }).length
+        // Los récords se derivan del historial completo, con el entreno recién
+        // terminado incluido: así una serie corregida o un entreno borrado
+        // nunca dejan una marca huérfana.
+        const workoutsConEste = [...useStore.getState().workouts, newWorkout]
+        const newPrs = computeRecords(workoutsConEste, allExercises)
+        const newPrCount = newRecords(prs, newPrs).length
 
         // Auto-progression suggestions (max 2)
         const progressionToasts: AppToast[] = []
@@ -432,7 +469,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         if (routine) {
           // Mismo criterio de doble progresión que usa la pantalla de entreno,
           // evaluado ya con el entreno recién terminado incluido.
-          const workoutsWithThisOne = [...useStore.getState().workouts, newWorkout]
+          const workoutsWithThisOne = workoutsConEste
           for (const re of routine.exercises) {
             if (progressionToasts.length >= 2) break
             const exercise = allExercises.find((e) => e.id === re.exerciseId)
@@ -448,22 +485,22 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
 
         const seriesTotales = workoutExercises.reduce((a, e) => a + e.sets.length, 0)
-        const successToast: AppToast = {
-          id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          message: options?.auto
-            ? `El entreno quedó abierto más de 4 h: lo guardamos con ${durationMin} min · ${seriesTotales} series`
-            : `¡Entreno terminado! ${durationMin} min · ${seriesTotales} series`,
-          type: options?.auto ? 'info' : 'success',
-        }
-        const prToast: AppToast | null = newPrCount > 0
-          ? { id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, message: `🏆 ${newPrCount} nuevo${newPrCount > 1 ? 's' : ''} PR!`, type: 'pr' }
-          : null
+        // Los minutos, las series y los PRs ya los muestra el resumen: repetirlos
+        // en avisos sólo servía para tapar la pantalla. En el cierre automático,
+        // en cambio, no hay resumen y el aviso es la única señal de que pasó algo.
+        const avisos: AppToast[] = options?.auto
+          ? [{
+              id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              message: `El entreno quedó abierto más de 4 h: lo guardamos con ${durationMin} min · ${seriesTotales} series`,
+              type: 'info',
+            }]
+          : progressionToasts
 
         // Write finished workout + PRs + toasts to persisted store
         useStore.setState((s) => ({
           workouts: [...s.workouts, newWorkout],
           prs: newPrs,
-          toasts: [...s.toasts, successToast, ...(prToast ? [prToast] : []), ...progressionToasts],
+          toasts: [...s.toasts, ...avisos],
         }))
 
         set((s) => ({
@@ -519,8 +556,8 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { activeWorkout: { ...s.activeWorkout, livePr: null } }
         }),
 
-      dismissSummary: () => {
-        useStore.setState({ activeTab: 'home' })
+      dismissSummary: (destino = 'home') => {
+        useStore.setState({ activeTab: destino })
         set({ summaryWorkout: null, summaryPrCount: 0 })
       },
     }),
