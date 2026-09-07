@@ -40,7 +40,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   // El plan de Mile se instala una sola vez: vive acá y no en Mis Rutinas,
   // que es una pantalla de uso diario.
   const mileFaltantes = MILE_ROUTINE_IDS.filter(id => !routines.some(r => r.id === id)).length
-  const diasDelPlan = plannedDowSet(weekPlan).size
+  const diasDelPlan = plannedDowSet(weekPlan, routines.map(r => r.id)).size
 
   const handleInstallMile = () => {
     const n = installMileRoutines()

@@ -37,7 +37,7 @@ export function HomeScreen() {
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
   // La meta sale de la semana tipo que armó el usuario; si no armó ninguna, de
   // lo que haya puesto a mano en Ajustes, y si no, de tres por semana.
-  const diasPlanificados = plannedDowSet(weekPlan).size
+  const diasPlanificados = plannedDowSet(weekPlan, routines.map(r => r.id)).size
   const porSemana = weeklyGoal ?? (diasPlanificados > 0 ? diasPlanificados : 3)
   const metaVentana = Math.round(porSemana * (30 / 7))
   const ringPct = Math.min(Math.round((ventana.workouts / Math.max(1, metaVentana)) * 100), 100)

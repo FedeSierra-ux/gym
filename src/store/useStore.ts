@@ -140,10 +140,17 @@ export const useStore = create<AppState>()(
         const archived = routine
           ? { ...s.archivedRoutineNames, [id]: { name: routine.name, emoji: routine.emoji } }
           : s.archivedRoutineNames
+        // Si no se limpia acá, el día queda "planificado" contra una rutina que
+        // ya no existe: el select la muestra como Descanso pero sigue contando
+        // en el cumplimiento del plan.
+        const weekPlan = Object.fromEntries(
+          Object.entries(s.weekPlan).map(([dow, routineId]) => [dow, routineId === id ? null : routineId])
+        )
         return {
           routines: s.routines.filter((r) => r.id !== id),
           activeRoutineId: s.activeRoutineId === id ? null : s.activeRoutineId,
           archivedRoutineNames: archived,
+          weekPlan,
         }
       }),
 

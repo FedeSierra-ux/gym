@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSeconds, toSeconds } from '../utils/duration'
@@ -332,27 +332,70 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
   )
 }
 
+const LONG_PRESS_MS = 550
+
+function WeekPlanDayRow({
+  label, routineId, routines, onSet,
+}: {
+  label: string; routineId: string | null; routines: Routine[]; onSet: (routineId: string | null) => void
+}) {
+  const routine = routineId ? routines.find(r => r.id === routineId) : null
+  const [locked, setLocked] = useState(false)
+  const timerRef = useRef<number | null>(null)
+
+  const cancelPress = () => {
+    if (timerRef.current !== null) { window.clearTimeout(timerRef.current); timerRef.current = null }
+  }
+  const startPress = () => {
+    if (!routine) return // ya está en descanso: no hay nada que mantener presionado
+    cancelPress()
+    timerRef.current = window.setTimeout(() => {
+      onSet(null)
+      navigator.vibrate?.(15)
+      // Deshabilitar el select un instante evita que, al soltar el dedo, el
+      // click del gesto abra igual el desplegable nativo.
+      setLocked(true)
+      window.setTimeout(() => setLocked(false), 300)
+    }, LONG_PRESS_MS)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span style={{ fontSize: 11, fontWeight: 600, width: 28, flexShrink: 0, color: S.dim }}>{label}</span>
+      <select
+        value={routine ? routineId! : ''}
+        disabled={locked}
+        onChange={(e) => onSet(e.target.value || null)}
+        onPointerDown={startPress}
+        onPointerUp={cancelPress}
+        onPointerLeave={cancelPress}
+        onPointerCancel={cancelPress}
+        onContextMenu={(e) => e.preventDefault()}
+        className="flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none appearance-none"
+        style={{ background: routine ? 'rgba(232,99,74,0.08)' : S.surf2, border: `1px solid ${routine ? 'rgba(232,99,74,0.2)' : S.line2}`, color: routine ? S.acc : S.dim, fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+        <option value="" style={{ background: S.surf, color: S.dim }}>— Descanso —</option>
+        {routines.map((r) => <option key={r.id} value={r.id} style={{ background: S.surf, color: S.ink }}>{r.emoji} {r.name}</option>)}
+      </select>
+    </div>
+  )
+}
+
 function WeekPlanner() {
   const { weekPlan, setWeekPlanDay, routines } = useStore()
   return (
     <div style={{ background: S.surf, borderRadius: 14, padding: '14px 16px', border: `1px solid ${S.line2}` }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 12 }}>Semana tipo</p>
+      <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 2 }}>Semana tipo</p>
+      <p style={{ fontSize: 11, color: S.faint, marginBottom: 10 }}>Mantené presionado un día para marcarlo descanso</p>
       <div className="flex flex-col gap-1.5">
-        {DOW_LABELS.map((label, dow) => {
-          const routineId = weekPlan[dow] ?? null
-          const routine = routineId ? routines.find(r => r.id === routineId) : null
-          return (
-            <div key={dow} className="flex items-center gap-2">
-              <span style={{ fontSize: 11, fontWeight: 600, width: 28, flexShrink: 0, color: S.dim }}>{label}</span>
-              <select value={routineId ?? ''} onChange={(e) => setWeekPlanDay(dow, e.target.value || null)}
-                className="flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none appearance-none"
-                style={{ background: routine ? 'rgba(232,99,74,0.08)' : S.surf2, border: `1px solid ${routine ? 'rgba(232,99,74,0.2)' : S.line2}`, color: routine ? S.acc : S.dim, fontFamily: 'DM Sans, system-ui, sans-serif' }}>
-                <option value="" style={{ background: S.surf, color: S.dim }}>— Descanso —</option>
-                {routines.map((r) => <option key={r.id} value={r.id} style={{ background: S.surf, color: S.ink }}>{r.emoji} {r.name}</option>)}
-              </select>
-            </div>
-          )
-        })}
+        {DOW_LABELS.map((label, dow) => (
+          <WeekPlanDayRow
+            key={dow}
+            label={label}
+            routineId={weekPlan[dow] ?? null}
+            routines={routines}
+            onSet={(routineId) => setWeekPlanDay(dow, routineId)}
+          />
+        ))}
       </div>
     </div>
   )
@@ -373,7 +416,7 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
-  const plannedDows = plannedDowSet(weekPlan)
+  const plannedDows = plannedDowSet(weekPlan, routines.map(r => r.id))
   // La asistencia se mide contra los días que la semana tipo pedía entrenar, no
   // contra los 31 del mes: ir tres veces por semana es cumplir el plan, no un 42%.
   const { trained: gymDaysCount, planned, attendance } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
