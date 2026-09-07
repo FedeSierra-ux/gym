@@ -66,15 +66,16 @@ function VolumenTab({ desde, hasta, etiqueta }: { desde: number; hasta: number; 
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Totales del periodo */}
+      {/* Totales del periodo — las series van primero: son la cifra que se
+          entiende de un vistazo, a diferencia del tonelaje con pesos livianos. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.acc }}>{formatTonelaje(totalKg)}</div>
-          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Volumen levantado</div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.acc }}>{totalSeries}</div>
+          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Series efectivas</div>
         </div>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>{totalSeries}</div>
-          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Series efectivas</div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>{formatTonelaje(totalKg)}</div>
+          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Volumen levantado</div>
         </div>
       </div>
 
@@ -159,9 +160,11 @@ function TarjetaEjercicio({ serie, onOpen }: { serie: ExerciseSeries; onOpen: ()
           )}
         </div>
       </div>
-      <div style={{ height: 40 }}>
-        <Sparkline values={serie.points.map(p => p.value)} color={cfg.color} />
-      </div>
+      {serie.points.length > 1 && (
+        <div style={{ height: 40 }}>
+          <Sparkline values={serie.points.map(p => p.value)} color={cfg.color} />
+        </div>
+      )}
     </button>
   )
 }

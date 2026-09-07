@@ -78,11 +78,16 @@ export interface MonthStats {
 /**
  * Cuántos días de la semana tienen rutina asignada. Es el denominador honesto
  * de la asistencia: nadie entrena los 31 días del mes.
+ *
+ * `routineIds`, si se pasa, descarta los días que apuntan a una rutina borrada:
+ * datos guardados antes de que `deleteRoutine` limpiara la semana tipo podían
+ * dejar un día contando como planificado aunque el selector lo mostrara como
+ * Descanso.
  */
-export function plannedDowSet(weekPlan: Record<number, string | null>): Set<number> {
+export function plannedDowSet(weekPlan: Record<number, string | null>, routineIds?: string[]): Set<number> {
   return new Set(
     Object.entries(weekPlan)
-      .filter(([, id]) => !!id)
+      .filter(([, id]) => !!id && (!routineIds || routineIds.includes(id)))
       .map(([dow]) => Number(dow))
   )
 }

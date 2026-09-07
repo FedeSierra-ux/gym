@@ -13,7 +13,9 @@ export function Sparkline({
   width?: number
   height?: number
 }) {
-  if (values.length === 0) return null
+  // Con una sola marca no hay evolución que dibujar: un puntito solo en el
+  // medio del gráfico no representa nada y confunde más de lo que aporta.
+  if (values.length < 2) return null
 
   const pad = 3
   const max = Math.max(...values)
@@ -22,9 +24,7 @@ export function Sparkline({
   const rango = max - min || Math.max(1, max * 0.2)
   const base = max === min ? min - rango / 2 : min
 
-  const x = (i: number) => values.length === 1
-    ? width / 2
-    : pad + (i / (values.length - 1)) * (width - pad * 2)
+  const x = (i: number) => pad + (i / (values.length - 1)) * (width - pad * 2)
   const y = (v: number) => height - pad - ((v - base) / rango) * (height - pad * 2)
 
   const linea = values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
@@ -40,7 +40,7 @@ export function Sparkline({
     >
       <path d={area} fill={color} fillOpacity={0.12} stroke="none" />
       <path d={linea} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {values.length > 1 && values.map((v, i) => (
+      {values.map((v, i) => (
         <circle key={i} cx={x(i)} cy={y(v)} r={1.8} fill={color} fillOpacity={0.45} />
       ))}
       <circle cx={ultimoX} cy={ultimoY} r={3.6} fill={color} />
