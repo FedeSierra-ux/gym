@@ -4,13 +4,13 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import { Sparkline } from '../components/Sparkline'
 import { buildProgressSeries, unidadDe, type ExerciseSeries } from '../utils/progressSeries'
-import { volumenPorGrupo, tonelaje, formatTonelaje } from '../utils/volume'
+import { resumenMensual } from '../utils/volume'
 import { formatDuration } from '../utils/duration'
 import { S } from '../theme'
 import type { MuscleGroup } from '../types'
 
 type Period = '6s' | '3m' | '6m' | 'todo'
-type Tab = 'fuerza' | 'volumen'
+type Tab = 'fuerza' | 'series'
 
 
 const PERIODOS: [Period, string, number][] = [
@@ -37,77 +37,137 @@ function formatDelta(kind: ExerciseSeries['kind'], change: number): string {
   return `${signo}${Math.round(change * 10) / 10} ${unidadDe(kind)}`
 }
 
-/* ------------------------------------------------------------------ Volumen */
+/* ------------------------------------------------------------------- Series */
 
-function VolumenTab({ desde, hasta, etiqueta }: { desde: number; hasta: number; etiqueta: string }) {
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+
+/**
+ * Series efectivas mes por mes, con el peso más alto de cada ejercicio en ese
+ * mes. Reemplaza al tonelaje ("4,1 t"), que era una cifra difícil de leer.
+ */
+function SeriesTab({ nowTs }: { nowTs: number }) {
   const { workouts } = useStore()
   const exercises = useAllExercises()
+  const hoy = new Date(nowTs)
+  const [cursor, setCursor] = useState(() => ({ anio: hoy.getFullYear(), mes: hoy.getMonth() }))
+  const [historyId, setHistoryId] = useState<string | null>(null)
 
-  const grupos = useMemo(
-    () => volumenPorGrupo(workouts, exercises, desde, hasta)
-      .filter(g => g.kg > 0 || g.sets > 0)
-      .sort((a, b) => MUSCLE_ORDER.indexOf(a.muscleGroup as MuscleGroup) - MUSCLE_ORDER.indexOf(b.muscleGroup as MuscleGroup)),
-    [workouts, exercises, desde, hasta]
+  const esMesActual = cursor.anio === hoy.getFullYear() && cursor.mes === hoy.getMonth()
+  const primerEntreno = useMemo(
+    () => workouts.reduce((min, w) => (w.finishedAt && w.startedAt < min ? w.startedAt : min), nowTs),
+    [workouts, nowTs]
   )
-  const totalKg = useMemo(
-    () => tonelaje(workouts.filter(w => w.startedAt >= desde && w.startedAt < hasta)),
-    [workouts, desde, hasta]
-  )
-  const totalSeries = grupos.reduce((a, g) => a + g.sets, 0)
-  const maxKg = Math.max(...grupos.map(g => g.kg), 1)
+  const inicio = new Date(primerEntreno)
+  const esPrimerMes = cursor.anio < inicio.getFullYear() || (cursor.anio === inicio.getFullYear() && cursor.mes <= inicio.getMonth())
 
-  if (grupos.length === 0) {
-    return (
-      <div className="flex items-center justify-center" style={{ padding: '48px 0' }}>
-        <p style={{ color: S.faint, fontSize: 13 }}>Sin series registradas en {etiqueta.toLowerCase()}</p>
-      </div>
-    )
-  }
+  const mover = (d: number) => setCursor(c => {
+    const f = new Date(c.anio, c.mes + d, 1)
+    return { anio: f.getFullYear(), mes: f.getMonth() }
+  })
+
+  const resumen = useMemo(() => resumenMensual(workouts, exercises, cursor.anio, cursor.mes), [workouts, exercises, cursor])
+  const anterior = useMemo(() => resumenMensual(workouts, exercises, cursor.anio, cursor.mes - 1), [workouts, exercises, cursor])
+  const maxAnteriorDe = useMemo(() => new Map(anterior.ejercicios.map(e => [e.exerciseId, e.maxKg])), [anterior])
+
+  const grupos = [...resumen.grupos].sort((a, b) => MUSCLE_ORDER.indexOf(a.muscleGroup as MuscleGroup) - MUSCLE_ORDER.indexOf(b.muscleGroup as MuscleGroup))
+  const maxSets = Math.max(...grupos.map(g => g.sets), 1)
+  const porId = new Map(exercises.map(e => [e.id, e]))
+  const ejercicios = [...resumen.ejercicios].sort((a, b) =>
+    (porId.get(a.exerciseId)?.nameEs ?? '').localeCompare(porId.get(b.exerciseId)?.nameEs ?? '', 'es', { sensitivity: 'base' })
+  )
+  const delta = resumen.series - anterior.series
+
+  const flecha = (habilitada: boolean) => ({
+    width: 44, height: 44, borderRadius: 12, border: `1px solid ${S.line2}`, background: S.surf2,
+    color: habilitada ? S.ink : S.faint, fontSize: 18, cursor: habilitada ? 'pointer' : 'default',
+    opacity: habilitada ? 1 : 0.4,
+  })
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Totales del periodo — las series van primero: son la cifra que se
-          entiende de un vistazo, a diferencia del tonelaje con pesos livianos. */}
+      <div className="flex items-center justify-between">
+        <button aria-label="Mes anterior" disabled={esPrimerMes} onClick={() => mover(-1)} style={flecha(!esPrimerMes)}>‹</button>
+        <div style={{ fontSize: 16, fontWeight: 700, color: S.ink }}>{MESES[cursor.mes]} {cursor.anio}</div>
+        <button aria-label="Mes siguiente" disabled={esMesActual} onClick={() => mover(1)} style={flecha(!esMesActual)}>›</button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.acc }}>{totalSeries}</div>
-          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Series efectivas</div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.acc }}>{resumen.series}</div>
+          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>
+            Series del mes
+            {anterior.series > 0 && delta !== 0 && (
+              <span style={{ color: delta > 0 ? S.good : S.bad, fontWeight: 700 }}> {delta > 0 ? '↑' : '↓'} {Math.abs(delta)}</span>
+            )}
+          </div>
         </div>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>{formatTonelaje(totalKg)}</div>
-          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>Volumen levantado</div>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>{resumen.sesiones}</div>
+          <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>{resumen.sesiones === 1 ? 'Entreno' : 'Entrenos'}</div>
         </div>
       </div>
 
-      <div style={{ background: S.surf, borderRadius: 18, padding: '16px 16px', border: `1px solid ${S.line2}` }}>
-        <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13 }}>Volumen por grupo muscular</h3>
-        <p style={{ fontSize: 11, color: S.dim, marginTop: 2, marginBottom: 14 }}>
-          Kilos × repeticiones en {etiqueta.toLowerCase()}
-        </p>
-        <div className="flex flex-col gap-2.5">
-          {grupos.map(g => {
-            const cfg = muscleGroupConfig[g.muscleGroup as MuscleGroup]
-            if (!cfg) return null
-            return (
-              <div key={g.muscleGroup} className="flex items-center gap-3">
-                <div style={{ width: 74, flexShrink: 0, textAlign: 'right' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
-                </div>
-                <div className="flex-1 rounded-full overflow-hidden relative" style={{ background: S.surf2, height: 20, minWidth: 0 }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${Math.max(3, (g.kg / maxKg) * 100)}%`, background: cfg.color + 'cc', transition: 'width 0.4s ease' }}
-                  />
-                </div>
-                <div style={{ width: 64, flexShrink: 0, textAlign: 'right' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: S.ink }}>{formatTonelaje(g.kg)}</span>
-                  <span style={{ fontSize: 11, color: S.faint, display: 'block' }}>{g.sets} series</span>
-                </div>
-              </div>
-            )
-          })}
+      {resumen.series === 0 ? (
+        <div className="flex items-center justify-center" style={{ padding: '40px 0' }}>
+          <p style={{ color: S.faint, fontSize: 13 }}>Sin series registradas en {MESES[cursor.mes].toLowerCase()}</p>
         </div>
-      </div>
+      ) : (
+        <>
+          <div style={{ background: S.surf, borderRadius: 18, padding: 16, border: `1px solid ${S.line2}` }}>
+            <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13, marginBottom: 14 }}>Series por grupo muscular</h3>
+            <div className="flex flex-col gap-2.5">
+              {grupos.map(g => {
+                const cfg = muscleGroupConfig[g.muscleGroup as MuscleGroup]
+                if (!cfg) return null
+                return (
+                  <div key={g.muscleGroup} className="flex items-center gap-3">
+                    <div style={{ width: 74, flexShrink: 0, textAlign: 'right' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color }}>{cfg.label}</span>
+                    </div>
+                    <div className="flex-1 rounded-full overflow-hidden" style={{ background: S.surf2, height: 20, minWidth: 0 }}>
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(3, (g.sets / maxSets) * 100)}%`, background: cfg.color + 'cc', transition: 'width 0.4s ease' }} />
+                    </div>
+                    <div style={{ width: 36, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 700, color: S.ink }}>{g.sets}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ background: S.surf, borderRadius: 18, padding: '16px 16px 6px', border: `1px solid ${S.line2}` }}>
+            <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 13 }}>Por ejercicio</h3>
+            <p style={{ fontSize: 11, color: S.dim, marginTop: 2, marginBottom: 8 }}>Series y peso máximo del mes</p>
+            {ejercicios.map(e => {
+              const ex = porId.get(e.exerciseId)
+              if (!ex) return null
+              const cfg = muscleGroupConfig[ex.muscleGroup]
+              const antes = maxAnteriorDe.get(e.exerciseId) ?? 0
+              const dif = antes > 0 && e.maxKg > 0 ? Math.round((e.maxKg - antes) * 10) / 10 : 0
+              return (
+                <button key={e.exerciseId} onClick={() => setHistoryId(e.exerciseId)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 0', background: 'none', border: 'none', borderTop: `1px solid ${S.line2}`, textAlign: 'left', cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+                  <span style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: cfg?.color ?? S.dim, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.nameEs}</div>
+                    <div style={{ fontSize: 11, color: S.dim, marginTop: 1 }}>{e.sets} {e.sets === 1 ? 'serie' : 'series'}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>
+                      {e.maxKg > 0 ? `${e.maxKg} kg` : e.maxSeg > 0 ? formatDuration(e.maxSeg) : '—'}
+                      {e.maxKg > 0 && e.repsAlMax > 0 && <span style={{ fontSize: 11, color: S.faint, fontWeight: 500 }}> × {e.repsAlMax}</span>}
+                    </div>
+                    {dif !== 0 && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: dif > 0 ? S.good : S.bad }}>{dif > 0 ? '↑ +' : '↓ '}{dif} kg</div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {historyId && <ExerciseHistorySheet exerciseId={historyId} onClose={() => setHistoryId(null)} />}
     </div>
   )
 }
@@ -214,7 +274,7 @@ export function ProgresoScreen() {
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>Progreso</div>
 
         <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 16 }}>
-          {([['fuerza', 'Marcas'], ['volumen', 'Volumen']] as [Tab, string][]).map(([t, label]) => (
+          {([['fuerza', 'Marcas'], ['series', 'Series']] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               style={{ flex: 1, minHeight: 44, borderRadius: 11, border: 'none', fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t ? S.surf2 : 'transparent', color: tab === t ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
               {label}
@@ -222,19 +282,19 @@ export function ProgresoScreen() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
+        {tab === 'fuerza' && <div style={{ display: 'flex', background: S.surf, borderRadius: 14, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
           {PERIODOS.map(([p, label]) => (
             <button key={p} onClick={() => setPeriod(p)}
               style={{ flex: 1, minHeight: 40, borderRadius: 11, border: 'none', fontFamily: 'DM Sans, system-ui, sans-serif', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: period === p ? S.surf2 : 'transparent', color: period === p ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
               {label}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
 
       <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 22px 24px' }}>
-        {tab === 'volumen' ? (
-          <VolumenTab desde={desde} hasta={nowTs + 86400000} etiqueta={etiquetaPeriodo} />
+        {tab === 'series' ? (
+          <SeriesTab nowTs={nowTs} />
         ) : (
           <>
             {gruposConDatos.length > 1 && (

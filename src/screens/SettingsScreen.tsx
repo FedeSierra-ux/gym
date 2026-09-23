@@ -1,8 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { exportBackup, readBackupFile, applyBackup } from '../utils/backup'
 import { MILE_ROUTINE_IDS } from '../data/mileRoutines'
 import { plannedDowSet } from '../utils/trainingDays'
+import { S } from '../theme'
+import { estadoAlmacenamiento, pedirAlmacenamientoPersistente, type EstadoAlmacenamiento } from '../utils/persistentStorage'
+
+/** Si el navegador puede borrar los datos por su cuenta o no. */
+function EstadoProteccion() {
+  const [estado, setEstado] = useState<EstadoAlmacenamiento | null>(null)
+  useEffect(() => { void estadoAlmacenamiento().then(setEstado) }, [])
+  if (estado === null || estado === 'no-soportado') return null
+  const ok = estado === 'protegido'
+  return (
+    <div
+      className="mb-3 rounded-xl px-3 py-2.5 flex items-start gap-2"
+      style={{ background: ok ? 'rgba(52,211,153,0.08)' : 'rgba(242,169,59,0.08)', border: `1px solid ${ok ? 'rgba(52,211,153,0.25)' : 'rgba(242,169,59,0.25)'}` }}
+    >
+      <span aria-hidden="true">{ok ? '🔒' : '⚠️'}</span>
+      <div className="flex-1">
+        <p className="text-xs font-semibold" style={{ color: ok ? S.good : S.acc2 }}>
+          {ok ? 'Datos protegidos' : 'Datos sin proteger'}
+        </p>
+        <p className="text-[11px] text-gray-500 mt-0.5">
+          {ok
+            ? 'El navegador no los va a borrar por su cuenta. Igual conviene exportar de vez en cuando.'
+            : 'El navegador podría borrarlos si le falta espacio. Instalá la app en la pantalla de inicio y exportá un backup.'}
+        </p>
+        {!ok && (
+          <button
+            onClick={() => { void pedirAlmacenamientoPersistente().then(setEstado) }}
+            className="mt-2 text-xs font-semibold underline"
+            style={{ color: S.acc2, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            Pedir protección de nuevo
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const {
@@ -195,6 +232,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             Tus rutinas, entrenos y récords viven solo en este dispositivo. Si vas a reinstalar la app o cambiar de
             celular, exportá un backup antes para no perderlos.
           </p>
+          <EstadoProteccion />
           <p className="text-xs text-gray-600 mb-3">
             En iPhone, Safari borra los datos de un sitio que no usás en ~7 días. Agregando la app a la pantalla de
             inicio (Compartir → Agregar a inicio) eso no pasa, pero igual conviene exportar de vez en cuando.

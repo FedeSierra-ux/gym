@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore'
 import { S } from '../theme'
 
 /** Cada cuánto se recuerda hacer una copia. */
-const DIAS_ENTRE_AVISOS = 30
+const DIAS_ENTRE_AVISOS = 14
 /** Antes de este piso no vale la pena molestar: no hay casi nada que perder. */
 const ENTRENOS_MINIMOS = 5
 
@@ -13,7 +13,7 @@ const ENTRENOS_MINIMOS = 5
  * Todo el historial vive en el localStorage de un solo teléfono: si se cambia
  * de equipo, se reinstala o el sistema limpia los datos del sitio, se pierde
  * todo y no hay vuelta atrás. Exportar funciona, pero hay que acordarse, y
- * nadie se acuerda. Este aviso aparece en Inicio cuando pasó un mes.
+ * nadie se acuerda. Este aviso aparece en Inicio cada dos semanas.
  */
 export function BackupReminder() {
   const { workouts, lastBackupAt, setActiveTab } = useStore()
@@ -41,7 +41,7 @@ export function BackupReminder() {
         <span style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true">💾</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: S.acc2, lineHeight: 1.3 }}>
-            {lastBackupAt ? 'Hace un mes que no hacés copia' : 'Todavía no hiciste ninguna copia'}
+            {lastBackupAt ? `Hace ${dias} días que no hacés copia` : 'Todavía no hiciste ninguna copia'}
           </p>
           <p style={{ fontSize: 11, color: S.dim, marginTop: 1, lineHeight: 1.3 }}>
             {terminados.length} entrenos, sólo en este teléfono

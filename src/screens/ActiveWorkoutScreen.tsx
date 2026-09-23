@@ -8,20 +8,17 @@ import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate, primeAudio } from '../utils/haptics'
 import { useWakeLock } from '../utils/useWakeLock'
-import { isDurationExercise, durationUnit, toSeconds } from '../utils/duration'
+import { isDurationExercise, durationUnit, toSeconds, formatDuration } from '../utils/duration'
 import { suggestNextWeight } from '../utils/progression'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { toDateInputValue, fromDateInputValue } from '../utils/dates'
 import { useLongPress } from '../utils/useLongPress'
 import { ExercisePickerSheet } from '../components/ExercisePickerSheet'
-import type { Exercise } from '../types'
+import type { Exercise, ActiveWorkoutSet, WorkoutSet } from '../types'
 import { S } from '../theme'
+import { estimate1RM } from '../utils/oneRM'
 
 
-function estimate1RM(kg: number, reps: number): number {
-  if (reps === 1) return kg
-  return Math.round(kg * (1 + reps / 30))
-}
 
 const BAR_KG = 20
 const PLATES = [20, 15, 10, 5, 2.5, 1.25]
@@ -156,7 +153,7 @@ function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChang
  * se usa (el peso se escribe), y dejaban los campos en unos 48 px de ancho con
  * botones de 32×32, imposibles de acertar con las manos transpiradas.
  */
-const SET_GRID = '34px minmax(0,1fr) minmax(0,1fr) 64px'
+const SET_GRID = '34px 62px minmax(0,1fr) minmax(0,1fr) 56px'
 
 /** Fila de un menú de acciones (serie o ejercicio). */
 const opcionMenu: React.CSSProperties = {
@@ -165,7 +162,34 @@ const opcionMenu: React.CSSProperties = {
   padding: '12px 16px', color: S.ink, fontSize: 14, fontWeight: 600,
   cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
 }
-const SET_GRID_TIEMPO = '34px minmax(0,1fr) 64px'
+const SET_GRID_TIEMPO = '34px 62px minmax(0,1fr) 56px'
+
+/**
+ * Para cada serie del entreno, la que le corresponde de la última vez: la
+ * k-ésima de calentamiento con la k-ésima de calentamiento, y lo mismo con
+ * las efectivas, así agregar un calentamiento no corre toda la comparación.
+ */
+function emparejarAnteriores(actuales: ActiveWorkoutSet[], anteriores: WorkoutSet[]): (WorkoutSet | undefined)[] {
+  const calent = anteriores.filter(s => s.isWarmup)
+  const efect = anteriores.filter(s => !s.isWarmup)
+  let c = 0, e = 0
+  return actuales.map(s => (s.isWarmup ? calent[c++] : efect[e++]))
+}
+
+function textoAnterior(prev: WorkoutSet, byTime: boolean, unit: 'min' | 'seg'): string {
+  if (byTime) {
+    const seg = prev.durationSec ?? 0
+    return unit === 'min' ? `${Math.round((seg / 60) * 10) / 10} min` : `${seg} s`
+  }
+  return prev.kg > 0 ? `${String(prev.kg).replace(".", ",")}×${prev.reps}` : `${prev.reps} reps`
+}
+
+/** true si la serie hecha supera a la de la vez anterior. */
+function superaAnterior(prev: WorkoutSet, kg: number, reps: number, seg: number, byTime: boolean): boolean {
+  if (byTime) return seg > (prev.durationSec ?? 0)
+  if (kg !== prev.kg) return kg > prev.kg
+  return reps > prev.reps
+}
 
 function estiloCampo(completada: boolean): React.CSSProperties {
   return {
@@ -189,12 +213,14 @@ function estiloCampo(completada: boolean): React.CSSProperties {
  * lado, y había que decidir entre ellos en el medio de la serie.
  */
 function SetRow({
-  exIdx, setIdx, set, byTime, unit, isBarbellLike, puedeBorrar,
+  exIdx, setIdx, set, prev, byTime, unit, isBarbellLike, puedeBorrar,
   onUpdate, onToggleWarmup, onRemove, onComplete,
 }: {
   exIdx: number
   setIdx: number
-  set: import('../types').ActiveWorkoutSet
+  set: ActiveWorkoutSet
+  /** La serie que le corresponde de la última vez que se hizo el ejercicio. */
+  prev?: WorkoutSet
   byTime: boolean
   unit: 'min' | 'seg'
   isBarbellLike: boolean
@@ -212,8 +238,23 @@ function SetRow({
   const calentamiento = !!set.isWarmup
   const kg = parseDecimal(set.kg) || 0
   const reps = parseInt(set.reps) || 0
-  const orm = completada && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
-  const sePuede = completada || (byTime ? toSeconds(set.duration ?? '', unit) > 0 : reps > 0)
+  const orm = completada && !calentamiento && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+  const seg = byTime ? toSeconds(set.duration ?? '', unit) : 0
+  const sePuede = completada || (byTime ? seg > 0 : reps > 0)
+  const mejoro = completada && !calentamiento && !!prev && superaAnterior(prev, kg, reps, seg, byTime)
+
+  // Tocar lo de la vez anterior lo copia en los campos.
+  const copiarAnterior = () => {
+    if (!prev || completada) return
+    if (byTime) {
+      const v = unit === 'min' ? Math.round(((prev.durationSec ?? 0) / 60) * 10) / 10 : prev.durationSec ?? 0
+      onUpdate(exIdx, setIdx, 'duration', String(v).replace('.', ','))
+    } else {
+      onUpdate(exIdx, setIdx, 'kg', String(prev.kg).replace('.', ','))
+      onUpdate(exIdx, setIdx, 'reps', String(prev.reps))
+    }
+    vibrate(15)
+  }
 
   const confirmar = (conDescanso: boolean) => {
     // El audio de iOS sólo arranca desde un gesto del usuario: este es el gesto.
@@ -235,7 +276,7 @@ function SetRow({
         style={{
           display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID,
           alignItems: 'center', padding: '6px 14px', gap: 8,
-          background: completada ? 'rgba(232,99,74,0.05)' : 'transparent',
+          background: mejoro ? 'rgba(52,211,153,0.08)' : completada ? 'rgba(232,99,74,0.05)' : 'transparent',
           borderTop: `1px solid ${S.line}`,
         }}
       >
@@ -262,6 +303,24 @@ function SetRow({
           {calentamiento && (
             <span style={{ fontSize: 11, fontWeight: 700, color: S.acc2, lineHeight: 1 }}>W</span>
           )}
+        </button>
+
+        {/* Lo que se hizo la vez anterior en esta serie. Tocarlo lo copia. */}
+        <button
+          onClick={copiarAnterior}
+          disabled={!prev || completada}
+          aria-label={prev ? `La vez anterior: ${textoAnterior(prev, byTime, unit)}. Tocá para copiar` : 'Sin datos de la vez anterior'}
+          style={{
+            width: '100%', minHeight: 48, borderRadius: 10, padding: 0,
+            background: 'none', border: 'none', fontFamily: 'inherit',
+            fontSize: 12, fontWeight: 600, lineHeight: 1.2,
+            color: mejoro ? S.good : S.faint,
+            cursor: prev && !completada ? 'pointer' : 'default',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}
+        >
+          {prev ? textoAnterior(prev, byTime, unit) : '—'}
+          {mejoro && <span style={{ display: 'block', fontSize: 11 }}>▲ mejor</span>}
         </button>
 
         {byTime ? (
@@ -397,9 +456,17 @@ export function ActiveWorkoutScreen() {
   const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.length, 0)
   const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
-  const prevWorkout = [...workouts]
-    .filter((w) => w.routineId === activeWorkout.routineId && w.finishedAt)
-    .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
+  // Última vez que se hizo cada ejercicio, en cualquier rutina.
+  const anteriores = [...workouts]
+    .filter((w) => w.finishedAt && w.startedAt < activeWorkout.startedAt)
+    .sort((a, b) => b.startedAt - a.startedAt)
+  const ultimasSeries = (exerciseId: string): WorkoutSet[] => {
+    for (const w of anteriores) {
+      const e = w.exercises.find((x) => x.exerciseId === exerciseId)
+      if (e && e.sets.length > 0) return e.sets
+    }
+    return []
+  }
 
 
 
@@ -456,7 +523,7 @@ export function ActiveWorkoutScreen() {
           const config = muscleGroupConfig[ex.muscleGroup]
           const pr = prs.find((p) => p.exerciseId === ex.id)
           const isBarbellLike = ex.equipmentType === 'barra'
-          const prevSets = prevWorkout?.exercises.find((e) => e.exerciseId === ex.id)?.sets ?? []
+          const prevPorSerie = emparejarAnteriores(activeEx.sets, ultimasSeries(ex.id))
           const completedCount = activeEx.sets.filter((s) => s.completed).length
           const byTime = isDurationExercise(ex)
           const unit = durationUnit(ex)
@@ -485,7 +552,7 @@ export function ActiveWorkoutScreen() {
                   <div style={{ fontSize: 15, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.nameEs}</div>
                   <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
                     <span style={{ color: config.color }}>{config.label}</span>
-                    {pr && <span style={{ color: S.acc2 }}> · 🏆 {pr.kg > 0 ? `${pr.kg}×${pr.reps}` : `${pr.reps} reps`}</span>}
+                    {pr && <span style={{ color: S.acc2 }}> · 🏆 {byTime ? formatDuration(pr.durationSec ?? 0) : pr.kg > 0 ? `${pr.kg}×${pr.reps}` : `${pr.reps} reps`}</span>}
                   </div>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: completedCount === activeEx.sets.length && activeEx.sets.length > 0 ? S.acc : S.dim }}>
@@ -517,8 +584,9 @@ export function ActiveWorkoutScreen() {
               )}
 
               {/* Encabezado de la tabla */}
-              <div style={{ display: 'grid', gridTemplateColumns: SET_GRID, padding: '0 14px 6px', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID, padding: '0 14px 6px', gap: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>Set</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>Anterior</div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: S.faint, textAlign: 'center' }}>
                   {byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG'}
                 </div>
@@ -530,7 +598,7 @@ export function ActiveWorkoutScreen() {
               {activeEx.sets.map((set, setIdx) => (
                 <SetRow
                   key={setIdx}
-                  exIdx={exIdx} setIdx={setIdx} set={set}
+                  exIdx={exIdx} setIdx={setIdx} set={set} prev={prevPorSerie[setIdx]}
                   byTime={byTime} unit={unit}
                   isBarbellLike={isBarbellLike}
                   puedeBorrar={!set.completed && activeEx.sets.length > 1}
@@ -540,18 +608,6 @@ export function ActiveWorkoutScreen() {
                   onComplete={completeSet}
                 />
               ))}
-
-              {/* Previous session hint */}
-              {prevSets.length > 0 && (
-                <div style={{ padding: '8px 16px 6px', borderTop: `1px solid ${S.line}`, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, color: S.faint, flexShrink: 0 }}>💡 Última:</span>
-                  {prevSets.slice(0, 4).map((s, i) => (
-                    <span key={i} style={{ fontSize: 11, fontWeight: 600, color: S.dim, background: S.surf2, padding: '2px 8px', borderRadius: 6, border: `1px solid ${S.line2}` }}>
-                      {s.kg > 0 ? `${s.kg}×${s.reps}` : `${s.reps} reps`}
-                    </span>
-                  ))}
-                </div>
-              )}
 
               <TipsRow exerciseId={ex.id} />
 

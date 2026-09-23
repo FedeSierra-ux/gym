@@ -54,6 +54,8 @@ function roundToStep(kg: number, step: number): number {
 interface LastSession {
   kg: number
   reps: number[]
+  /** Series efectivas hechas con menos peso que el más alto (una bajada, un back-off). */
+  masLivianas: number
   date: number
 }
 
@@ -74,6 +76,7 @@ function lastSessionFor(exerciseId: string, workouts: Workout[]): LastSession | 
       kg,
       // Sólo cuentan las series hechas al peso más alto de esa sesión.
       reps: sets.filter(s => s.kg === kg).map(s => s.reps),
+      masLivianas: sets.filter(s => s.kg < kg).length,
       date: workout.finishedAt ?? workout.startedAt,
     }
   }
@@ -140,6 +143,19 @@ export function suggestNextWeight(
   const faltan = last.reps.filter(r => r < routineExercise.repsMax).length
   const seriesFaltantes = Math.max(0, routineExercise.sets - last.reps.length)
   const carga = bodyweight ? 'el peso corporal' : `${last.kg} kg`
+  // Las series que faltan al peso más alto pueden estar hechas con menos peso:
+  // no "faltaron", se bajó el peso. El mensaje tiene que decir eso.
+  const bajadas = Math.min(seriesFaltantes, last.masLivianas)
+  if (bajadas > 0 && !bodyweight) {
+    return {
+      kg: last.kg,
+      reason: 'mantener',
+      note: bajadas === 1
+        ? `Mantené ${carga}: la última vez hiciste 1 serie con menos peso. Buscá hacerlas todas con ${carga}.`
+        : `Mantené ${carga}: la última vez hiciste ${bajadas} series con menos peso. Buscá hacerlas todas con ${carga}.`,
+      targetReps: routineExercise.repsMax,
+    }
+  }
   return {
     kg: last.kg,
     reason: 'mantener',
