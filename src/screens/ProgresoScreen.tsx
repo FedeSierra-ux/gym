@@ -153,7 +153,7 @@ function SeriesTab({ nowTs }: { nowTs: number }) {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>
-                      {e.maxKg > 0 ? `${e.maxKg} kg` : '—'}
+                      {e.maxKg > 0 ? `${e.maxKg} kg` : e.maxSeg > 0 ? formatDuration(e.maxSeg) : '—'}
                       {e.maxKg > 0 && e.repsAlMax > 0 && <span style={{ fontSize: 11, color: S.faint, fontWeight: 500 }}> × {e.repsAlMax}</span>}
                     </div>
                     {dif !== 0 && (

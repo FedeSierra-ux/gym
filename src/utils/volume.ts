@@ -81,6 +81,8 @@ export interface EjercicioMes {
   maxKg: number
   /** Repeticiones de la serie con el peso más alto (la mejor, si hubo empate). */
   repsAlMax: number
+  /** Mejor tiempo del mes, para los ejercicios por tiempo. */
+  maxSeg: number
 }
 
 export interface ResumenMes {
@@ -110,9 +112,10 @@ export function resumenMensual(
     for (const wex of w.exercises) {
       const efectivas = wex.sets.filter((s) => !s.isWarmup)
       if (efectivas.length === 0) continue
-      const acc = ejercicios.get(wex.exerciseId) ?? { exerciseId: wex.exerciseId, sets: 0, maxKg: 0, repsAlMax: 0 }
+      const acc = ejercicios.get(wex.exerciseId) ?? { exerciseId: wex.exerciseId, sets: 0, maxKg: 0, repsAlMax: 0, maxSeg: 0 }
       for (const s of efectivas) {
         acc.sets++
+        acc.maxSeg = Math.max(acc.maxSeg, s.durationSec ?? 0)
         if (s.kg > acc.maxKg || (s.kg === acc.maxKg && s.reps > acc.repsAlMax)) {
           acc.maxKg = s.kg
           acc.repsAlMax = s.reps
