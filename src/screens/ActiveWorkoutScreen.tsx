@@ -241,7 +241,7 @@ function SetRow({
   const calentamiento = !!set.isWarmup
   const kg = parseDecimal(set.kg) || 0
   const reps = parseInt(set.reps) || 0
-  const orm = completada && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
+  const orm = completada && !calentamiento && kg > 0 && reps > 1 ? estimate1RM(kg, reps) : null
   const seg = byTime ? toSeconds(set.duration ?? '', unit) : 0
   const sePuede = completada || (byTime ? seg > 0 : reps > 0)
   const mejoro = completada && !calentamiento && !!prev && superaAnterior(prev, kg, reps, seg, byTime)
