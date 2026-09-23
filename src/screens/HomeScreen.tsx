@@ -5,7 +5,6 @@ import { CircularRing } from '../components/CircularRing'
 import { BackupReminder } from '../components/BackupReminder'
 import { getWorkoutStreak } from '../utils/streak'
 import { windowStats, plannedDowSet } from '../utils/trainingDays'
-import { tonelaje, formatTonelaje } from '../utils/volume'
 
 function formatDate() {
   const now = new Date()
@@ -49,9 +48,7 @@ export function HomeScreen() {
     : null
   const daysAgoStr = daysAgo === null ? '' : daysAgo === 0 ? 'hoy' : daysAgo === 1 ? 'hace 1 día' : `hace ${daysAgo} días`
   const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0) ?? 0
-  // Volumen es tonelaje (kg × reps), que es lo que la palabra significa en el
-  // gimnasio. Antes esta casilla decía "Volumen" y mostraba cantidad de series.
-  const lastTonelaje = tonelaje(lastWorkout ? [lastWorkout] : [])
+  const lastEjercicios = lastWorkout?.exercises.filter(e => e.sets.length > 0).length ?? 0
 
   // Qué toca hoy. Manda la semana tipo que armó el usuario en Agenda: antes
   // Inicio la ignoraba y elegía por rotación, así que un miércoles asignado a
@@ -242,7 +239,7 @@ export function HomeScreen() {
                 {[
                   [`${lastWorkout.durationMin ?? 0} min`, 'Duración'],
                   [`${lastTotalSets}`, 'Series'],
-                  [formatTonelaje(lastTonelaje), 'Volumen'],
+                  [`${lastEjercicios}`, 'Ejercicios'],
                 ].map(([v, l]) => (
                   <div key={l} style={{
                     background: 'var(--surf2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center',

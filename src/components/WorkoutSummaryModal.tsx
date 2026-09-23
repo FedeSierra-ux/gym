@@ -3,7 +3,6 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
 import type { NavTab, Workout } from '../types'
-import { tonelaje, formatTonelaje } from '../utils/volume'
 import { formatLoad } from '../utils/format'
 import { S } from '../theme'
 
@@ -67,10 +66,11 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
 
   // Las calorías eran minutos × 6,5 para cualquier persona, así que salieron:
   // un número inventado le resta credibilidad a los que sí se miden.
+  const ejercicios = workout.exercises.filter(e => e.sets.length > 0).length
   const stats: [string | number, string, string, string][] = [
     [workout.durationMin ?? 0, 'min', 'Tiempo', S.acc],
     [totalSets, totalSets === 1 ? 'serie' : 'series', 'Series', S.acc2],
-    [formatTonelaje(tonelaje([workout])), '', 'Volumen', S.good],
+    [ejercicios, ejercicios === 1 ? 'ejercicio' : 'ejercicios', 'Ejercicios', S.good],
     [prCount, prCount === 1 ? 'récord' : 'récords', 'PRs', S.ink],
   ]
 

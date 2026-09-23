@@ -4,7 +4,7 @@ import { SettingsScreen } from './SettingsScreen'
 import { MedidasSheet } from './MedidasSheet'
 import { HistorialBuscadorSheet } from './HistorialBuscadorSheet'
 import { getWorkoutStreak } from '../utils/streak'
-import { tonelaje, formatTonelaje } from '../utils/volume'
+import { seriesEfectivas } from '../utils/volume'
 
 export function ProfileScreen() {
   const { userName, updateUserName, workouts, prs, measures } = useStore()
@@ -22,7 +22,7 @@ export function ProfileScreen() {
   const streak = useMemo(() => getWorkoutStreak(finished), [finished])
 
   const initials = userName.slice(0, 2).toUpperCase()
-  const volumenTotal = useMemo(() => tonelaje(finished), [finished])
+  const seriesTotales = useMemo(() => seriesEfectivas(finished), [finished])
   const ultimaMedida = measures.length > 0 ? measures[measures.length - 1] : null
 
   const handleSaveName = () => {
@@ -97,8 +97,8 @@ export function ProfileScreen() {
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="bg-card border border-border-hi rounded-xl p-3">
-            <p className="text-lg font-bold text-ink">{formatTonelaje(volumenTotal)}</p>
-            <p className="text-[11px] text-dim mt-0.5">Levantados en total</p>
+            <p className="text-lg font-bold text-ink">{seriesTotales.toLocaleString('es-AR')}</p>
+            <p className="text-[11px] text-dim mt-0.5">Series en total</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 flex items-center gap-2">
             <span className="text-lg" aria-hidden="true">🔥</span>

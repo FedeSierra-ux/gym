@@ -3,12 +3,9 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { S } from '../theme'
+import { estimate1RM } from '../utils/oneRM'
 
 
-function estimate1RM(kg: number, reps: number): number {
-  if (reps <= 1) return kg
-  return Math.round(kg * (1 + reps / 30))
-}
 
 interface SessionEntry {
   date: number

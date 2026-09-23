@@ -16,12 +16,9 @@ import { useLongPress } from '../utils/useLongPress'
 import { ExercisePickerSheet } from '../components/ExercisePickerSheet'
 import type { Exercise, ActiveWorkoutSet, WorkoutSet } from '../types'
 import { S } from '../theme'
+import { estimate1RM } from '../utils/oneRM'
 
 
-function estimate1RM(kg: number, reps: number): number {
-  if (reps === 1) return kg
-  return Math.round(kg * (1 + reps / 30))
-}
 
 const BAR_KG = 20
 const PLATES = [20, 15, 10, 5, 2.5, 1.25]
