@@ -1,4 +1,4 @@
-import type { Exercise, Workout } from '../types'
+import type { Exercise, MuscleGroup, Workout } from '../types'
 
 /**
  * Series efectivas (sin calentamiento). Es la medida de volumen que usa la
@@ -76,3 +76,28 @@ export function resumenMensual(
     ejercicios: [...ejercicios.values()],
   }
 }
+
+/** Series efectivas de cada grupo muscular entre `desde` (incluido) y `hasta` (excluido). */
+export function seriesPorGrupo(
+  workouts: Workout[],
+  exercises: Exercise[],
+  desde: number,
+  hasta: number,
+): Map<MuscleGroup, number> {
+  const porId = new Map(exercises.map((e) => [e.id, e]))
+  const out = new Map<MuscleGroup, number>()
+  for (const w of workouts) {
+    if (!w.finishedAt || w.startedAt < desde || w.startedAt >= hasta) continue
+    for (const wex of w.exercises) {
+      const mg = porId.get(wex.exerciseId)?.muscleGroup
+      if (!mg) continue
+      const n = wex.sets.filter((s) => !s.isWarmup).length
+      if (n) out.set(mg, (out.get(mg) ?? 0) + n)
+    }
+  }
+  return out
+}
+
+/** La franja de series semanales por músculo que se suele recomendar para crecer. */
+export const SERIES_SEMANA_MIN = 10
+export const SERIES_SEMANA_MAX = 20

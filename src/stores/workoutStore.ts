@@ -4,10 +4,10 @@ import type { ActiveWorkoutExercise, AppToast, Workout } from '../types'
 import { useStore } from '../store/useStore'
 import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
 import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
-import { lastTopKg, suggestNextWeight } from '../utils/progression'
+import { lastTopKg } from '../utils/progression'
 import { computeRecords, newRecords } from '../utils/records'
-import { formatKg } from '../utils/format'
 import { rutinaEnUso } from '../utils/routineVariant'
+import { descansoDeNota } from '../utils/restFromNote'
 
 export interface ActiveWorkout {
   routineId: string
@@ -25,6 +25,10 @@ export interface ActiveWorkout {
    */
   restEndsAt?: number
   lastCompletedSet?: { exerciseId: string; setIdx: number; kg: number; reps: number }
+  /** Descanso por defecto (el último que se eligió a mano) para los ejercicios cuya nota no dice nada. */
+  restDefaultSeconds?: number
+  /** Descanso elegido a mano para un ejercicio en este entreno: manda sobre la nota. */
+  restPorEjercicio?: Record<string, number>
   livePr?: { exerciseId: string; kg: number; reps: number } | null
 }
 
@@ -80,6 +84,21 @@ const MAX_WORKOUT_DURATION_MIN = 120
  * capeada en vez de quedar viva para siempre y arrastrarse al día siguiente.
  */
 const AUTO_CLOSE_AFTER_MIN = 240
+
+const DESCANSO_INICIAL = 75
+
+/**
+ * Cuánto descansar después de una serie de este ejercicio: lo elegido a mano en
+ * este entreno, si no lo que pide la nota de la rutina ("descanso 2 min"), y si
+ * no el descanso por defecto.
+ */
+export function descansoPara(aw: ActiveWorkout, exerciseId: string): number {
+  const elegido = aw.restPorEjercicio?.[exerciseId]
+  if (elegido) return elegido
+  const routine = useStore.getState().routines.find((r) => r.id === aw.routineId)
+  const nota = descansoDeNota(routine?.exercises.find((re) => re.exerciseId === exerciseId)?.note)
+  return nota ?? aw.restDefaultSeconds ?? DESCANSO_INICIAL
+}
 
 function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
   if (value === '') return ''
@@ -189,8 +208,9 @@ export const useWorkoutStore = create<WorkoutState>()(
             realStartedAt: now,
             exercises: activeExercises,
             restTimerVisible: false,
-            restSecondsLeft: 75,
-            restTotalSeconds: 75,
+            restSecondsLeft: DESCANSO_INICIAL,
+            restTotalSeconds: DESCANSO_INICIAL,
+            restDefaultSeconds: DESCANSO_INICIAL,
             restEndsAt: undefined,
           },
         })
@@ -301,6 +321,8 @@ export const useWorkoutStore = create<WorkoutState>()(
             livePr = null
           }
 
+          // El descanso de este ejercicio (la nota de la rutina, o lo elegido a mano).
+          const descanso = startRest ? descansoPara(s.activeWorkout, exercises[exerciseIdx].exerciseId) : s.activeWorkout.restTotalSeconds
           return {
             activeWorkout: {
               ...s.activeWorkout,
@@ -309,10 +331,10 @@ export const useWorkoutStore = create<WorkoutState>()(
               livePr,
               // El descanso arranca sólo si se confirmó con el ✓⏱.
               restTimerVisible: startRest,
-              restSecondsLeft: s.activeWorkout.restTotalSeconds,
-              restTotalSeconds: s.activeWorkout.restTotalSeconds,
+              restSecondsLeft: startRest ? descanso : s.activeWorkout.restSecondsLeft,
+              restTotalSeconds: descanso,
               restEndsAt: startRest
-                ? Date.now() + s.activeWorkout.restTotalSeconds * 1000
+                ? Date.now() + descanso * 1000
                 : s.activeWorkout.restEndsAt,
             },
           }
@@ -418,7 +440,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           return
         }
 
-        const { prs, routines, exercises: allExDb, customExercises } = useStore.getState()
+        const { prs, exercises: allExDb, customExercises } = useStore.getState()
         const allExercises = [...allExDb, ...customExercises]
 
         const realFinishedAt = Date.now()
@@ -466,39 +488,17 @@ export const useWorkoutStore = create<WorkoutState>()(
         const newPrs = computeRecords(workoutsConEste, allExercises)
         const newPrCount = newRecords(prs, newPrs).length
 
-        // Auto-progression suggestions (max 2)
-        const progressionToasts: AppToast[] = []
-        const guardada = routines.find((r) => r.id === activeWorkout.routineId)
-        const routine = guardada ? rutinaEnUso(guardada) : undefined
-        if (routine) {
-          // Mismo criterio de doble progresión que usa la pantalla de entreno,
-          // evaluado ya con el entreno recién terminado incluido.
-          const workoutsWithThisOne = workoutsConEste
-          for (const re of routine.exercises) {
-            if (progressionToasts.length >= 2) break
-            const exercise = allExercises.find((e) => e.id === re.exerciseId)
-            const suggestion = suggestNextWeight(exercise, re, workoutsWithThisOne, re.exerciseId)
-            if (!suggestion || suggestion.reason !== 'subir') continue
-            const exName = exercise?.nameEs ?? re.exerciseId
-            progressionToasts.push({
-              id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              message: `💪 ${exName}: la próxima, ${formatKg(suggestion.kg)} kg`,
-              type: 'info',
-            })
-          }
-        }
-
         const seriesTotales = workoutExercises.reduce((a, e) => a + e.sets.length, 0)
-        // Los minutos, las series y los PRs ya los muestra el resumen: repetirlos
-        // en avisos sólo servía para tapar la pantalla. En el cierre automático,
-        // en cambio, no hay resumen y el aviso es la única señal de que pasó algo.
+        // Lo que se hizo y lo que toca subir ya lo muestra el resumen ("La próxima
+        // subís"): repetirlo en avisos sólo tapaba la pantalla. En el cierre
+        // automático, en cambio, no hay resumen y el aviso es la única señal.
         const avisos: AppToast[] = options?.auto
           ? [{
               id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
               message: `El entreno quedó abierto más de 4 h: lo guardamos con ${durationMin} min · ${seriesTotales} series`,
               type: 'info',
             }]
-          : progressionToasts
+          : []
 
         // Write finished workout + PRs + toasts to persisted store
         useStore.setState((s) => ({
@@ -544,9 +544,14 @@ export const useWorkoutStore = create<WorkoutState>()(
       setRestPreset: (seconds) =>
         set((s) => {
           if (!s.activeWorkout) return {}
+          // Lo elegido vale para este ejercicio el resto del entreno, y pasa a ser
+          // el descanso de los ejercicios cuya nota no dice nada.
+          const exId = s.activeWorkout.lastCompletedSet?.exerciseId
           return {
             activeWorkout: {
               ...s.activeWorkout,
+              restDefaultSeconds: seconds,
+              restPorEjercicio: exId ? { ...s.activeWorkout.restPorEjercicio, [exId]: seconds } : s.activeWorkout.restPorEjercicio,
               restSecondsLeft: seconds,
               restTotalSeconds: seconds,
               restEndsAt: Date.now() + seconds * 1000,

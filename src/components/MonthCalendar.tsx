@@ -23,7 +23,7 @@ interface DayCell {
  * lee de un vistazo qué días se fue y si se están alternando bien las rutinas.
  */
 export function MonthCalendar({
-  year, month, workouts, routines, onSelectDay, weekPlan,
+  year, month, workouts, routines, onSelectDay, weekPlan, planPorDia,
 }: {
   year: number
   month: number
@@ -34,6 +34,12 @@ export function MonthCalendar({
   onSelectDay?: (ts: number) => void
   /** Semana tipo (0 = lunes → rutina): los días planificados llevan un aro del color de esa rutina. */
   weekPlan?: Record<number, string | null>
+  /**
+   * Plan en orden: qué rutina cae en cada día de hoy en adelante. Si se pasa,
+   * manda sobre la semana tipo para los días que vienen (si faltaste uno, las
+   * rutinas se corren).
+   */
+  planPorDia?: Map<string, string>
 }) {
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
@@ -91,7 +97,10 @@ export function MonthCalendar({
               const dow = (date.getDay() + 6) % 7
               // Entrenado: relleno. Planificado: aro con el color de la rutina
               // (tenue si ya pasó y no se hizo). Descanso: vacío.
-              const rutinaPlan = weekPlan?.[dow] && routineIds.includes(weekPlan[dow]!) ? weekPlan[dow]! : null
+              const rutinaSemana = weekPlan?.[dow] && routineIds.includes(weekPlan[dow]!) ? weekPlan[dow]! : null
+              const rutinaPlan = planPorDia && rutinaSemana && (cell.isFuture || cell.isToday)
+                ? planPorDia.get(cell.key) ?? rutinaSemana
+                : rutinaSemana
               const planned = !entrenado && rutinaPlan != null
               const pasado = !cell.isFuture && !cell.isToday
               const aro = planned ? routineColor(rutinaPlan, routineIds) : null

@@ -253,3 +253,21 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 input[type="number"] { -moz-appearance: textfield; }
 
 h1, h2, h3, h4, h5, h6, p { margin: 0; padding: 0; }
+
+/* Tilde que se llena: el verde crece desde el centro al confirmar la serie. */
+.tilde { position: relative; overflow: hidden; isolation: isolate; }
+.tilde::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: var(--good, #34D399); border-radius: inherit;
+  transform: scale(0); transition: transform 150ms ease-out;
+}
+.tilde[data-hecha="true"]::before { transform: scale(1); }
+
+/* El contador de series da un saltito al subir. */
+@keyframes cuenta-sube { 0% { transform: translateY(0); } 40% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+.cuenta-sube { display: inline-block; animation: cuenta-sube 300ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tilde::before { transition: none; }
+  .cuenta-sube { animation: none; }
+}

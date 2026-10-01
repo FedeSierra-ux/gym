@@ -4,6 +4,11 @@ import { useWorkoutStore } from '../stores/workoutStore'
 import { BackupReminder } from '../components/BackupReminder'
 import { getWorkoutStreak } from '../utils/streak'
 import { plannedDowSet, dayKey } from '../utils/trainingDays'
+import { proximaDelPlan } from '../utils/planOrder'
+import { ProgramCard } from '../components/ProgramCard'
+import { WeeklyReview } from '../components/WeeklyReview'
+import { WeeklyMuscleSets } from '../components/WeeklyMuscleSets'
+import { RoutineIcon } from '../components/RoutineIcon'
 
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
@@ -23,8 +28,9 @@ export function HomeScreen() {
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const sortedWorkouts = [...finishedWorkouts].sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
   const lastWorkout = sortedWorkouts[0]
+  const lastRoutineVigente = lastWorkout ? routines.find(r => r.id === lastWorkout.routineId) : undefined
   const lastRoutine = lastWorkout
-    ? (routines.find(r => r.id === lastWorkout.routineId) ?? getArchivedRoutineName(lastWorkout.routineId))
+    ? (lastRoutineVigente ?? getArchivedRoutineName(lastWorkout.routineId))
     : null
 
   const [nowTs] = useState(() => Date.now())
@@ -64,17 +70,20 @@ export function HomeScreen() {
     ? prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter(h => h.date === lastWorkout.startedAt).length, 0)
     : 0
 
-  // Qué toca hoy. Manda la semana tipo que armó el usuario en Agenda: antes
-  // Inicio la ignoraba y elegía por rotación, así que un miércoles asignado a
-  // "Full body B" podía proponer "Full body A" sin explicación.
+  // Qué toca hoy. La semana tipo dice qué días se entrena y en qué orden van
+  // las rutinas, pero no ata cada rutina a un día: toca la siguiente a la
+  // última que hiciste. Si faltaste el miércoles, el viernes te espera brazos.
   const hoyDow = (new Date(nowTs).getDay() + 6) % 7  // 0 = lunes
-  const planDeHoy = weekPlan[hoyDow] ? routines.find(r => r.id === weekPlan[hoyDow]) : undefined
+  const routineIds = routines.map(r => r.id)
+  const delPlan = proximaDelPlan(weekPlan, routineIds, finishedWorkouts)
+  const proximaPlan = delPlan ? routines.find(r => r.id === delPlan) : undefined
   const yaEntreneHoy = lastWorkout
     ? new Date(lastWorkout.startedAt).toDateString() === new Date(nowTs).toDateString()
     : false
+  const hoySeEntrena = !!weekPlan[hoyDow] && routineIds.includes(weekPlan[hoyDow]!)
 
-  // Reserva para los días sin plan (o cuando ya hiciste lo de hoy): la rutina
-  // que hace más tiempo que no tocás, evitando repetir la última.
+  // Sin semana tipo: la rutina que hace más tiempo que no tocás, evitando
+  // repetir la última.
   const lastPerformedAt = new Map<string, number>()
   for (const w of sortedWorkouts) {
     if (!lastPerformedAt.has(w.routineId)) lastPerformedAt.set(w.routineId, w.finishedAt ?? w.startedAt)
@@ -84,10 +93,10 @@ export function HomeScreen() {
   const porRotacion = [...suggestionPool].sort(
     (a, b) => (lastPerformedAt.get(a.id) ?? 0) - (lastPerformedAt.get(b.id) ?? 0)
   )[0]
-  const suggestedRoutine = (!yaEntreneHoy && planDeHoy) ? planDeHoy : porRotacion
-  const esDelPlan = suggestedRoutine != null && suggestedRoutine.id === planDeHoy?.id && !yaEntreneHoy
+  const suggestedRoutine = proximaPlan ?? porRotacion
+  const esDelPlan = !!proximaPlan && hoySeEntrena && !yaEntreneHoy
   // Día de descanso según el plan: se dice, no se esconde.
-  const esDescansoPlanificado = diasPlanificados > 0 && !weekPlan[hoyDow] && !yaEntreneHoy
+  const esDescansoPlanificado = diasPlanificados > 0 && !hoySeEntrena && !yaEntreneHoy
   const suggestedExerciseCount = suggestedRoutine?.exercises.length ?? 0
   const approxMinutes = Math.round((suggestedRoutine?.exercises.reduce((a, e) => a + e.sets * 2.5, 0) ?? 0))
   const previewExercises = suggestedRoutine?.exercises.slice(0, 4).map(re => {
@@ -140,7 +149,7 @@ export function HomeScreen() {
                   </span>
                   {esDelPlan && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--acc)', background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.22)', padding: '3px 9px', borderRadius: 20 }}>
-                      según tu semana
+                      sigue tu plan
                     </span>
                   )}
                   {esDescansoPlanificado && (
@@ -149,8 +158,9 @@ export function HomeScreen() {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
-                  {suggestedRoutine.emoji} {suggestedRoutine.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
+                  <RoutineIcon routine={suggestedRoutine} size={20} />
+                  <span style={{ minWidth: 0 }}>{suggestedRoutine.name}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4 }}>
                   {suggestedExerciseCount} ejercicios · ~{approxMinutes} min · {previewExercises.map(e => e?.name).filter(Boolean).slice(0, 2).join(', ')}
@@ -185,7 +195,9 @@ export function HomeScreen() {
                         cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                       }}
                     >
-                      {r.emoji} {r.name}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <RoutineIcon routine={r} size={14} /> {r.name}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -204,6 +216,9 @@ export function HomeScreen() {
             </div>
           )}
         </div>
+
+        {/* En qué semana del plan estás */}
+        <ProgramCard />
 
         {/* La semana: un punto por día. Relleno = entrenado, aro = planificado. */}
         <div style={{ padding: '12px 22px 0' }}>
@@ -242,6 +257,9 @@ export function HomeScreen() {
           </div>
         </div>
 
+        {/* Desde el lunes, cómo fue la semana pasada */}
+        <WeeklyReview />
+
         {/* Última sesión: una línea que abre el entreno en la Agenda */}
         {lastWorkout && lastRoutine && (
           <div style={{ padding: '12px 22px 0' }}>
@@ -253,7 +271,9 @@ export function HomeScreen() {
                 padding: '12px 14px', minHeight: 52, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink)',
               }}
             >
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{lastRoutine.emoji}</span>
+              {lastRoutineVigente
+                ? <RoutineIcon routine={lastRoutineVigente} size={14} />
+                : <span style={{ fontSize: 18, flexShrink: 0 }}>{lastRoutine.emoji}</span>}
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 11, color: 'var(--dim)', fontWeight: 600 }}>Última sesión · {daysAgoStr}</span>
                 <span style={{ display: 'block', fontSize: 13, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -268,6 +288,9 @@ export function HomeScreen() {
             </button>
           </div>
         )}
+
+        {/* Series de la semana por músculo, contra la franja de 10 a 20 */}
+        <WeeklyMuscleSets />
 
         {/* La copia de seguridad, abajo de todo y en una línea */}
         <BackupReminder />

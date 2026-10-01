@@ -6,10 +6,15 @@ import { toDateInputValue } from '../utils/dates'
 import { formatKg, formatLoad } from '../utils/format'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { getWorkoutStreak } from '../utils/streak'
+import { prediccionDelPlan } from '../utils/planOrder'
+import { recordsPorReps, REPS_TABLA } from '../utils/records'
+import { muscleGroupConfig } from '../data/muscleGroups'
+import { MuscleIcon } from '../components/MuscleIcon'
+import { RoutineBadge, RoutineIcon } from '../components/RoutineIcon'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { useLongPress } from '../utils/useLongPress'
-import { monthStats, plannedDowSet } from '../utils/trainingDays'
-import type { CalendarSubTab, Routine, Workout } from '../types'
+import { monthStats, plannedDowSet, routineColor } from '../utils/trainingDays'
+import type { CalendarSubTab, MuscleGroup, Routine, Workout } from '../types'
 import { S } from '../theme'
 
 const MONTH_NAMES = [
@@ -84,7 +89,7 @@ function DaySheet({
               ) : routines.filter(r => r.exercises.length > 0).map((r) => (
                 <button key={r.id} onClick={() => handleStart(r.id)}
                   style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', width: '100%', cursor: 'pointer' }}>
-                  <span style={{ fontSize: 22, flexShrink: 0 }}>{r.emoji}</span>
+                  <RoutineIcon routine={r} size={16} boxed />
                   <div className="flex-1 min-w-0">
                     <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{r.name}</p>
                     <p style={{ fontSize: 11, color: S.dim }}>{r.exercises.length} ejercicios</p>
@@ -107,7 +112,7 @@ function DaySheet({
                       <div key={w.id} style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: 12 }}>
                         <div className="flex items-center gap-3 mb-2">
                           <div className="flex-1 min-w-0">
-                            <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
+                            <p style={{ fontWeight: 600, color: S.ink, fontSize: 13 }}><RoutineBadge routineId={w.routineId} />{routine?.name ?? 'Rutina eliminada'}</p>
                             <p style={{ fontSize: 11, color: S.dim }}>{w.exercises.length} ejercicios · {totalSets} series · {w.durationMin ?? 0}min</p>
                           </div>
                           <button
@@ -168,9 +173,8 @@ function DaySheet({
 }
 
 function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () => void }) {
-  const { routines, getArchivedRoutineName, updateWorkout } = useStore()
+  const { updateWorkout } = useStore()
   const exercises = useAllExercises()
-  const routine = routines.find((r) => r.id === workout.routineId) ?? getArchivedRoutineName(workout.routineId)
 
   const [dateStr, setDateStr] = useState(toDateInputValue(workout.startedAt))
   const [durationStr, setDurationStr] = useState(String(workout.durationMin ?? 0))
@@ -259,7 +263,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
       >
         <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 16px' }} />
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
-          <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 17 }}>{routine?.emoji} Editar entreno</h3>
+          <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 17 }}><RoutineBadge routineId={workout.routineId} size={16} />Editar entreno</h3>
           <button onClick={onClose} style={{ color: S.dim, fontSize: 22, lineHeight: 1, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
         </div>
 
@@ -372,10 +376,15 @@ function WeekPlanDayRow({
         onPointerLeave={cancelPress}
         onPointerCancel={cancelPress}
         onContextMenu={(e) => e.preventDefault()}
-        className="flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none appearance-none"
-        style={{ background: routine ? 'rgba(232,99,74,0.08)' : S.surf2, border: `1px solid ${routine ? 'rgba(232,99,74,0.2)' : S.line2}`, color: routine ? S.acc : S.dim, fontFamily: 'DM Sans, system-ui, sans-serif' }}>
-        <option value="" style={{ background: S.surf, color: S.dim }}>— Descanso —</option>
-        {routines.map((r) => <option key={r.id} value={r.id} style={{ background: S.surf, color: S.ink }}>{r.emoji} {r.name}</option>)}
+        className="flex-1 rounded-lg px-2 text-xs focus:outline-none appearance-none"
+        style={{
+          minHeight: 36, background: 'transparent', fontFamily: 'DM Sans, system-ui, sans-serif',
+          // Aro con el color de la rutina, como en el calendario de arriba; el descanso, tenue.
+          border: routine ? `1.5px solid ${routineColor(routine.id, routines.map(r => r.id))}` : '1.5px solid transparent',
+          color: routine ? S.ink : S.faint, fontWeight: routine ? 700 : 500,
+        }}>
+        <option value="" style={{ background: S.surf, color: S.dim }}>Descanso</option>
+        {routines.map((r) => <option key={r.id} value={r.id} style={{ background: S.surf, color: S.ink }}>{r.name}</option>)}
       </select>
     </div>
   )
@@ -386,7 +395,9 @@ function WeekPlanner() {
   return (
     <div style={{ background: S.surf, borderRadius: 14, padding: '14px 16px', border: `1px solid ${S.line2}` }}>
       <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 2 }}>Semana tipo</p>
-      <p style={{ fontSize: 11, color: S.faint, marginBottom: 10 }}>Mantené presionado un día para marcarlo descanso</p>
+      <p style={{ fontSize: 11, color: S.dim, marginBottom: 10 }}>
+        Los días que entrenás y el orden de las rutinas. Si faltás un día, te toca la que sigue. Mantené apretado un día para marcarlo descanso.
+      </p>
       <div className="flex flex-col gap-1.5">
         {DOW_LABELS.map((label, dow) => (
           <WeekPlanDayRow
@@ -436,7 +447,7 @@ function HistoryRow({ workout: w, routines, onOpen, onLongPress }: {
         <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{MONTH_NAMES[date.getMonth()].slice(0, 3)}</div>
       </div>
       <div className="flex-1 min-w-0">
-        <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
+        <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}><RoutineBadge routineId={w.routineId} />{routine?.name ?? 'Rutina eliminada'}</p>
         <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
           <span className="num">{w.exercises.length}</span> ej · <span className="num">{totalSets}</span> series · <span className="num">{w.durationMin ?? 0}</span> min
         </p>
@@ -476,6 +487,8 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
   const { trained: gymDaysCount, planned } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
   const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
+  // Plan en orden: los días que vienen muestran la rutina que de verdad te toca.
+  const planPorDia = prediccionDelPlan(weekPlan, routines.map(r => r.id), finishedWorkouts, nowTs, 70)
 
   return (
     <div className="flex flex-col gap-3">
@@ -492,6 +505,7 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
           workouts={finishedWorkouts}
           routines={routines}
           weekPlan={weekPlan}
+          planPorDia={planPorDia}
           onSelectDay={(ts) => {
             const d = new Date(ts)
             setSelectedDay({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() })
@@ -528,7 +542,7 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
               style={{ background: S.surf, borderTop: `1px solid ${S.line2}` }}
               onClick={(e) => e.stopPropagation()}>
               <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 16px' }} />
-              <p style={{ fontSize: 16, fontWeight: 700, color: S.ink, marginBottom: 2 }}>{routine?.emoji} {routine?.name ?? 'Entreno'}</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: S.ink, marginBottom: 2 }}><RoutineBadge routineId={menuWorkout.routineId} size={16} />{routine?.name ?? 'Entreno'}</p>
               <p style={{ fontSize: 12, color: S.dim, marginBottom: 16 }}>
                 {new Date(menuWorkout.startedAt).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
@@ -575,7 +589,7 @@ function formatMarca(m: { kg: number; reps: number; durationSec?: number }): str
 }
 
 function RecordsTab() {
-  const { prs } = useStore()
+  const { prs, workouts } = useStore()
   const exercises = useAllExercises()
   const [expandedPr, setExpandedPr] = useState<string | null>(null)
   // Últimos 30 días en vez del mes calendario: todos los días 1 este contador
@@ -583,9 +597,18 @@ function RecordsTab() {
   const [nowTs] = useState(() => Date.now())
   const startOfMonth = nowTs - 30 * 86400000
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
-  // Ordenados por lo más reciente: mezclar kilos, repeticiones y segundos en un
-  // solo ranking no significaba nada.
-  const sortedPrs = [...prs].sort((a, b) => b.date - a.date)
+
+  // Por grupo muscular, y adentro los del mes primero (los demás, del más
+  // reciente al más viejo). Antes eran 30 filas iguales en una sola lista.
+  const porId = new Map(exercises.map((e) => [e.id, e]))
+  const grupos = (Object.keys(muscleGroupConfig) as MuscleGroup[])
+    .map((g) => ({
+      g,
+      lista: prs
+        .filter((p) => porId.get(p.exerciseId)?.muscleGroup === g)
+        .sort((a, b) => Number(b.date >= startOfMonth) - Number(a.date >= startOfMonth) || b.date - a.date),
+    }))
+    .filter((x) => x.lista.length > 0)
 
   return (
     <div className="flex flex-col gap-3">
@@ -599,72 +622,89 @@ function RecordsTab() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {sortedPrs.map((pr) => {
-          const ex = exercises.find((e) => e.id === pr.exerciseId)
-          if (!ex) return null
-          const isNew = pr.date >= startOfMonth
-          const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
-          const isExpanded = expandedPr === pr.exerciseId
-          const hasHistory = !!pr.history && pr.history.length > 0
-          const volumen = pr.kg > 0 && !pr.durationSec ? Math.round(pr.kg * pr.reps) : 0
-          const desplegable = hasHistory || volumen > 0
-          return (
-            <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 14, border: `1px solid ${S.line2}` }}>
-              <button
-                type="button"
-                onClick={() => desplegable && setExpandedPr(isExpanded ? null : pr.exerciseId)}
-                aria-expanded={desplegable ? isExpanded : undefined}
-                className="flex items-center gap-3 w-full text-left"
-                style={{ padding: '12px 14px', background: 'none', border: 'none', cursor: desplegable ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit' }}
-              >
-                <div className="flex-1 min-w-0">
-                  {/* Nombre completo, hasta dos líneas: el punto coral marca lo de los últimos 30 días. */}
-                  <span style={{
-                    fontSize: 13, fontWeight: 700, color: S.ink, lineHeight: 1.3,
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {isNew && <span aria-label="nuevo" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: S.acc, marginRight: 6, verticalAlign: 'middle', position: 'relative', top: -1 }} />}
-                    {ex.nameEs}
-                  </span>
-                  <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{prDate}</p>
-                </div>
-                <div className="num" style={{ fontSize: 14, fontWeight: 700, color: S.ink, flexShrink: 0, textAlign: 'right' }}>{formatMarca(pr)}</div>
-                {desplegable && (
-                  <span aria-hidden="true" style={{ color: S.faint, fontSize: 11, flexShrink: 0, width: 14, textAlign: 'center' }}>
-                    {isExpanded ? '▲' : '▼'}
-                  </span>
+      {grupos.map(({ g, lista }) => (
+        <section key={g} aria-label={muscleGroupConfig[g].label} className="flex flex-col gap-2">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: S.ink, margin: '8px 0 0' }}>
+            <MuscleIcon group={g} size={20} />
+            {muscleGroupConfig[g].label}
+            <span className="num" style={{ fontSize: 11, color: S.faint, fontWeight: 600 }}>{lista.length}</span>
+          </h3>
+          {lista.map((pr) => {
+            const ex = porId.get(pr.exerciseId)!
+            const isNew = pr.date >= startOfMonth
+            const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+            const isExpanded = expandedPr === pr.exerciseId
+            const hasHistory = !!pr.history && pr.history.length > 0
+            const conKilos = pr.kg > 0 && !pr.durationSec
+            const desplegable = hasHistory || conKilos
+            const porReps = isExpanded && conKilos ? recordsPorReps(pr.exerciseId, workouts) : []
+            return (
+              <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 14, border: `1px solid ${S.line2}` }}>
+                <button
+                  type="button"
+                  onClick={() => desplegable && setExpandedPr(isExpanded ? null : pr.exerciseId)}
+                  aria-expanded={desplegable ? isExpanded : undefined}
+                  className="flex items-center gap-3 w-full text-left"
+                  style={{ padding: '12px 14px', background: 'none', border: 'none', cursor: desplegable ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit' }}
+                >
+                  <div className="flex-1 min-w-0">
+                    {/* Nombre completo, hasta dos líneas: el punto coral marca lo de los últimos 30 días. */}
+                    <span style={{
+                      fontSize: 13, fontWeight: 700, color: S.ink, lineHeight: 1.3,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {isNew && <span aria-label="nuevo" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: S.acc, marginRight: 6, verticalAlign: 'middle', position: 'relative', top: -1 }} />}
+                      {ex.nameEs}
+                    </span>
+                    <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{prDate}</p>
+                  </div>
+                  <div className="num" style={{ fontSize: 14, fontWeight: 700, color: S.ink, flexShrink: 0, textAlign: 'right' }}>{formatMarca(pr)}</div>
+                  {desplegable && (
+                    <span aria-hidden="true" style={{ color: S.faint, fontSize: 11, flexShrink: 0, width: 14, textAlign: 'center' }}>
+                      {isExpanded ? '▲' : '▼'}
+                    </span>
+                  )}
+                </button>
+                {isExpanded && desplegable && (
+                  <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${S.line}` }}>
+                    {conKilos && (
+                      <>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Mejor peso por repeticiones</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 12, rowGap: 6, marginBottom: hasHistory ? 14 : 0 }}>
+                          {porReps.map((r, i) => (
+                            <div key={i} style={{ display: 'contents' }}>
+                              <span className="num" style={{ fontSize: 12, color: S.dim }}>{REPS_TABLA[i]} reps</span>
+                              <span className="num" style={{ fontSize: 12, fontWeight: 700, color: r ? S.ink : S.faint, textAlign: 'right' }}>{r ? `${formatKg(r.kg)} kg` : '—'}</span>
+                              <span style={{ fontSize: 11, color: S.faint, minWidth: 54, textAlign: 'right' }}>
+                                {r ? new Date(r.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {hasHistory && (
+                      <>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
+                        <div className="flex flex-col gap-1.5">
+                          {[...pr.history!].reverse().map((h, hi) => (
+                            <div key={hi} className="flex items-center justify-between">
+                              <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                              <span className="num" style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
-              </button>
-              {isExpanded && desplegable && (
-                <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${S.line}` }}>
-                  {volumen > 0 && (
-                    <p style={{ fontSize: 12, color: S.dim, marginBottom: hasHistory ? 10 : 0 }}>
-                      Volumen de la serie: <span className="num" style={{ color: S.ink }}>{formatKg(volumen)} kg</span>
-                    </p>
-                  )}
-                  {hasHistory && (
-                    <>
-                      <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
-                      <div className="flex flex-col gap-1.5">
-                        {[...pr.history!].reverse().map((h, hi) => (
-                          <div key={hi} className="flex items-center justify-between">
-                            <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                            <span className="num" style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-        {prs.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No hay récords aún. ¡A entrenar!</p>}
-      </div>
-
-          </div>
+              </div>
+            )
+          })}
+        </section>
+      ))}
+      {prs.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No hay récords aún. ¡A entrenar!</p>}
+    </div>
   )
 }
 

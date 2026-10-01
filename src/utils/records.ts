@@ -100,3 +100,34 @@ export function newRecords(antes: PR[], despues: PR[]): PR[] {
     return viejo.kg !== p.kg || viejo.reps !== p.reps || viejo.durationSec !== p.durationSec
   })
 }
+
+/** Las cantidades de repeticiones que muestra la tabla de récords por reps. */
+export const REPS_TABLA = [5, 8, 10, 12, 15] as const
+
+/**
+ * El mejor peso que se movió para cada cantidad de repeticiones: una serie de
+ * 40 × 10 cuenta para 5, 8 y 10 (si hiciste 10, hiciste 8). Sin calentamiento.
+ */
+export function recordsPorReps(
+  exerciseId: string,
+  workouts: Workout[],
+): Array<{ reps: number; kg: number; date: number } | null> {
+  const mejor = REPS_TABLA.map(() => null as { reps: number; kg: number; date: number } | null)
+  for (const w of workouts) {
+    if (!w.finishedAt) continue
+    for (const wex of w.exercises) {
+      if (wex.exerciseId !== exerciseId) continue
+      for (const s of wex.sets) {
+        if (s.isWarmup || s.kg <= 0) continue
+        REPS_TABLA.forEach((n, i) => {
+          if (s.reps < n) return
+          const actual = mejor[i]
+          if (!actual || s.kg > actual.kg || (s.kg === actual.kg && w.startedAt < actual.date)) {
+            mejor[i] = { reps: n, kg: s.kg, date: w.startedAt }
+          }
+        })
+      }
+    }
+  }
+  return mejor
+}

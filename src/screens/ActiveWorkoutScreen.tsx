@@ -14,11 +14,12 @@ import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/num
 import { toDateInputValue, fromDateInputValue } from '../utils/dates'
 import { useLongPress } from '../utils/useLongPress'
 import { ExercisePickerSheet } from '../components/ExercisePickerSheet'
-import type { Exercise, ActiveWorkoutSet, WorkoutSet } from '../types'
+import type { Exercise, ActiveWorkoutSet, PR, WorkoutSet } from '../types'
 import { S } from '../theme'
 import { estimate1RM } from '../utils/oneRM'
 import { formatKg } from '../utils/format'
 import { rutinaEnUso } from '../utils/routineVariant'
+import { RoutineBadge } from '../components/RoutineIcon'
 
 
 
@@ -80,33 +81,6 @@ function formatElapsed(ms: number) {
   const m = Math.floor((totalSeconds % 3600) / 60)
   const s = totalSeconds % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
-
-function LivePrBanner({ exerciseId, kg, reps, onDismiss }: {
-  exerciseId: string; kg: number; reps: number; onDismiss: () => void
-}) {
-  const allExercises = useAllExercises()
-  const ex = allExercises.find(e => e.id === exerciseId)
-  useEffect(() => {
-    const t = setTimeout(onDismiss, 4000)
-    return () => clearTimeout(t)
-  }, [onDismiss])
-  return (
-    <div className="absolute top-0 left-0 right-0 z-40 flex items-center justify-center px-4 pt-2" style={{ pointerEvents: 'none' }}>
-      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl w-full max-w-sm screen-enter"
-        style={{ background: 'rgba(242,169,59,0.15)', border: `1px solid rgba(242,169,59,0.4)`, pointerEvents: 'auto' }}>
-        <span style={{ fontSize: 24 }}>🏆</span>
-        <div className="flex-1 min-w-0">
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: S.acc2 }}>¡Nuevo PR!</p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: S.ink, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-            {ex?.nameEs ?? ''} — {formatKg(kg)} kg × {reps} reps
-          </p>
-          {reps > 1 && <p style={{ fontSize: 11, color: S.acc2, opacity: 0.75, marginTop: 2 }}>~1RM estimado: {formatKg(estimate1RM(kg, reps))} kg</p>}
-        </div>
-        <button onClick={onDismiss} style={{ color: S.dim, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>✕</button>
-      </div>
-    </div>
-  )
 }
 
 /**
@@ -197,6 +171,27 @@ function superaAnterior(prev: WorkoutSet, kg: number, reps: number, seg: number,
   return reps > prev.reps
 }
 
+/**
+ * true si la serie supera el récord guardado (que no incluye el entreno en
+ * curso). Sin récord previo no hay nada que festejar: es la primera vez.
+ */
+function superaRecord(pr: PR | undefined, kg: number, reps: number, seg: number, byTime: boolean): boolean {
+  if (!pr) return false
+  if (byTime) return seg > (pr.durationSec ?? 0)
+  if (kg > 0 || pr.kg > 0) return kg > pr.kg || (kg === pr.kg && reps > pr.reps)
+  return reps > pr.reps
+}
+
+/** Cuánto vale una serie para compararla con otras del mismo ejercicio. */
+function pesoDeSerie(kg: number, reps: number, seg: number, byTime: boolean): number {
+  return byTime ? seg : kg * 1000 + reps
+}
+
+function textoRecord(pr: PR, byTime: boolean, unit: 'min' | 'seg'): string {
+  if (byTime) return unit === 'min' ? `${Math.round(((pr.durationSec ?? 0) / 60) * 10) / 10} min` : `${pr.durationSec ?? 0} s`
+  return pr.kg > 0 ? `${formatKg(pr.kg)} × ${pr.reps}` : `${pr.reps} reps`
+}
+
 function estiloCampo(completada: boolean): React.CSSProperties {
   return {
     width: '100%', minWidth: 0, textAlign: 'center',
@@ -227,7 +222,8 @@ function estiloTilde(completada: boolean, esProxima: boolean, sePuede: boolean):
     transition: 'all 0.15s',
     touchAction: 'manipulation', userSelect: 'none', WebkitUserSelect: 'none',
   }
-  if (completada) return { ...base, background: S.good, border: `2px solid ${S.good}`, color: '#0C0E14' }
+  // El verde lo pinta .tilde::before, que crece desde el centro al confirmar.
+  if (completada) return { ...base, background: 'transparent', border: `2px solid ${S.good}`, color: '#0C0E14' }
   if (esProxima) return { ...base, background: 'rgba(232,99,74,0.12)', border: `2px solid ${S.acc}`, color: S.acc, opacity: sePuede ? 1 : 0.5 }
   return { ...base, background: 'transparent', border: `1.5px solid ${S.line2}`, color: S.faint }
 }
@@ -240,7 +236,7 @@ function estiloTilde(completada: boolean, esProxima: boolean, sePuede: boolean):
  * lado, y había que decidir entre ellos en el medio de la serie.
  */
 function SetRow({
-  exIdx, setIdx, set, prev, byTime, unit, isBarbellLike, puedeBorrar, esProxima,
+  exIdx, setIdx, set, prev, byTime, unit, isBarbellLike, puedeBorrar, esProxima, recordGuardado, esRecord,
   onUpdate, onToggleWarmup, onRemove, onComplete,
 }: {
   exIdx: number
@@ -254,6 +250,10 @@ function SetRow({
   puedeBorrar: boolean
   /** La próxima serie del entreno: la única con el tilde en coral. */
   esProxima: boolean
+  /** El récord del ejercicio antes de este entreno. */
+  recordGuardado?: PR
+  /** Esta serie es la mejor del ejercicio y supera el récord: se marca en ámbar. */
+  esRecord: boolean
   onUpdate: (e: number, s: number, f: 'kg' | 'reps' | 'duration', v: string) => void
   onToggleWarmup: (e: number, s: number) => void
   onRemove: (e: number, s: number) => void
@@ -290,7 +290,9 @@ function SetRow({
     primeAudio()
     onComplete(exIdx, setIdx, { startRest: conDescanso })
     if (!completada && sePuede) {
-      vibrate(conDescanso ? [40, 20, 40, 20, 40] : [40, 20, 40])
+      // Un récord vibra más largo, para enterarse sin mirar.
+      const record = !calentamiento && superaRecord(recordGuardado, kg, reps, seg, byTime)
+      vibrate(record ? [60, 40, 60, 40, 260] : conDescanso ? [40, 20, 40, 20, 40] : [40, 20, 40])
       setDestello(true)
       setTimeout(() => setDestello(false), 600)
     }
@@ -305,7 +307,7 @@ function SetRow({
         style={{
           display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID,
           alignItems: 'center', padding: '6px 14px', gap: 8,
-          background: mejoro ? 'rgba(52,211,153,0.07)' : esProxima ? 'rgba(232,99,74,0.04)' : 'transparent',
+          background: esRecord ? 'rgba(242,169,59,0.10)' : mejoro ? 'rgba(52,211,153,0.07)' : esProxima ? 'rgba(232,99,74,0.04)' : 'transparent',
           borderTop: `1px solid ${S.line}`,
         }}
       >
@@ -394,9 +396,20 @@ function SetRow({
           aria-label={completada ? 'Desmarcar serie' : 'Confirmar serie. Mantené apretado para arrancar el descanso'}
           title={completada ? 'Desmarcar' : 'Tocá para confirmar · mantené apretado para el descanso'}
           onClick={() => { if (consumioElTap()) return; confirmar(false) }}
+          className="tilde"
+          data-hecha={completada}
           style={estiloTilde(completada, esProxima, sePuede)}
         >✓</button>
       </div>
+
+      {/* Récord en el momento: la fila en ámbar y contra qué marca */}
+      {esRecord && recordGuardado && (
+        <div style={{ padding: '0 14px 6px', background: 'rgba(242,169,59,0.10)' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: S.acc2 }}>
+            🏆 Récord <span style={{ fontWeight: 500, opacity: 0.85 }}>· antes <span className="num">{textoRecord(recordGuardado, byTime, unit)}</span></span>
+          </span>
+        </div>
+      )}
 
       {/* Pista de discos y 1RM, debajo de la fila */}
       {(verDiscos && isBarbellLike && kg >= BAR_KG) && (
@@ -451,7 +464,7 @@ export function ActiveWorkoutScreen() {
   const exercises = useAllExercises()
   const {
     activeWorkout, updateSetValue, toggleSetWarmup, completeSet, addSetToExercise, removeSetFromExercise,
-    dismissLivePr, finishWorkout, cancelWorkout, setWorkoutDate,
+    finishWorkout, cancelWorkout, setWorkoutDate,
     addExerciseToWorkout, replaceExerciseInWorkout, removeExerciseFromWorkout,
   } = useWorkoutStore()
 
@@ -519,15 +532,12 @@ export function ActiveWorkoutScreen() {
     <div className="flex-1 min-h-0 flex flex-col screen-enter relative" style={{ background: S.bg }}>
 
       {/* Live PR banner */}
-      {activeWorkout.livePr && (
-        <LivePrBanner exerciseId={activeWorkout.livePr.exerciseId} kg={activeWorkout.livePr.kg} reps={activeWorkout.livePr.reps} onDismiss={dismissLivePr} />
-      )}
 
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '54px 22px 14px', borderBottom: `1px solid ${S.line2}` }}>
         <div className="flex items-center justify-between gap-3">
           <div style={{ fontSize: 13, color: S.dim, fontWeight: 500, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-            {routine?.emoji} {routine?.name}
+            {routine && <RoutineBadge routineId={routine.id} />}{routine?.name}
           </div>
           {/* Fecha del entreno: editable para cargar el de ayer. */}
           <WorkoutDatePicker startedAt={activeWorkout.startedAt} onChange={setWorkoutDate} />
@@ -535,7 +545,8 @@ export function ActiveWorkoutScreen() {
         <div className="flex items-end justify-between gap-3" style={{ marginTop: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.ink, lineHeight: 1 }}>
-              {completedSets}<span style={{ color: S.dim, fontSize: 15 }}> / {totalSets}</span>
+              <span key={completedSets} className={completedSets > 0 ? 'cuenta-sube' : undefined}>{completedSets}</span>
+              <span style={{ color: S.dim, fontSize: 15 }}> / {totalSets}</span>
               <span style={{ color: S.dim, fontSize: 13, fontWeight: 500, fontFamily: 'DM Sans, system-ui, sans-serif', letterSpacing: 0 }}> series</span>
             </div>
             {/* El reloj total, en segundo plano */}
@@ -573,6 +584,18 @@ export function ActiveWorkoutScreen() {
           const pr = prs.find((p) => p.exerciseId === ex.id)
           const isBarbellLike = ex.equipmentType === 'barra'
           const prevPorSerie = emparejarAnteriores(activeEx.sets, ultimasSeries(ex.id))
+          // La mejor serie hecha que supera el récord: sólo esa se marca.
+          let recordIdx = -1
+          let mejorValor = -1
+          activeEx.sets.forEach((st, i) => {
+            if (!st.completed || st.isWarmup) return
+            const k = parseDecimal(st.kg) || 0
+            const r = parseInt(st.reps) || 0
+            const sg = isDurationExercise(ex) ? toSeconds(st.duration ?? '', durationUnit(ex)) : 0
+            if (!superaRecord(pr, k, r, sg, isDurationExercise(ex))) return
+            const v = pesoDeSerie(k, r, sg, isDurationExercise(ex))
+            if (v > mejorValor) { mejorValor = v; recordIdx = i }
+          })
           const completedCount = activeEx.sets.filter((s) => s.completed).length
           const byTime = isDurationExercise(ex)
           const unit = durationUnit(ex)
@@ -714,6 +737,8 @@ export function ActiveWorkoutScreen() {
                   onToggleWarmup={toggleSetWarmup}
                   onRemove={removeSetFromExercise}
                   esProxima={exIdx === ejActual && setIdx === proximaSerie}
+                  recordGuardado={pr}
+                  esRecord={setIdx === recordIdx}
                   onComplete={confirmarSerie}
                 />
               ))}
