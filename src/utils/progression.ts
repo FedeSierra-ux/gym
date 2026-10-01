@@ -1,4 +1,5 @@
 import type { Exercise, RoutineExercise, Workout } from '../types'
+import { formatKg } from './format'
 
 /**
  * Doble progresión: se mantiene el peso hasta completar TODAS las series en el
@@ -123,7 +124,7 @@ export function suggestNextWeight(
     return {
       kg,
       reason: 'bajar',
-      note: `Pasaron ${Math.round(daysAgo)} días: arrancá con ${kg} kg y subí de nuevo.`,
+      note: `Pasaron ${Math.round(daysAgo)} días: arrancá con ${formatKg(kg)} kg y subí de nuevo.`,
       targetReps: routineExercise.repsMax,
     }
   }
@@ -145,14 +146,14 @@ export function suggestNextWeight(
     return {
       kg,
       reason: 'subir',
-      note: `${last.reps.join('/')} la última vez: subí a ${kg} kg y volvé a ${routineExercise.repsMin} reps.`,
+      note: `${last.reps.join('/')} la última vez: subí a ${formatKg(kg)} kg y volvé a ${routineExercise.repsMin} reps.`,
       targetReps: routineExercise.repsMin,
     }
   }
 
   const faltan = last.reps.filter(r => r < routineExercise.repsMax).length
   const seriesFaltantes = Math.max(0, routineExercise.sets - last.reps.length)
-  const carga = bodyweight ? 'el peso corporal' : `${last.kg} kg`
+  const carga = bodyweight ? 'el peso corporal' : `${formatKg(last.kg)} kg`
   // Las series que faltan al peso más alto pueden estar hechas con menos peso:
   // no "faltaron", se bajó el peso. El mensaje tiene que decir eso.
   const bajadas = Math.min(seriesFaltantes, last.masLivianas)

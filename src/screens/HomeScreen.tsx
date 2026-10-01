@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
-import { CircularRing } from '../components/CircularRing'
 import { BackupReminder } from '../components/BackupReminder'
 import { getWorkoutStreak } from '../utils/streak'
-import { windowStats, plannedDowSet } from '../utils/trainingDays'
+import { plannedDowSet, dayKey } from '../utils/trainingDays'
+
+const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
 function formatDate() {
   const now = new Date()
@@ -15,7 +16,7 @@ function formatDate() {
 }
 
 export function HomeScreen() {
-  const { userName, workouts, routines, prs, weekPlan, weeklyGoal, setActiveTab, getArchivedRoutineName } = useStore()
+  const { userName, avatarPhoto, workouts, routines, prs, weekPlan, setActiveTab, openAgendaDay, getArchivedRoutineName } = useStore()
   const allExercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
@@ -26,29 +27,42 @@ export function HomeScreen() {
     ? (routines.find(r => r.id === lastWorkout.routineId) ?? getArchivedRoutineName(lastWorkout.routineId))
     : null
 
-  // Últimos 30 días, no el mes calendario: contando por mes, todos los días 1 la
-  // app le decía "0 entrenos, 0 h, 0 PRs" a alguien que venía entrenando bien.
   const [nowTs] = useState(() => Date.now())
-  const ventana = windowStats(finishedWorkouts, nowTs, 30)
-  const windowPrCount = prs.filter(p => p.date >= nowTs - 30 * 86400000).length
   // Racha por entrenos encadenados, no por días corridos: entrenar día por
   // medio (o tres veces por semana cambiando los días) no la corta.
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
-  // La meta sale de la semana tipo que armó el usuario; si no armó ninguna, de
-  // lo que haya puesto a mano en Ajustes, y si no, de tres por semana.
   const diasPlanificados = plannedDowSet(weekPlan, routines.map(r => r.id)).size
-  const porSemana = weeklyGoal ?? (diasPlanificados > 0 ? diasPlanificados : 3)
-  const metaVentana = Math.round(porSemana * (30 / 7))
-  const ringPct = Math.min(Math.round((ventana.workouts / Math.max(1, metaVentana)) * 100), 100)
+
+  // La semana en curso, de lunes a domingo: hecho, planificado o descanso.
+  const hoy = new Date(nowTs)
+  const hoyIdx = (hoy.getDay() + 6) % 7
+  const lunes = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - hoyIdx)
+  const diasEntrenados = new Set(finishedWorkouts.map(w => dayKey(w.startedAt)))
+  const semana = DIAS.map((letra, i) => {
+    const fecha = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + i)
+    const rutinaPlan = weekPlan[i] && routines.some(r => r.id === weekPlan[i]) ? weekPlan[i] : null
+    return {
+      letra,
+      hecho: diasEntrenados.has(dayKey(fecha.getTime())),
+      planificado: !!rutinaPlan,
+      pasado: i < hoyIdx,
+      esHoy: i === hoyIdx,
+    }
+  })
+  const hechosSemana = semana.filter(d => d.hecho).length
+  const metaSemana = semana.filter(d => d.planificado).length
 
   // Last session stats
   const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0)
   const daysAgo = lastWorkout
     ? Math.floor((todayMidnight.getTime() - new Date(lastWorkout.startedAt).setHours(0, 0, 0, 0)) / 86400000)
     : null
-  const daysAgoStr = daysAgo === null ? '' : daysAgo === 0 ? 'hoy' : daysAgo === 1 ? 'hace 1 día' : `hace ${daysAgo} días`
+  const daysAgoStr = daysAgo === null ? '' : daysAgo === 0 ? 'hoy' : daysAgo === 1 ? 'ayer' : `hace ${daysAgo} días`
   const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0) ?? 0
-  const lastEjercicios = lastWorkout?.exercises.filter(e => e.sets.length > 0).length ?? 0
+  // Los récords quedan fechados con el inicio del entreno en que se hicieron.
+  const lastRecords = lastWorkout
+    ? prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter(h => h.date === lastWorkout.startedAt).length, 0)
+    : 0
 
   // Qué toca hoy. Manda la semana tipo que armó el usuario en Agenda: antes
   // Inicio la ignoraba y elegía por rotación, así que un miércoles asignado a
@@ -103,17 +117,17 @@ export function HomeScreen() {
               aria-label="Abrir perfil"
               style={{
                 flexShrink: 0, width: 44, height: 44, borderRadius: 22,
-                background: 'var(--surf2)', border: '2px solid var(--acc)',
+                background: 'var(--surf2)', border: '2px solid var(--acc)', overflow: 'hidden', padding: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 700, color: 'var(--acc)',
               }}
             >
-              {userInitial}
+              {avatarPhoto
+                ? <img src={avatarPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : userInitial}
             </button>
           </div>
         </div>
-
-        <BackupReminder />
 
         {/* Qué toca hoy — lo primero, con el botón de arrancar sobre el pliegue */}
         <div style={{ padding: '16px 22px 0' }}>
@@ -191,67 +205,72 @@ export function HomeScreen() {
           )}
         </div>
 
-        {/* Últimos 30 días — una línea, no una tarjeta con un anillo en cero */}
+        {/* La semana: un punto por día. Relleno = entrenado, aro = planificado. */}
         <div style={{ padding: '12px 22px 0' }}>
-          <div
-            style={{
-              background: 'var(--surf)', borderRadius: 14, border: '1px solid var(--line2)',
-              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
-            }}
-          >
-            <CircularRing value={ringPct} size={40} strokeWidth={4} color="var(--acc)" trackColor="var(--line2)">
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)' }}>{ventana.workouts}</span>
-            </CircularRing>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                {ventana.workouts} de {metaVentana} en 30 días
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 2 }}>
-                {ventana.perWeek} por semana · {ventana.hours}h
-                {windowPrCount > 0 && ` · ${windowPrCount} PRs`}
-              </div>
+          <div style={{ background: 'var(--surf)', borderRadius: 14, border: '1px solid var(--line2)', padding: '12px 14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }} role="list" aria-label="Esta semana">
+              {semana.map((d) => {
+                const estado = d.hecho ? 'entrenado' : d.planificado ? (d.pasado ? 'planificado, no se hizo' : 'planificado') : 'descanso'
+                return (
+                  <div key={d.letra} role="listitem" aria-label={`${d.letra}: ${estado}`}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: d.esHoy ? 700 : 500, color: d.esHoy ? 'var(--ink)' : 'var(--dim)' }}>{d.letra}</span>
+                    <span style={{
+                      width: 22, height: 22, borderRadius: 11, boxSizing: 'border-box',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: d.hecho ? 'var(--acc)' : 'transparent',
+                      border: d.hecho ? 'none' : d.planificado ? `2px solid ${d.pasado ? 'var(--faint)' : 'var(--acc)'}` : 'none',
+                    }}>
+                      {!d.hecho && !d.planificado && <span style={{ width: 4, height: 4, borderRadius: 2, background: 'var(--faint)' }} />}
+                      {d.hecho && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>✓</span>}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-            <div className="flex flex-col items-center" style={{ flexShrink: 0 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: streak.atRisk ? 'var(--acc)' : 'var(--acc2)' }}>
-                🔥 {streak.current}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)' }}>
+              <span style={{ fontSize: 12, color: 'var(--dim)' }}>
+                Racha: <b className="num" style={{ color: 'var(--ink)', fontSize: 14 }}>{streak.current}</b> {streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos'}
+                {streak.atRisk && streak.current > 0 && <span style={{ color: 'var(--acc)' }}> · entrená hoy o mañana</span>}
               </span>
-              <span style={{ fontSize: 11, color: 'var(--dim)' }}>seguidos</span>
+              {metaSemana > 0 && (
+                <span style={{ fontSize: 12, color: 'var(--dim)' }}>
+                  <b className="num" style={{ color: 'var(--ink)' }}>{hechosSemana}</b> de <span className="num">{metaSemana}</span>
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Last session */}
+        {/* Última sesión: una línea que abre el entreno en la Agenda */}
         {lastWorkout && lastRoutine && (
-          <div style={{ padding: '20px 22px 0' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3, marginBottom: 12 }}>
-              Última sesión · {daysAgoStr}
-            </div>
-            <div style={{
-              background: 'var(--surf)', borderRadius: 18, padding: 18,
-              border: '1px solid var(--line2)',
-            }}>
-              <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
-                <span style={{ fontSize: 22 }}>{lastRoutine.emoji}</span>
-                <span style={{ fontSize: 17, fontWeight: 700, flex: 1, color: 'var(--ink)' }}>{lastRoutine.name}</span>
-                <CircularRing value={lastTotalSets > 0 ? 100 : 0} size={38} strokeWidth={4} color="var(--acc)" trackColor="var(--line2)" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                {[
-                  [`${lastWorkout.durationMin ?? 0} min`, 'Duración'],
-                  [`${lastTotalSets}`, 'Series'],
-                  [`${lastEjercicios}`, 'Ejercicios'],
-                ].map(([v, l]) => (
-                  <div key={l} style={{
-                    background: 'var(--surf2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center',
-                  }}>
-                    <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>{v}</div>
-                    <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 3 }}>{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div style={{ padding: '12px 22px 0' }}>
+            <button
+              onClick={() => openAgendaDay(lastWorkout.startedAt)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                background: 'var(--surf)', borderRadius: 14, border: '1px solid var(--line2)',
+                padding: '12px 14px', minHeight: 52, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--ink)',
+              }}
+            >
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{lastRoutine.emoji}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--dim)', fontWeight: 600 }}>Última sesión · {daysAgoStr}</span>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {lastRoutine.name}
+                  <span style={{ color: 'var(--dim)', fontWeight: 500 }}>
+                    {' · '}<span className="num">{lastWorkout.durationMin ?? 0}</span> min · <span className="num">{lastTotalSets}</span> series
+                    {lastRecords > 0 && <> · <span className="num" style={{ color: 'var(--acc2)' }}>{lastRecords}</span> {lastRecords === 1 ? 'récord' : 'récords'}</>}
+                  </span>
+                </span>
+              </span>
+              <span style={{ color: 'var(--faint)', fontSize: 18, flexShrink: 0 }} aria-hidden="true">›</span>
+            </button>
           </div>
         )}
+
+        {/* La copia de seguridad, abajo de todo y en una línea */}
+        <BackupReminder />
 
         <div style={{ height: 24 }} />
       </div>

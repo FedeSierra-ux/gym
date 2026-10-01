@@ -5,6 +5,7 @@ import { getWorkoutTip } from '../utils/aiCoach'
 import type { NavTab, Workout } from '../types'
 import { formatLoad } from '../utils/format'
 import { S } from '../theme'
+import { formatKg } from '../utils/format'
 
 
 interface Props {
@@ -48,7 +49,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
     const exerciseSummaries = workout.exercises.map(we => {
       const ex = exercises.find(e => e.id === we.exerciseId)
       const best = we.sets.reduce((a, s) => (s.kg > a.kg ? s : a), we.sets[0])
-      return `${ex?.nameEs ?? we.exerciseId}: ${we.sets.length} series, mejor ${best?.kg ?? 0}kg x ${best?.reps ?? 0}`
+      return `${ex?.nameEs ?? we.exerciseId}: ${we.sets.length} series, mejor ${formatKg(best?.kg ?? 0)}kg x ${best?.reps ?? 0}`
     })
     getWorkoutTip(anthropicApiKey, {
       routineName: routine?.name ?? 'Sesión',

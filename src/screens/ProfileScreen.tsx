@@ -5,6 +5,7 @@ import { MedidasSheet } from './MedidasSheet'
 import { HistorialBuscadorSheet } from './HistorialBuscadorSheet'
 import { getWorkoutStreak } from '../utils/streak'
 import { seriesEfectivas } from '../utils/volume'
+import { formatKg } from '../utils/format'
 
 export function ProfileScreen() {
   const { userName, updateUserName, workouts, prs, measures } = useStore()
@@ -123,7 +124,7 @@ export function ProfileScreen() {
             <span className="block font-semibold text-ink text-sm">Peso y medidas</span>
             <span className="block text-dim text-xs mt-0.5">
               {ultimaMedida?.weightKg
-                ? `${ultimaMedida.weightKg} kg · ${new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`
+                ? `${formatKg(ultimaMedida.weightKg)} kg · ${new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`
                 : 'Todavía sin anotar'}
             </span>
           </span>

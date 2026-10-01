@@ -35,6 +35,9 @@ interface AppState {
   /** Última vez que se exportó un backup, para poder recordarlo. */
   lastBackupAt: number | null
   customExercises: Exercise[]
+  /** Foto de perfil, achicada y guardada como data URL en el teléfono. */
+  avatarPhoto: string | null
+  setAvatarPhoto: (photo: string | null) => void
   archivedRoutineNames: Record<string, { name: string; emoji: string }>
 
   // Actions
@@ -42,6 +45,10 @@ interface AppState {
   setCalendarSubTab: (tab: CalendarSubTab) => void
   setActiveRoutineId: (id: string | null) => void
   setShowExercisePicker: (show: boolean) => void
+  /** Día que la Agenda tiene que abrir al entrar (desde "Última sesión" en Inicio). */
+  agendaDayTs: number | null
+  openAgendaDay: (ts: number) => void
+  clearAgendaDay: () => void
 
   // Routines
   addRoutine: (routine: Routine) => void
@@ -110,6 +117,7 @@ export const useStore = create<AppState>()(
       calendarSubTab: 'calendario',
       activeRoutineId: null,
       showExercisePicker: false,
+      agendaDayTs: null,
       exercises: exerciseDb,
       routines: [],
       workouts: [],
@@ -125,12 +133,16 @@ export const useStore = create<AppState>()(
       measures: [],
       lastBackupAt: null,
       customExercises: [],
+      avatarPhoto: null,
       archivedRoutineNames: {},
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
       setActiveRoutineId: (id) => set({ activeRoutineId: id }),
       setShowExercisePicker: (show) => set({ showExercisePicker: show }),
+      openAgendaDay: (ts) => set({ activeTab: 'calendario', calendarSubTab: 'calendario', activeRoutineId: null, agendaDayTs: ts }),
+      clearAgendaDay: () => set({ agendaDayTs: null }),
+      setAvatarPhoto: (photo) => set({ avatarPhoto: photo }),
 
       addRoutine: (routine) => set((s) => ({ routines: [...s.routines, routine] })),
       updateRoutine: (routine) =>
@@ -360,6 +372,7 @@ export const useStore = create<AppState>()(
         measures: state.measures,
         lastBackupAt: state.lastBackupAt,
         customExercises: state.customExercises,
+        avatarPhoto: state.avatarPhoto,
         archivedRoutineNames: state.archivedRoutineNames,
       }),
       // Los récords guardados por versiones anteriores pueden haber quedado

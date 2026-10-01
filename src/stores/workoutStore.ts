@@ -6,6 +6,7 @@ import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../uti
 import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
 import { lastTopKg, suggestNextWeight } from '../utils/progression'
 import { computeRecords, newRecords } from '../utils/records'
+import { formatKg } from '../utils/format'
 
 export interface ActiveWorkout {
   routineId: string
@@ -477,7 +478,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             const exName = exercise?.nameEs ?? re.exerciseId
             progressionToasts.push({
               id: `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              message: `💪 ${exName}: la próxima, ${suggestion.kg} kg`,
+              message: `💪 ${exName}: la próxima, ${formatKg(suggestion.kg)} kg`,
               type: 'info',
             })
           }

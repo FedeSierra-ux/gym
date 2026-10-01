@@ -8,6 +8,7 @@ import { resumenMensual } from '../utils/volume'
 import { formatDuration } from '../utils/duration'
 import { S } from '../theme'
 import type { MuscleGroup } from '../types'
+import { formatKg } from '../utils/format'
 
 type Period = '6s' | '3m' | '6m' | 'todo'
 type Tab = 'fuerza' | 'series'
@@ -25,7 +26,7 @@ const MUSCLE_ORDER: MuscleGroup[] = ['pecho', 'espalda', 'hombros', 'biceps', 't
 /** El valor de una marca, escrito con la unidad que corresponde al ejercicio. */
 function formatValor(serie: Pick<ExerciseSeries, 'kind' | 'current' | 'currentReps'>): string {
   switch (serie.kind) {
-    case 'kg': return `${serie.current} kg`
+    case 'kg': return `${formatKg(serie.current)} kg`
     case 'reps': return `${serie.current} reps`
     case 'tiempo': return formatDuration(serie.current)
   }
@@ -153,11 +154,11 @@ function SeriesTab({ nowTs }: { nowTs: number }) {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>
-                      {e.maxKg > 0 ? `${e.maxKg} kg` : e.maxSeg > 0 ? formatDuration(e.maxSeg) : '—'}
+                      {e.maxKg > 0 ? `${formatKg(e.maxKg)} kg` : e.maxSeg > 0 ? formatDuration(e.maxSeg) : '—'}
                       {e.maxKg > 0 && e.repsAlMax > 0 && <span style={{ fontSize: 11, color: S.faint, fontWeight: 500 }}> × {e.repsAlMax}</span>}
                     </div>
                     {dif !== 0 && (
-                      <div style={{ fontSize: 11, fontWeight: 700, color: dif > 0 ? S.good : S.bad }}>{dif > 0 ? '↑ +' : '↓ '}{dif} kg</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: dif > 0 ? S.good : S.bad }}>{dif > 0 ? '↑ +' : '↓ '}{formatKg(dif)} kg</div>
                     )}
                   </div>
                 </button>
