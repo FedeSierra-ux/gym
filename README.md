@@ -96,9 +96,17 @@ cargadas desde el primer arranque, repartidas en la semana (lunes piernas,
 miércoles brazos, viernes full body). Si ya usabas la app, el botón *"Cargar
 plan de Mile"* en Rutinas las agrega.
 
-Las series y reps son las de las semanas 1-2-3; la variante de las semanas 4-5-6,
-los descansos y las aclaraciones ("10 por pierna", "circuito de entrada",
-"tabata") quedan en la nota de cada ejercicio.
+Cada rutina está armada en bloques (circuito de entrada, principal, tabata),
+con la superserie del full body marcada. Las series y reps de base son las de
+las semanas 1-2-3; las de las semanas 4-5-6 van en `alt` y se eligen con el
+selector *Semanas 1-3 / 4-6* de la rutina, que cambia también lo que se carga
+en el entreno. Los descansos y las aclaraciones ("por pierna") quedan en la
+nota. Las rutinas guardadas antes de esto se completan solas al abrir la app
+(`completarPlanMile`).
+
+Cualquier rutina puede usar lo mismo: en modo edición, el menú ⋯ de cada
+ejercicio define su bloque y lo une en superserie con el siguiente, y con
+*Semanas 4-6* elegido se editan las series de ese bloque.
 
 ## Iconos
 
