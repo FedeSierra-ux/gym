@@ -3,9 +3,24 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
 import type { NavTab, Workout } from '../types'
-import { formatLoad } from '../utils/format'
+import { formatKg, formatLoad } from '../utils/format'
 import { S } from '../theme'
-import { formatKg } from '../utils/format'
+
+/** Volumen de un entreno: kilos × reps de las series efectivas. */
+function volumenDe(w: Workout): number {
+  return w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).reduce((b, s) => b + s.kg * s.reps, 0), 0)
+}
+
+function seriesDe(w: Workout): number {
+  return w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
+}
+
+/** Diferencia con signo, lista para mostrar: "+3", "−5", "=" */
+function delta(actual: number, antes: number, unidad = ''): { texto: string; signo: number } {
+  const d = Math.round(actual - antes)
+  if (d === 0) return { texto: '=', signo: 0 }
+  return { texto: `${d > 0 ? '+' : '−'}${Math.abs(d).toLocaleString('es-AR')}${unidad}`, signo: Math.sign(d) }
+}
 
 
 interface Props {
@@ -65,15 +80,32 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workout.id, anthropicApiKey])
 
-  // Las calorías eran minutos × 6,5 para cualquier persona, así que salieron:
-  // un número inventado le resta credibilidad a los que sí se miden.
-  const ejercicios = workout.exercises.filter(e => e.sets.length > 0).length
-  const stats: [string | number, string, string, string][] = [
-    [workout.durationMin ?? 0, 'min', 'Tiempo', S.acc],
-    [totalSets, totalSets === 1 ? 'serie' : 'series', 'Series', S.acc2],
-    [ejercicios, ejercicios === 1 ? 'ejercicio' : 'ejercicios', 'Ejercicios', S.good],
-    [prCount, prCount === 1 ? 'récord' : 'récords', 'PRs', S.ink],
+  // Contra la vez anterior de esta misma rutina: ¿fue mejor o peor que la última?
+  const anterior = workouts
+    .filter(w => w.finishedAt && w.routineId === workout.routineId && w.id !== workout.id && w.startedAt < workout.startedAt)
+    .sort((a, b) => b.startedAt - a.startedAt)[0]
+  const volumen = volumenDe(workout)
+  const filas: { label: string; valor: string; antes?: string; d?: { texto: string; signo: number } }[] = [
+    {
+      label: 'Volumen', valor: `${Math.round(volumen).toLocaleString('es-AR')} kg`,
+      antes: anterior ? `${Math.round(volumenDe(anterior)).toLocaleString('es-AR')} kg` : undefined,
+      d: anterior ? delta(volumen, volumenDe(anterior), ' kg') : undefined,
+    },
+    {
+      label: 'Series', valor: String(totalSets),
+      antes: anterior ? String(seriesDe(anterior)) : undefined,
+      d: anterior ? delta(totalSets, seriesDe(anterior)) : undefined,
+    },
+    {
+      label: 'Duración', valor: `${workout.durationMin ?? 0} min`,
+      antes: anterior ? `${anterior.durationMin ?? 0} min` : undefined,
+      // Menos tiempo para lo mismo no es peor: la duración va sin color.
+      d: anterior ? { ...delta(workout.durationMin ?? 0, anterior.durationMin ?? 0, ' min'), signo: 0 } : undefined,
+    },
   ]
+  const fechaAnterior = anterior
+    ? new Date(anterior.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    : null
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-end"
@@ -98,15 +130,30 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
           </div>
         </div>
 
-        {/* Stats grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, padding: '0 20px 16px', flexShrink: 0 }}>
-          {stats.map(([val, unit, label, color]) => (
-            <div key={label} style={{ background: S.surf2, borderRadius: 14, padding: '12px 6px', textAlign: 'center', border: `1px solid ${S.line2}` }}>
-              <div style={{ fontSize: 19, fontWeight: 800, color, letterSpacing: -0.5, lineHeight: 1 }}>{val}</div>
-              <div style={{ fontSize: 11, color: S.dim, marginTop: 2, fontWeight: 600 }}>{unit}</div>
-              <div style={{ fontSize: 11, color: S.faint, marginTop: 1 }}>{label}</div>
+        {/* Contra la vez anterior de esta rutina */}
+        <div style={{ margin: '0 20px 16px', flexShrink: 0, background: S.surf2, borderRadius: 14, border: `1px solid ${S.line2}`, padding: '4px 14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '8px 0 6px', borderBottom: `1px solid ${S.line}` }}>
+            <span style={{ fontSize: 11, color: S.faint, fontWeight: 600 }}>{fechaAnterior ? `Contra el ${fechaAnterior}` : 'Primera vez con esta rutina'}</span>
+            <span style={{ fontSize: 11, color: S.faint, fontWeight: 600, textAlign: 'right' }}>Hoy</span>
+            <span style={{ fontSize: 11, color: S.faint, fontWeight: 600, textAlign: 'right', minWidth: 64 }}>{anterior ? 'Diferencia' : ''}</span>
+          </div>
+          {filas.map(f => (
+            <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '9px 0', borderBottom: `1px solid ${S.line}` }}>
+              <span style={{ fontSize: 13, color: S.dim }}>{f.label}</span>
+              <span className="num" style={{ fontSize: 15, fontWeight: 700, color: S.ink, textAlign: 'right' }}>{f.valor}</span>
+              <span className="num" style={{
+                fontSize: 13, fontWeight: 700, textAlign: 'right', minWidth: 64,
+                color: !f.d || f.d.signo === 0 ? S.dim : f.d.signo > 0 ? S.good : S.bad,
+              }}>
+                {f.d?.texto ?? ''}
+              </span>
             </div>
           ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '9px 0 8px' }}>
+            <span style={{ fontSize: 13, color: S.dim }}>Récords</span>
+            <span className="num" style={{ fontSize: 15, fontWeight: 700, color: prCount > 0 ? S.acc2 : S.ink, textAlign: 'right' }}>{prCount}</span>
+            <span style={{ minWidth: 64 }} />
+          </div>
         </div>
 
         {/* PR banner */}
@@ -171,8 +218,8 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
                       </div>
                     </div>
                     {!byTime && (
-                      <div style={{ fontSize: 12, fontWeight: 700, color: S.dim, flexShrink: 0 }}>
-                        {vol >= 1000 ? `${(vol / 1000).toFixed(1)}K` : Math.round(vol)}kg vol
+                      <div className="num" style={{ fontSize: 12, fontWeight: 700, color: S.dim, flexShrink: 0 }}>
+                        {Math.round(vol).toLocaleString('es-AR')} kg
                       </div>
                     )}
                   </div>

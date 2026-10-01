@@ -3,7 +3,7 @@ import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import { Sparkline } from '../components/Sparkline'
-import { buildProgressSeries, unidadDe, type ExerciseSeries } from '../utils/progressSeries'
+import { buildProgressSeries, estaEstancado, unidadDe, type ExerciseSeries } from '../utils/progressSeries'
 import { resumenMensual } from '../utils/volume'
 import { formatDuration } from '../utils/duration'
 import { S } from '../theme'
@@ -184,6 +184,9 @@ function TarjetaEjercicio({ serie, onOpen }: { serie: ExerciseSeries; onOpen: ()
   const bajó = serie.change < 0
   const deltaColor = subió ? S.good : bajó ? S.bad : S.dim
   const fecha = new Date(serie.lastDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+  const estancado = estaEstancado(serie)
+  // Una semana de descarga al 90 %, redondeada a lo que hay en el gimnasio.
+  const descarga = serie.kind === 'kg' ? Math.round((serie.current * 0.9) / 2.5) * 2.5 : 0
 
   return (
     <button
@@ -206,9 +209,17 @@ function TarjetaEjercicio({ serie, onOpen }: { serie: ExerciseSeries; onOpen: ()
             <span style={{ color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
             {' · '}{serie.sessions} {serie.sessions === 1 ? 'sesión' : 'sesiones'} · {fecha}
           </div>
+          {estancado && (
+            <span style={{
+              display: 'inline-block', marginTop: 6, fontSize: 11, fontWeight: 700, color: S.acc2,
+              background: 'rgba(242,169,59,0.12)', border: '1px solid rgba(242,169,59,0.3)', padding: '2px 8px', borderRadius: 6,
+            }}>
+              Estancado · {serie.sinMejora} sesiones sin superar la marca
+            </span>
+          )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -0.4, color: S.ink, lineHeight: 1.1 }}>
+          <div className="num" style={{ fontSize: 19, fontWeight: 700, color: S.ink, lineHeight: 1.1 }}>
             {formatValor(serie)}
           </div>
           {serie.kind === 'kg' && serie.currentReps > 0 && (
@@ -226,8 +237,32 @@ function TarjetaEjercicio({ serie, onOpen }: { serie: ExerciseSeries; onOpen: ()
           <Sparkline values={serie.points.map(p => p.value)} color={cfg.color} />
         </div>
       )}
+      {estancado && (
+        <p style={{ fontSize: 12, color: S.dim, lineHeight: 1.45 }}>
+          {descarga > 0
+            ? <>Probá una semana de descarga con <span className="num" style={{ color: S.ink }}>{formatKg(descarga)} kg</span> y volvé a subir, o cambiá a una variante del ejercicio.</>
+            : <>Probá una variante más difícil o sumá lastre para volver a progresar.</>}
+        </p>
+      )}
     </button>
   )
+}
+
+/**
+ * Orden por avance: primero lo que más subió (en porcentaje, para que 5 kg en
+ * sentadilla no le gane siempre a 2 kg en vuelos), después lo estancado, que es
+ * lo que pide una decisión, y al final el resto por nombre.
+ */
+function secciones(series: ExerciseSeries[]): [string, ExerciseSeries[]][] {
+  const pct = (s: ExerciseSeries) => (s.baseline > 0 ? s.change / s.baseline : s.change)
+  const subieron = series.filter(s => s.change > 0 && !estaEstancado(s)).sort((a, b) => pct(b) - pct(a))
+  const estancados = series.filter(s => estaEstancado(s)).sort((a, b) => b.sinMejora - a.sinMejora)
+  const resto = series.filter(s => !subieron.includes(s) && !estancados.includes(s))
+  return [
+    ['Los que más subieron', subieron],
+    ['Estancados', estancados],
+    ['El resto', resto],
+  ]
 }
 
 /* ------------------------------------------------------------------ Pantalla */
@@ -348,13 +383,22 @@ export function ProgresoScreen() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-2.5">
-                {visibles.map(serie => (
-                  <TarjetaEjercicio
-                    key={serie.exerciseId}
-                    serie={serie}
-                    onOpen={() => setHistoryExerciseId(serie.exerciseId)}
-                  />
+              <div className="flex flex-col gap-5">
+                {secciones(visibles).map(([titulo, lista]) => lista.length > 0 && (
+                  <section key={titulo}>
+                    <h3 style={{ fontSize: 12, fontWeight: 700, color: S.dim, marginBottom: 8 }}>
+                      {titulo} <span className="num" style={{ color: S.faint, fontWeight: 500 }}>{lista.length}</span>
+                    </h3>
+                    <div className="flex flex-col gap-2.5">
+                      {lista.map(serie => (
+                        <TarjetaEjercicio
+                          key={serie.exerciseId}
+                          serie={serie}
+                          onOpen={() => setHistoryExerciseId(serie.exerciseId)}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
