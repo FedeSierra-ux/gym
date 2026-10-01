@@ -4,6 +4,9 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { CustomExercisesScreen } from './CustomExercisesScreen'
 import type { MuscleGroup, Routine } from '../types'
 import { useLongPress } from '../utils/useLongPress'
+import { MuscleIcon } from '../components/MuscleIcon'
+import { haceCuanto } from '../utils/relativeDate'
+import { rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
 
 /**
  * Detecta el "mantener apretado" sobre una tarjeta. Se usa pointer events para
@@ -59,6 +62,10 @@ export function RutinasScreen() {
     .filter((w) => w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
   const lastRoutineId = sortedWorkouts[0]?.routineId
+  // Cuándo se hizo cada rutina por última vez, para "hace 2 días".
+  const ultimaVez = new Map<string, number>()
+  for (const w of sortedWorkouts) if (!ultimaVez.has(w.routineId)) ultimaVez.set(w.routineId, w.startedAt)
+  const [nowTs] = useState(() => Date.now())
 
   const handleCreateRoutine = () => {
     const id = `routine-${Date.now()}`
@@ -94,7 +101,7 @@ export function RutinasScreen() {
             routine.exercises.map((e) => e.exerciseId),
             allExercises
           )
-          const totalSets = routine.exercises.map((e) => e.sets)
+          const totalSets = rutinaEnUso(routine).exercises.map((e) => e.sets)
           const duration = getApproxDuration(totalSets)
           const isLast = routine.id === lastRoutineId
           const primaryColor = muscleGroups[0] ? muscleGroupConfig[muscleGroups[0]].color : '#E8634A'
@@ -136,6 +143,8 @@ export function RutinasScreen() {
                   </div>
                   <div style={{ fontSize: 12, color: '#8A91A3', marginTop: 3 }}>
                     {routine.exercises.length} ejercicios · ~{duration} min
+                    {ultimaVez.has(routine.id) && <> · {haceCuanto(ultimaVez.get(routine.id)!, nowTs)}</>}
+                    {routine.variante === 'alt' && tieneVariante(routine) && <> · {VARIANTE_LABEL.alt}</>}
                   </div>
                 </div>
                 <div style={{ color: '#3B3F4E', fontSize: 20, alignSelf: 'center', lineHeight: 1 }}>›</div>
@@ -149,8 +158,9 @@ export function RutinasScreen() {
                       <span key={mg} style={{
                         fontSize: 11, fontWeight: 600, color: cfg.color,
                         background: cfg.color + '22', padding: '4px 10px', borderRadius: 20,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
                       }}>
-                        {cfg.emoji} {cfg.label}
+                        <MuscleIcon group={mg} size={20} /> {cfg.label}
                       </span>
                     )
                   })}

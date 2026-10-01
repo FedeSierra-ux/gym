@@ -13,7 +13,7 @@ const ENTRENOS_MINIMOS = 5
  * Todo el historial vive en el localStorage de un solo teléfono: si se cambia
  * de equipo, se reinstala o el sistema limpia los datos del sitio, se pierde
  * todo y no hay vuelta atrás. Exportar funciona, pero hay que acordarse, y
- * nadie se acuerda. Este aviso aparece en Inicio cada dos semanas.
+ * nadie se acuerda. Este aviso aparece al final de Inicio cada dos semanas.
  */
 export function BackupReminder() {
   const { workouts, lastBackupAt, setActiveTab } = useStore()
@@ -28,32 +28,20 @@ export function BackupReminder() {
   const dias = Math.floor((nowTs - desde) / 86400000)
   if (dias < DIAS_ENTRE_AVISOS) return null
 
+  // Una línea al final de Inicio: está para recordar, no para tapar lo de hoy.
   return (
-    <div style={{ padding: '14px 22px 0' }}>
-      <div
-        style={{
-          background: 'rgba(242,169,59,0.08)',
-          border: '1px solid rgba(242,169,59,0.24)',
-          borderRadius: 14, padding: '10px 12px',
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}
-      >
-        <span style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true">💾</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: S.acc2, lineHeight: 1.3 }}>
-            {lastBackupAt ? `Hace ${dias} días que no hacés copia` : 'Todavía no hiciste ninguna copia'}
-          </p>
-          <p style={{ fontSize: 11, color: S.dim, marginTop: 1, lineHeight: 1.3 }}>
-            {terminados.length} entrenos, sólo en este teléfono
-          </p>
-        </div>
+    <div style={{ padding: '16px 22px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px 6px 12px', borderRadius: 12, border: `1px solid ${S.line2}` }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: S.dim }}>
+          <span className="num" style={{ color: S.ink }}>{terminados.length}</span> entrenos sin copia
+          {lastBackupAt ? ` · la última hace ${dias} días` : ''}
+        </span>
         <button
           onClick={() => setActiveTab('perfil')}
           style={{
-            flexShrink: 0, minHeight: 36, padding: '0 12px', borderRadius: 10,
-            background: 'rgba(242,169,59,0.16)', border: `1px solid rgba(242,169,59,0.4)`,
-            color: S.acc2, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            whiteSpace: 'nowrap',
+            flexShrink: 0, minHeight: 36, padding: '0 10px', borderRadius: 10,
+            background: 'none', border: 'none',
+            color: S.acc, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           Exportar
@@ -62,8 +50,8 @@ export function BackupReminder() {
           onClick={() => setOculto(true)}
           aria-label="Ocultar el recordatorio"
           style={{
-            flexShrink: 0, width: 28, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: 'none', color: S.dim, fontSize: 15, cursor: 'pointer',
+            flexShrink: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', color: S.faint, fontSize: 15, cursor: 'pointer',
           }}
         >×</button>
       </div>

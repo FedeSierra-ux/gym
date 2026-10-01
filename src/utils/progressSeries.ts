@@ -40,6 +40,29 @@ export interface ExerciseSeries {
   sessions: number
   /** Última vez que se hizo. */
   lastDate: number
+  /** Sesiones seguidas desde la última vez que se superó la mejor marca. */
+  sinMejora: number
+}
+
+/** A partir de cuántas sesiones sin superar la marca se considera estancado. */
+export const SESIONES_ESTANCADO = 4
+
+/**
+ * Cuántas sesiones van desde la última que superó la mejor marca hasta ahora.
+ * La primera sesión cuenta como marca, así que con [60, 60, 60, 60, 60] da 4.
+ */
+export function sesionesSinMejora(values: number[]): number {
+  let mejor = -Infinity
+  let desde = 0
+  values.forEach((v, i) => {
+    if (v > mejor) { mejor = v; desde = i }
+  })
+  return values.length === 0 ? 0 : values.length - 1 - desde
+}
+
+/** Estancado: varias sesiones sin superar la marca. El cardio y los isométricos quedan afuera. */
+export function estaEstancado(serie: Pick<ExerciseSeries, 'kind' | 'sinMejora'>): boolean {
+  return serie.kind !== 'tiempo' && serie.sinMejora >= SESIONES_ESTANCADO
 }
 
 /** Cuánto pesa una serie para elegir "la mejor" de la sesión, según la unidad. */
@@ -124,6 +147,7 @@ export function buildProgressSeries(
       change: Math.round((ultimo.value - baseline) * 100) / 100,
       sessions: points.length,
       lastDate: ultimo.date,
+      sinMejora: sesionesSinMejora(points.map((p) => p.value)),
     })
   }
   return salida

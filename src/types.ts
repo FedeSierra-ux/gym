@@ -43,8 +43,21 @@ export interface RoutineExercise {
   order: number
   /** Objetivo en segundos para los ejercicios por tiempo (ignora repsMin/repsMax). */
   targetSeconds?: number
-  /** Aclaración del plan: "10 por lado", "semana 4-6: 3x8", etc. */
+  /** Aclaración del plan: "10 por lado", "descanso 2 min", etc. */
   note?: string
+  /** Bloque al que pertenece ("Circuito de entrada · 3 rondas", "Tabata"): se muestra como encabezado. */
+  block?: string
+  /** Ejercicios consecutivos con el mismo valor forman una superserie. */
+  supersetGroup?: string
+  /** Series y reps de las semanas 4-6, si el plan las cambia. */
+  alt?: RoutineVariant
+}
+
+export interface RoutineVariant {
+  sets: number
+  repsMin: number
+  repsMax: number
+  targetSeconds?: number
 }
 
 export interface Routine {
@@ -53,6 +66,8 @@ export interface Routine {
   emoji: string
   exercises: RoutineExercise[]
   createdAt: number
+  /** Qué series y reps se usan: las de base (semanas 1-3) o las de `alt` (semanas 4-6). */
+  variante?: 'base' | 'alt'
 }
 
 export interface WorkoutSet {

@@ -5,6 +5,7 @@ import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { S } from '../theme'
 import type { Workout } from '../types'
+import { formatKg } from '../utils/format'
 
 interface Resultado {
   exerciseId: string
@@ -62,7 +63,7 @@ export function HistorialBuscadorSheet({ onClose }: { onClose: () => void }) {
         marca = formatDuration(totalSeconds(usar))
       } else {
         const mejor = usar.reduce((a, s) => (s.kg > a.kg || (s.kg === a.kg && s.reps > a.reps) ? s : a), usar[0])
-        marca = mejor ? (mejor.kg > 0 ? `${mejor.kg} kg × ${mejor.reps}` : `${mejor.reps} reps`) : '—'
+        marca = mejor ? (mejor.kg > 0 ? `${formatKg(mejor.kg)} kg × ${mejor.reps}` : `${mejor.reps} reps`) : '—'
         marca += ` · ${usar.length} ${usar.length === 1 ? 'serie' : 'series'}`
       }
 

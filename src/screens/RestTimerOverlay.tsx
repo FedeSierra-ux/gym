@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react'
 import { useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
-import { vibrate, playBeep } from '../utils/haptics'
 import { formatLoad } from '../utils/format'
 
 const PRESETS = [
@@ -19,7 +17,7 @@ function formatTime(seconds: number) {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export function RestTimerOverlay() {
+export function RestTimerOverlay({ onMinimize }: { onMinimize?: () => void }) {
   const exercises = useAllExercises()
   const {
     activeWorkout,
@@ -27,64 +25,6 @@ export function RestTimerOverlay() {
     adjustRestTimer,
     setRestPreset,
   } = useWorkoutStore()
-
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    // El tiempo restante sale siempre de restEndsAt (reloj de pared): si iOS
-    // suspende la PWA con la pantalla bloqueada, al volver el contador muestra
-    // lo que realmente queda en vez de haberse quedado congelado.
-    const tick = () => {
-      const state = useWorkoutStore.getState()
-      const workout = state.activeWorkout
-      if (!workout?.restTimerVisible) return
-
-      // Un entreno guardado por una versión anterior no tiene restEndsAt.
-      // Hay que fijarlo UNA vez a partir de los segundos que le quedaban: si lo
-      // recalculáramos en cada tick, el descuento nunca avanzaría.
-      if (!workout.restEndsAt) {
-        useWorkoutStore.setState((s) => ({
-          activeWorkout: s.activeWorkout
-            ? { ...s.activeWorkout, restEndsAt: Date.now() + s.activeWorkout.restSecondsLeft * 1000 }
-            : null,
-        }))
-        return
-      }
-
-      const left = Math.max(0, Math.ceil((workout.restEndsAt - Date.now()) / 1000))
-      const prev = workout.restSecondsLeft
-      if (left === prev) return
-
-      if (left <= 0) {
-        vibrate([150, 80, 150, 80, 300])
-        playBeep(660, 250)
-        setTimeout(() => playBeep(880, 300), 300)
-        useWorkoutStore.setState((s) => ({
-          activeWorkout: s.activeWorkout
-            ? { ...s.activeWorkout, restTimerVisible: false, restSecondsLeft: 0 }
-            : null,
-        }))
-        return
-      }
-
-      // Los avisos se disparan al cruzar el umbral, no al valer exactamente N:
-      // si la app estuvo dormida el contador puede saltar varios segundos.
-      if (prev > 10 && left <= 10) vibrate([80])
-      if (prev > 5 && left <= 5) vibrate([100, 50, 100])
-      if (prev > 3 && left <= 3) playBeep(660, 100)
-
-      useWorkoutStore.setState((s) => ({
-        activeWorkout: s.activeWorkout ? { ...s.activeWorkout, restSecondsLeft: left } : null,
-      }))
-    }
-
-    intervalRef.current = setInterval(tick, 250)
-    document.addEventListener('visibilitychange', tick)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-      document.removeEventListener('visibilitychange', tick)
-    }
-  }, [])
 
   if (!activeWorkout) return null
 
@@ -119,8 +59,14 @@ export function RestTimerOverlay() {
 
   return (
     <div className="absolute inset-0 bg-background/97 backdrop-blur-sm flex flex-col items-center justify-between py-8 z-50 screen-enter">
-      <div className="text-center">
-        <p className="text-info font-bold text-sm tracking-widest uppercase">⏸ DESCANSANDO</p>
+      <div className="text-center flex flex-col items-center gap-2">
+        <p className="text-dim font-bold text-sm tracking-widest uppercase">Descanso</p>
+        {onMinimize && (
+          <button onClick={onMinimize}
+            style={{ minHeight: 40, padding: '0 14px', borderRadius: 12, background: 'none', border: '1px solid rgba(236,238,244,0.12)', color: '#8A91A3', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Ver el entreno ↓
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col items-center gap-6">

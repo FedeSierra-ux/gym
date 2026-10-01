@@ -4,6 +4,8 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { S } from '../theme'
 import { estimate1RM } from '../utils/oneRM'
+import { MuscleIcon } from './MuscleIcon'
+import { formatKg } from '../utils/format'
 
 
 
@@ -84,8 +86,8 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
               {exercise?.nameEs ?? 'Ejercicio'}
             </div>
             {config && (
-              <div style={{ fontSize: 12, color: config.color, fontWeight: 600, marginTop: 2 }}>
-                {config.emoji} {config.label}
+              <div style={{ fontSize: 12, color: config.color, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {exercise && <MuscleIcon group={exercise.muscleGroup} size={20} />} {config.label}
               </div>
             )}
           </div>
@@ -105,18 +107,18 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
             {/* Resumen */}
             <div className="flex gap-2" style={{ marginBottom: 16 }}>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: S.ink, letterSpacing: -0.5 }}>{currentKg}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span></div>
+                <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.ink }}>{formatKg(currentKg)}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span></div>
                 <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Máx actual</div>
               </div>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: S.acc2, letterSpacing: -0.5 }}>
-                  {pr ? `${pr.kg}×${pr.reps}` : '—'}
+                <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.acc2 }}>
+                  {pr ? `${formatKg(pr.kg)}×${pr.reps}` : '—'}
                 </div>
                 <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>🏆 Récord</div>
               </div>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: change > 0 ? S.good : change < 0 ? '#f87171' : S.ink }}>
-                  {change > 0 ? '+' : ''}{change}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span>
+                <div className="num" style={{ fontSize: 22, fontWeight: 700, color: change > 0 ? S.good : change < 0 ? '#f87171' : S.ink }}>
+                  {change > 0 ? '+' : ''}{formatKg(change)}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>kg</span>
                 </div>
                 <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Progreso</div>
               </div>
@@ -130,8 +132,8 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
                   const isLast = i === arr.length - 1
                   const h = Math.max(Math.round((s.bestKg / maxKg) * 100), 8)
                   return (
-                    <div key={s.date} className="flex-1 flex flex-col items-center justify-end" style={{ minWidth: 0 }} title={`${fmtDate(s.date)} · ${s.bestKg}kg × ${s.bestReps}`}>
-                      <div style={{ fontSize: 11, color: isLast ? S.acc : S.faint, fontWeight: 600, marginBottom: 3 }}>{s.bestKg}</div>
+                    <div key={s.date} className="flex-1 flex flex-col items-center justify-end" style={{ minWidth: 0 }} title={`${fmtDate(s.date)} · ${formatKg(s.bestKg)}kg × ${s.bestReps}`}>
+                      <div className="num" style={{ fontSize: 11, color: isLast ? S.ink : S.faint, fontWeight: 600, marginBottom: 3 }}>{formatKg(s.bestKg)}</div>
                       <div style={{
                         width: '100%', height: `${h}%`, minHeight: 4, borderRadius: '4px 4px 0 0',
                         background: isLast ? S.acc : 'rgba(232,99,74,0.28)', transition: 'height 0.4s ease',
@@ -151,21 +153,21 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
                 <div key={s.date} style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 14, padding: '12px 14px' }}>
                   <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: S.ink, textTransform: 'capitalize' }}>{fmtDate(s.date)}</span>
-                    <span style={{ fontSize: 11, color: S.dim }}>
-                      {s.bestKg}kg × {s.bestReps} · ~1RM {estimate1RM(s.bestKg, s.bestReps)}kg
+                    <span className="num" style={{ fontSize: 11, color: S.dim }}>
+                      {formatKg(s.bestKg)}kg × {s.bestReps} · ~1RM {formatKg(estimate1RM(s.bestKg, s.bestReps))}kg
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {s.sets.map((set, idx) => {
                       const isBest = set.kg === s.bestKg && set.reps === s.bestReps
                       return (
-                        <span key={idx} style={{
+                        <span key={idx} className="num" style={{
                           fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 7,
                           background: isBest ? 'rgba(232,99,74,0.15)' : S.surf2,
                           border: `1px solid ${isBest ? 'rgba(232,99,74,0.35)' : S.line2}`,
                           color: isBest ? S.acc : S.dim,
                         }}>
-                          {set.kg}×{set.reps}
+                          {formatKg(set.kg)}×{set.reps}
                         </span>
                       )
                     })}

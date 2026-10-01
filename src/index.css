@@ -77,6 +77,14 @@ textarea[class] {
   background: var(--bg);
 }
 
+/* Cifras: kilos, reps, tiempos y récords en mono tabular, como el cronómetro.
+   Todos los dígitos ocupan lo mismo, así las columnas no bailan al editar. */
+.num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
 .scroll-area {
   overflow-y: auto;
   overflow-x: hidden;

@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSeconds, toSeconds } from '../utils/duration'
 import { toDateInputValue } from '../utils/dates'
-import { formatLoad } from '../utils/format'
+import { formatKg, formatLoad } from '../utils/format'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { getWorkoutStreak } from '../utils/streak'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { useLongPress } from '../utils/useLongPress'
 import { monthStats, plannedDowSet } from '../utils/trainingDays'
 import type { CalendarSubTab, Routine, Workout } from '../types'
 import { S } from '../theme'
@@ -401,11 +402,64 @@ function WeekPlanner() {
   )
 }
 
+const opcionMenu: React.CSSProperties = {
+  width: '100%', textAlign: 'left', padding: '14px 16px', borderRadius: 14,
+  background: S.surf2, border: `1px solid ${S.line2}`,
+  color: S.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+  fontFamily: 'DM Sans, system-ui, sans-serif',
+}
+
+/** Una fila del historial: tocar abre el día, mantener apretado abre el menú. */
+function HistoryRow({ workout: w, routines, onOpen, onLongPress }: {
+  workout: Workout; routines: Routine[]; onOpen: () => void; onLongPress: () => void
+}) {
+  const { getArchivedRoutineName } = useStore()
+  const { consumioElTap, handlers } = useLongPress(onLongPress)
+  const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
+  const date = new Date(w.startedAt)
+  const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`${routine?.name ?? 'Entreno'} del ${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}. Mantené apretado para editar o borrar`}
+      onClick={() => { if (!consumioElTap()) onOpen() }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
+      {...handlers}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, background: S.surf, borderRadius: 14, padding: 12,
+        border: `1px solid ${S.line2}`, cursor: 'pointer', WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
+      }}
+    >
+      <div style={{ borderRadius: 10, padding: '6px 0', textAlign: 'center', flexShrink: 0, width: 44, background: S.surf2 }}>
+        <div className="num" style={{ fontSize: 15, fontWeight: 700, color: S.ink, lineHeight: 1 }}>{date.getDate()}</div>
+        <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{MONTH_NAMES[date.getMonth()].slice(0, 3)}</div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{routine?.emoji} {routine?.name ?? 'Rutina eliminada'}</p>
+        <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
+          <span className="num">{w.exercises.length}</span> ej · <span className="num">{totalSets}</span> series · <span className="num">{w.durationMin ?? 0}</span> min
+        </p>
+      </div>
+      <span style={{ color: S.faint, fontSize: 18, flexShrink: 0 }} aria-hidden="true">›</span>
+    </div>
+  )
+}
+
 function CalendarioTab({ year, month }: { year: number; month: number }) {
   const { workouts, routines, weekPlan, deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
-  const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(null)
+  const agendaDayTs = useStore((s) => s.agendaDayTs)
+  const clearAgendaDay = useStore((s) => s.clearAgendaDay)
+  // Si se llegó desde "Última sesión" en Inicio, se abre ese día directamente.
+  const [selectedDay, setSelectedDay] = useState<SelectedDay | null>(() => {
+    if (agendaDayTs == null) return null
+    const d = new Date(agendaDayTs)
+    return { day: d.getDate(), month: d.getMonth(), year: d.getFullYear() }
+  })
+  useEffect(() => { if (agendaDayTs != null) clearAgendaDay() }, [agendaDayTs, clearAgendaDay])
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
+  const [menuWorkout, setMenuWorkout] = useState<Workout | null>(null)
 
   const borrarConDeshacer = (w: Workout) => {
     const nombre = (routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId))?.name ?? 'el entreno'
@@ -417,37 +471,27 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
   const [nowTs] = useState(() => Date.now())
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
   const plannedDows = plannedDowSet(weekPlan, routines.map(r => r.id))
-  // La asistencia se mide contra los días que la semana tipo pedía entrenar, no
-  // contra los 31 del mes: ir tres veces por semana es cumplir el plan, no un 42%.
-  const { trained: gymDaysCount, planned, attendance } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
+  // Se mide contra los días que la semana tipo pedía entrenar, no contra los 31
+  // del mes: ir tres veces por semana es cumplir el plan.
+  const { trained: gymDaysCount, planned } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
   const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Resumen del mes — cumplimiento del plan, no días del calendario */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-        {([
-          [gymDaysCount, planned > 0 ? `de ${planned} planificados` : 'días de gym', S.acc],
-          [`${attendance}%`, planned > 0 ? 'del plan' : 'de los días', attendance >= 100 ? S.good : S.acc2],
-          [streak.current, streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos', S.acc2],
-        ] as [string | number, string, string][]).map(([v, l, col]) => (
-          <div key={l} style={{ background: S.surf2, borderRadius: 14, padding: '12px 10px', textAlign: 'center', border: `1px solid ${S.line2}` }}>
-            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5, color: col }}>{v}</div>
-            <div style={{ fontSize: 11, color: S.dim, marginTop: 3, lineHeight: 1.25 }}>{l}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Calendario del mes: cada día pintado según las series que hiciste */}
+      {/* Calendario del mes, con el resumen en una línea arriba */}
       <div style={{ background: S.surf, borderRadius: 18, padding: '14px 14px', border: `1px solid ${S.line2}` }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 10 }}>Tocá un día para ver el detalle</p>
+        <p style={{ fontSize: 13, color: S.dim, marginBottom: 12 }}>
+          <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{gymDaysCount}</span>
+          {planned > 0 ? <> de <span className="num">{planned}</span> planificados</> : ` ${gymDaysCount === 1 ? 'día' : 'días'} de gym`}
+          {' · '}racha <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{streak.current}</span>
+        </p>
         <MonthCalendar
           year={year}
           month={month}
           workouts={finishedWorkouts}
           routines={routines}
-          plannedDows={plannedDows}
+          weekPlan={weekPlan}
           onSelectDay={(ts) => {
             const d = new Date(ts)
             setSelectedDay({ day: d.getDate(), month: d.getMonth(), year: d.getFullYear() })
@@ -455,64 +499,55 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
         />
       </div>
 
-      {/* Consistencia */}
-      <div style={{ background: S.surf, borderRadius: 14, padding: '12px 14px', border: `1px solid ${S.line2}` }}>
-        <div className="flex justify-between items-center mb-2">
-          <span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>
-            {planned > 0 ? 'Cumplimiento del plan' : 'Consistencia del mes'}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: attendance >= 100 ? S.good : S.acc }}>{attendance}%</span>
-        </div>
-        <div style={{ height: 6, background: S.surf2, borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ width: `${Math.min(100, attendance)}%`, height: '100%', background: attendance >= 100 ? S.good : S.acc, borderRadius: 3, transition: 'width 0.4s ease' }} />
-        </div>
-        {planned > 0 && (
-          <p style={{ fontSize: 11, color: S.faint, marginTop: 6 }}>
-            {gymDaysCount} de {planned} días que pedía tu semana tipo
-          </p>
-        )}
-      </div>
-
       {/* Week planner */}
       <WeekPlanner />
 
       {/* Recent history */}
       <div>
-        <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 8 }}>Historial reciente</p>
+        <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 8 }}>Historial reciente <span style={{ fontWeight: 400, color: S.faint }}>· mantené apretado para editar o borrar</span></p>
         <div className="flex flex-col gap-2">
-          {recentWorkouts.map((w) => {
-            const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
-            const date = new Date(w.startedAt)
-            const totalSets = w.exercises.reduce((acc, e) => acc + e.sets.length, 0)
-            return (
-              <div key={w.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, background: S.surf, borderRadius: 14, padding: 12, border: `1px solid ${S.line2}`, cursor: 'pointer' }}
-                onClick={() => setSelectedDay({ day: date.getDate(), month: date.getMonth(), year: date.getFullYear() })}
-              >
-                <div style={{ background: 'rgba(232,99,74,0.10)', border: `1px solid rgba(232,99,74,0.2)`, borderRadius: 10, padding: '8px 10px', textAlign: 'center', flexShrink: 0, minWidth: 44 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: S.acc, lineHeight: 1 }}>{date.getDate()}</div>
-                  <div style={{ fontSize: 11, color: S.acc, opacity: 0.7, marginTop: 1 }}>{MONTH_NAMES[date.getMonth()].slice(0, 3)}</div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p style={{ fontWeight: 700, color: S.ink, fontSize: 13, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{routine?.emoji} {routine?.name}</p>
-                  <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{w.exercises.length} ej · {totalSets} series · {w.durationMin}min</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setEditingWorkout(w) }}
-                  aria-label="Editar este entreno"
-                  style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 14, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
-                >✏️</button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); borrarConDeshacer(w) }}
-                  aria-label="Borrar este entreno"
-                  style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer' }}
-                >🗑</button>
-              </div>
-            )
-          })}
+          {recentWorkouts.map((w) => (
+            <HistoryRow key={w.id} workout={w} routines={routines}
+              onOpen={() => {
+                const date = new Date(w.startedAt)
+                setSelectedDay({ day: date.getDate(), month: date.getMonth(), year: date.getFullYear() })
+              }}
+              onLongPress={() => setMenuWorkout(w)}
+            />
+          ))}
           {recentWorkouts.length === 0 && <p style={{ color: S.faint, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>Sin historial</p>}
         </div>
       </div>
+
+      {/* Menú del entreno (mantener apretado), igual que en Rutinas */}
+      {menuWorkout && (() => {
+        const routine = routines.find((r) => r.id === menuWorkout.routineId) ?? getArchivedRoutineName(menuWorkout.routineId)
+        return (
+          <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setMenuWorkout(null)}>
+            <div className="w-full rounded-t-3xl px-4 pt-4 pb-8 sheet-enter"
+              style={{ background: S.surf, borderTop: `1px solid ${S.line2}` }}
+              onClick={(e) => e.stopPropagation()}>
+              <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 16px' }} />
+              <p style={{ fontSize: 16, fontWeight: 700, color: S.ink, marginBottom: 2 }}>{routine?.emoji} {routine?.name ?? 'Entreno'}</p>
+              <p style={{ fontSize: 12, color: S.dim, marginBottom: 16 }}>
+                {new Date(menuWorkout.startedAt).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => { const w = menuWorkout; setMenuWorkout(null); setEditingWorkout(w) }} style={opcionMenu}>
+                  ✏️  Editar entreno
+                </button>
+                <button onClick={() => { const w = menuWorkout; setMenuWorkout(null); borrarConDeshacer(w) }}
+                  style={{ ...opcionMenu, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.28)', color: S.bad }}>
+                  🗑  Borrar entreno
+                </button>
+                <button onClick={() => setMenuWorkout(null)} style={{ ...opcionMenu, background: 'none', color: S.dim, textAlign: 'center', marginTop: 4 }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {editingWorkout && (
         <EditWorkoutSheet workout={editingWorkout} onClose={() => setEditingWorkout(null)} />
@@ -535,7 +570,7 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
  */
 function formatMarca(m: { kg: number; reps: number; durationSec?: number }): string {
   if (m.durationSec) return formatDuration(m.durationSec)
-  if (m.kg > 0) return `${m.kg} kg × ${m.reps}`
+  if (m.kg > 0) return `${formatKg(m.kg)} kg × ${m.reps}`
   return `${m.reps} reps`
 }
 
@@ -571,44 +606,56 @@ function RecordsTab() {
           const isNew = pr.date >= startOfMonth
           const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
           const isExpanded = expandedPr === pr.exerciseId
-          const hasHistory = pr.history && pr.history.length > 0
+          const hasHistory = !!pr.history && pr.history.length > 0
+          const volumen = pr.kg > 0 && !pr.durationSec ? Math.round(pr.kg * pr.reps) : 0
+          const desplegable = hasHistory || volumen > 0
           return (
-            <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 14, border: `1px solid ${isNew ? 'rgba(232,99,74,0.22)' : S.line2}` }}>
-              <div className="flex items-center gap-3" style={{ padding: '12px 14px' }}>
-                <div style={{ width: 30, textAlign: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 18 }} aria-hidden="true">🏆</span>
-                </div>
+            <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 14, border: `1px solid ${S.line2}` }}>
+              <button
+                type="button"
+                onClick={() => desplegable && setExpandedPr(isExpanded ? null : pr.exerciseId)}
+                aria-expanded={desplegable ? isExpanded : undefined}
+                className="flex items-center gap-3 w-full text-left"
+                style={{ padding: '12px 14px', background: 'none', border: 'none', cursor: desplegable ? 'pointer' : 'default', fontFamily: 'inherit', color: 'inherit' }}
+              >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: S.ink, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ex.nameEs}</span>
-                    {isNew && <span style={{ fontSize: 11, fontWeight: 700, color: S.acc, background: 'rgba(232,99,74,0.15)', padding: '2px 6px', borderRadius: 4, flexShrink: 0 }}>NEW</span>}
-                  </div>
+                  {/* Nombre completo, hasta dos líneas: el punto coral marca lo de los últimos 30 días. */}
+                  <span style={{
+                    fontSize: 13, fontWeight: 700, color: S.ink, lineHeight: 1.3,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {isNew && <span aria-label="nuevo" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: S.acc, marginRight: 6, verticalAlign: 'middle', position: 'relative', top: -1 }} />}
+                    {ex.nameEs}
+                  </span>
                   <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{prDate}</p>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: S.ink }}>{formatMarca(pr)}</div>
-                  {pr.kg > 0 && !pr.durationSec && (
-                    <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{Math.round(pr.kg * pr.reps)} kg de volumen</div>
-                  )}
-                </div>
-                {hasHistory && (
-                  <button onClick={() => setExpandedPr(isExpanded ? null : pr.exerciseId)}
-                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: isExpanded ? 'rgba(232,99,74,0.12)' : S.surf2, border: `1px solid ${isExpanded ? 'rgba(232,99,74,0.25)' : S.line2}`, color: isExpanded ? S.acc : S.dim, fontSize: 11, flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div className="num" style={{ fontSize: 14, fontWeight: 700, color: S.ink, flexShrink: 0, textAlign: 'right' }}>{formatMarca(pr)}</div>
+                {desplegable && (
+                  <span aria-hidden="true" style={{ color: S.faint, fontSize: 11, flexShrink: 0, width: 14, textAlign: 'center' }}>
                     {isExpanded ? '▲' : '▼'}
-                  </button>
+                  </span>
                 )}
-              </div>
-              {isExpanded && hasHistory && (
+              </button>
+              {isExpanded && desplegable && (
                 <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${S.line}` }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
-                  <div className="flex flex-col gap-1.5">
-                    {[...pr.history!].reverse().map((h, hi) => (
-                      <div key={hi} className="flex items-center justify-between">
-                        <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
+                  {volumen > 0 && (
+                    <p style={{ fontSize: 12, color: S.dim, marginBottom: hasHistory ? 10 : 0 }}>
+                      Volumen de la serie: <span className="num" style={{ color: S.ink }}>{formatKg(volumen)} kg</span>
+                    </p>
+                  )}
+                  {hasHistory && (
+                    <>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
+                      <div className="flex flex-col gap-1.5">
+                        {[...pr.history!].reverse().map((h, hi) => (
+                          <div key={hi} className="flex items-center justify-between">
+                            <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                            <span className="num" style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -624,7 +671,7 @@ function RecordsTab() {
 export function CalendarioScreen() {
   const { calendarSubTab, setCalendarSubTab } = useStore()
   const [viewDate, setViewDate] = useState(() => {
-    const d = new Date()
+    const d = new Date(useStore.getState().agendaDayTs ?? Date.now())
     return new Date(d.getFullYear(), d.getMonth(), 1)
   })
   const year = viewDate.getFullYear()

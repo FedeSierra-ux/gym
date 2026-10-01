@@ -1,13 +1,52 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { SettingsScreen } from './SettingsScreen'
 import { MedidasSheet } from './MedidasSheet'
 import { HistorialBuscadorSheet } from './HistorialBuscadorSheet'
 import { getWorkoutStreak } from '../utils/streak'
 import { seriesEfectivas } from '../utils/volume'
+import { formatKg } from '../utils/format'
+import { Sparkline } from '../components/Sparkline'
+import { S } from '../theme'
+
+/**
+ * Achica la foto elegida a 256 px y la devuelve como JPEG en data URL: así
+ * entra en el almacenamiento del teléfono (y en la copia de seguridad) sin
+ * ocupar varios megas.
+ */
+function achicarFoto(file: File, lado = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      // Recorte cuadrado desde el centro.
+      const corte = Math.min(img.width, img.height)
+      const canvas = document.createElement('canvas')
+      canvas.width = lado
+      canvas.height = lado
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { URL.revokeObjectURL(url); reject(new Error('sin canvas')); return }
+      ctx.drawImage(img, (img.width - corte) / 2, (img.height - corte) / 2, corte, corte, 0, 0, lado, lado)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('no se pudo leer la imagen')) }
+    img.src = url
+  })
+}
+
+/** "en 9 días", "en 3 semanas", "en 2 meses" */
+function lapso(ms: number): string {
+  const dias = Math.max(1, Math.round(ms / 86400000))
+  if (dias < 14) return `en ${dias} ${dias === 1 ? 'día' : 'días'}`
+  if (dias < 60) return `en ${Math.round(dias / 7)} semanas`
+  const meses = Math.round(dias / 30)
+  return `en ${meses} ${meses === 1 ? 'mes' : 'meses'}`
+}
 
 export function ProfileScreen() {
-  const { userName, updateUserName, workouts, prs, measures } = useStore()
+  const { userName, updateUserName, workouts, prs, measures, avatarPhoto, setAvatarPhoto, addToast } = useStore()
+  const fotoInput = useRef<HTMLInputElement>(null)
   const allExercises = useAllExercises()
 
   const [editingName, setEditingName] = useState(false)
@@ -24,6 +63,23 @@ export function ProfileScreen() {
   const initials = userName.slice(0, 2).toUpperCase()
   const seriesTotales = useMemo(() => seriesEfectivas(finished), [finished])
   const ultimaMedida = measures.length > 0 ? measures[measures.length - 1] : null
+  // Las últimas mediciones de peso, para la línea de la tarjeta.
+  const pesos = useMemo(
+    () => measures.filter(m => m.weightKg).sort((a, b) => a.date - b.date).slice(-8),
+    [measures]
+  )
+  const difPeso = pesos.length > 1 ? pesos[pesos.length - 1].weightKg! - pesos[0].weightKg! : 0
+
+  const elegirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      setAvatarPhoto(await achicarFoto(file))
+    } catch {
+      addToast('No se pudo usar esa foto. Probá con otra.', 'info')
+    }
+  }
 
   const handleSaveName = () => {
     if (nameDraft.trim()) updateUserName(nameDraft.trim())
@@ -39,9 +95,22 @@ export function ProfileScreen() {
       {/* Avatar + Name */}
       <div className="px-4 mb-4">
         <div className="bg-card border border-border-hi rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary-muted border border-primary/30 flex items-center justify-center flex-shrink-0">
-            <span className="text-primary text-2xl font-bold">{initials}</span>
-          </div>
+          <button
+            onClick={() => fotoInput.current?.click()}
+            aria-label={avatarPhoto ? 'Cambiar la foto de perfil' : 'Elegir una foto de perfil'}
+            className="w-16 h-16 rounded-2xl bg-primary-muted border border-primary/30 flex items-center justify-center flex-shrink-0 overflow-hidden relative"
+            style={{ padding: 0, cursor: 'pointer' }}
+          >
+            {avatarPhoto
+              ? <img src={avatarPhoto} alt="" className="w-full h-full object-cover" />
+              : <span className="text-primary text-2xl font-bold">{initials}</span>}
+            <span aria-hidden="true" style={{
+              position: 'absolute', right: 3, bottom: 3, width: 20, height: 20, borderRadius: 10,
+              background: S.surf, border: `1px solid ${S.line2}`, fontSize: 11,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>📷</span>
+          </button>
+          <input ref={fotoInput} type="file" accept="image/*" onChange={elegirFoto} style={{ display: 'none' }} />
           <div className="flex-1 min-w-0">
             {editingName ? (
               <div className="flex gap-2">
@@ -74,7 +143,13 @@ export function ProfileScreen() {
                 </button>
               </div>
             )}
-            <p className="text-dim text-xs mt-0.5">Atleta GymPro</p>
+            {avatarPhoto ? (
+              <button onClick={() => setAvatarPhoto(null)} className="text-dim text-xs mt-0.5" style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                Quitar la foto
+              </button>
+            ) : (
+              <p className="text-dim text-xs mt-0.5">Tocá el cuadrado para poner una foto</p>
+            )}
           </div>
         </div>
       </div>
@@ -83,26 +158,26 @@ export function ProfileScreen() {
       <div className="px-4 mb-4">
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-primary">{totalWorkouts}</p>
+            <p className="text-2xl font-bold text-ink num">{totalWorkouts}</p>
             <p className="text-[11px] text-dim mt-0.5">Entrenos</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-info">{Math.round(totalMinutes / 60)}h</p>
+            <p className="text-2xl font-bold text-ink num">{Math.round(totalMinutes / 60)}h</p>
             <p className="text-[11px] text-dim mt-0.5">Horas totales</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-gold">{prs.length}</p>
+            <p className="text-2xl font-bold text-ink num">{prs.length}</p>
             <p className="text-[11px] text-dim mt-0.5">Récords</p>
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="bg-card border border-border-hi rounded-xl p-3">
-            <p className="text-lg font-bold text-ink">{seriesTotales.toLocaleString('es-AR')}</p>
+            <p className="text-lg font-bold text-ink num">{seriesTotales.toLocaleString('es-AR')}</p>
             <p className="text-[11px] text-dim mt-0.5">Series en total</p>
           </div>
           <div className="bg-card border border-border-hi rounded-xl p-3 flex items-center gap-2">
             <span className="text-lg" aria-hidden="true">🔥</span>
-            <span className="text-lg font-bold text-gold">{streak.current}</span>
+            <span className="text-lg font-bold text-ink num">{streak.current}</span>
             <span className="text-xs text-dim">
               {streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos'}
               {streak.best > streak.current && ` · mejor: ${streak.best}`}
@@ -119,14 +194,25 @@ export function ProfileScreen() {
           style={{ minHeight: 64 }}
         >
           <span className="text-xl" aria-hidden="true">⚖️</span>
-          <span className="flex-1 text-left">
+          <span className="flex-1 text-left min-w-0">
             <span className="block font-semibold text-ink text-sm">Peso y medidas</span>
             <span className="block text-dim text-xs mt-0.5">
               {ultimaMedida?.weightKg
-                ? `${ultimaMedida.weightKg} kg · ${new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`
+                ? <><span className="num">{formatKg(ultimaMedida.weightKg)}</span> kg · {new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>
                 : 'Todavía sin anotar'}
             </span>
+            {pesos.length > 1 && difPeso !== 0 && (
+              <span className="block text-xs mt-0.5" style={{ color: S.ink }}>
+                <span className="num">{difPeso > 0 ? '+' : '−'}{formatKg(Math.abs(Math.round(difPeso * 10) / 10))} kg</span>
+                <span className="text-dim"> {lapso(pesos[pesos.length - 1].date - pesos[0].date)}</span>
+              </span>
+            )}
           </span>
+          {pesos.length > 1 && (
+            <span style={{ width: 84, height: 34, flexShrink: 0 }}>
+              <Sparkline values={pesos.map(m => m.weightKg!)} color={S.dim} width={84} height={34} />
+            </span>
+          )}
           <span className="text-dim text-lg" aria-hidden="true">›</span>
         </button>
         <button

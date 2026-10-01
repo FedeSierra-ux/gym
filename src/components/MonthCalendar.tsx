@@ -17,12 +17,13 @@ interface DayCell {
 }
 
 /**
- * Calendario del mes con cada día entrenado pintado del color de su rutina: los
+ * Calendario del mes con cada día entrenado pintado del color de su rutina y
+ * los planificados con un aro de ese color. Los
  * días de la semana van arriba en horizontal y cada fila es una semana, así se
  * lee de un vistazo qué días se fue y si se están alternando bien las rutinas.
  */
 export function MonthCalendar({
-  year, month, workouts, routines, onSelectDay, plannedDows,
+  year, month, workouts, routines, onSelectDay, weekPlan,
 }: {
   year: number
   month: number
@@ -31,8 +32,8 @@ export function MonthCalendar({
   routines: Routine[]
   /** Si se pasa, cada día es clickeable y devuelve su timestamp al mediodía. */
   onSelectDay?: (ts: number) => void
-  /** Días de la semana (0 = lunes) con rutina planificada: se marcan a futuro. */
-  plannedDows?: Set<number>
+  /** Semana tipo (0 = lunes → rutina): los días planificados llevan un aro del color de esa rutina. */
+  weekPlan?: Record<number, string | null>
 }) {
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
@@ -88,12 +89,18 @@ export function MonthCalendar({
               const color = entrenado && cell.routineId ? routineColor(cell.routineId, routineIds) : null
               const date = new Date(cell.ts)
               const dow = (date.getDay() + 6) % 7
-              const planned = cell.isFuture && plannedDows?.has(dow)
+              // Entrenado: relleno. Planificado: aro con el color de la rutina
+              // (tenue si ya pasó y no se hizo). Descanso: vacío.
+              const rutinaPlan = weekPlan?.[dow] && routineIds.includes(weekPlan[dow]!) ? weekPlan[dow]! : null
+              const planned = !entrenado && rutinaPlan != null
+              const pasado = !cell.isFuture && !cell.isToday
+              const aro = planned ? routineColor(rutinaPlan, routineIds) : null
               const nombreRutina = cell.routineId
                 ? routines.find((r) => r.id === cell.routineId)?.name ?? 'rutina eliminada'
                 : null
               const etiqueta = `${date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: ${
-                entrenado ? `${nombreRutina}, ${cell.sets} series` : 'sin entrenar'
+                entrenado ? `${nombreRutina}, ${cell.sets} series`
+                  : planned ? `planificado: ${routines.find((r) => r.id === rutinaPlan)?.name}` : 'descanso'
               }`
               return (
                 <div
@@ -112,23 +119,18 @@ export function MonthCalendar({
                   style={{
                     aspectRatio: '1', borderRadius: 8, position: 'relative',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: color ?? S.surf2,
-                    border: cell.isToday
-                      ? `1.5px solid ${S.acc}`
-                      : entrenado ? '1px solid transparent' : `1px solid ${S.line2}`,
-                    color: entrenado ? '#0C0E14' : S.faint,
-                    fontSize: 11, fontWeight: entrenado ? 700 : 500,
-                    opacity: cell.isFuture ? 0.35 : 1,
+                    background: color ?? 'transparent',
+                    border: aro
+                      ? `2px solid ${aro}`
+                      : cell.isToday ? `1.5px solid ${S.ink}` : '2px solid transparent',
+                    opacity: aro && pasado ? 0.4 : 1,
+                    boxShadow: entrenado && cell.isToday ? `0 0 0 2px ${S.bg}, 0 0 0 3.5px ${S.ink}` : undefined,
+                    color: entrenado ? '#0C0E14' : aro ? S.ink : cell.isFuture ? S.faint : S.dim,
+                    fontSize: 12, fontWeight: entrenado || cell.isToday ? 700 : 500,
                     cursor: onSelectDay ? 'pointer' : 'default',
                   }}
                 >
-                  {cell.day}
-                  {planned && (
-                    <span style={{
-                      position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: 2,
-                      background: 'rgba(56,189,248,0.9)',
-                    }} />
-                  )}
+                  <span className="num">{cell.day}</span>
                 </div>
               )
             })}

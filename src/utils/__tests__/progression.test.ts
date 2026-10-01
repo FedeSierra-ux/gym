@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { suggestNextWeight } from '../progression'
+import { lastTopKg, suggestNextWeight } from '../progression'
 import { DIA, ejercicio, entreno, serie } from './helpers'
 
 const banca = ejercicio('banca')
@@ -48,5 +48,24 @@ describe('suggestNextWeight', () => {
   it('no sugiere nada para los ejercicios por tiempo', () => {
     const plancha = ejercicio('plancha', { trackingType: 'duration' })
     expect(suggestNextWeight(plancha, plan, [], 'plancha')).toBeNull()
+  })
+})
+
+describe('lastTopKg', () => {
+  it('devuelve el peso máximo de la última vez, no el sugerido', () => {
+    const w = entreno(ayer, [{ exerciseId: 'banca', sets: [serie(40, 12, { isWarmup: true }), serie(80, 8), serie(80, 8), serie(77.5, 8)] }])
+    expect(lastTopKg('banca', [w])).toBe(80)
+    expect(suggestNextWeight(banca, plan, [w], 'banca')?.kg).toBe(80)
+  })
+
+  it('no aplica la bajada por inactividad', () => {
+    const w = entreno(Date.now() - 30 * DIA, [{ exerciseId: 'banca', sets: [serie(80, 8)] }])
+    expect(lastTopKg('banca', [w])).toBe(80)
+  })
+
+  it('null sin historial o a peso corporal', () => {
+    expect(lastTopKg('banca', [])).toBeNull()
+    const w = entreno(ayer, [{ exerciseId: 'banca', sets: [serie(0, 15)] }])
+    expect(lastTopKg('banca', [w])).toBeNull()
   })
 })
