@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeRecords } from '../records'
+import { computeRecords, recordsPorReps } from '../records'
 import { ejercicio, entreno, serie } from './helpers'
 
 describe('computeRecords', () => {
@@ -22,5 +22,17 @@ describe('computeRecords', () => {
     const prs = computeRecords(ws, ejercicios)
     expect(prs.find(p => p.exerciseId === 'dominadas')?.reps).toBe(11)
     expect(prs.find(p => p.exerciseId === 'plancha')?.durationSec).toBe(70)
+  })
+})
+
+describe('recordsPorReps', () => {
+  it('toma el mejor peso con al menos esas repeticiones', () => {
+    const ws = [
+      entreno(1000, [{ exerciseId: 'a', sets: [serie(40, 10), serie(50, 5), serie(20, 15, { isWarmup: true })] }]),
+      entreno(2000, [{ exerciseId: 'a', sets: [serie(42.5, 8)] }]),
+    ]
+    const tabla = recordsPorReps('a', ws)
+    expect(tabla.map((r) => r?.kg ?? null)).toEqual([50, 42.5, 40, null, null])
+    expect(tabla[1]?.date).toBe(2000)
   })
 })

@@ -10,6 +10,7 @@ import type { Routine, RoutineExercise } from '../types'
 import { ejercicioEnUso, rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
 import { posicionEnSuperserie, separarDelSiguiente, unirConSiguiente } from '../utils/superset'
 import { S } from '../theme'
+import { RoutineBadge } from '../components/RoutineIcon'
 
 function BackIcon() {
   return (
@@ -180,7 +181,7 @@ export function RoutineDetailScreen() {
               />
             ) : (
               <h1 className="text-xl font-bold text-white truncate">
-                {routine.emoji} {routine.name}
+                <RoutineBadge routineId={routine.id} size={18} />{routine.name}
               </h1>
             )}
           </div>

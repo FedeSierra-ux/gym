@@ -5,14 +5,27 @@ import { getWorkoutTip } from '../utils/aiCoach'
 import type { NavTab, Workout } from '../types'
 import { formatKg, formatLoad } from '../utils/format'
 import { S } from '../theme'
+import { RoutineIcon } from './RoutineIcon'
+import { suggestNextWeight } from '../utils/progression'
+import { rutinaEnUso } from '../utils/routineVariant'
+import { routineColor } from '../utils/trainingDays'
+import { seriesPorGrupo } from '../utils/volume'
+import { compartirImagen, generarImagenEntreno } from '../utils/shareImage'
 
-/** Volumen de un entreno: kilos × reps de las series efectivas. */
-function volumenDe(w: Workout): number {
-  return w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).reduce((b, s) => b + s.kg * s.reps, 0), 0)
+/**
+ * Volumen de un entreno: kilos × reps de las series efectivas. Con `soloIds`,
+ * sólo esos ejercicios (para comparar contra lo mismo que se hizo hoy).
+ */
+function volumenDe(w: Workout, soloIds?: Set<string>): number {
+  return w.exercises
+    .filter(e => !soloIds || soloIds.has(e.exerciseId))
+    .reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).reduce((b, s) => b + s.kg * s.reps, 0), 0)
 }
 
-function seriesDe(w: Workout): number {
-  return w.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
+function seriesDe(w: Workout, soloIds?: Set<string>): number {
+  return w.exercises
+    .filter(e => !soloIds || soloIds.has(e.exerciseId))
+    .reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0)
 }
 
 /** Diferencia con signo, lista para mostrar: "+3", "−5", "=" */
@@ -84,17 +97,26 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
   const anterior = workouts
     .filter(w => w.finishedAt && w.routineId === workout.routineId && w.id !== workout.id && w.startedAt < workout.startedAt)
     .sort((a, b) => b.startedAt - a.startedAt)[0]
+  // Comparación justa: sólo los ejercicios que se hicieron hoy. Si cortaste
+  // antes, no se compara contra la sesión entera.
+  const hechosHoy = new Set(workout.exercises.filter(e => e.sets.some(s => !s.isWarmup)).map(e => e.exerciseId))
+  const sinHacer = routine
+    ? rutinaEnUso(routine).exercises.filter(re => !hechosHoy.has(re.exerciseId))
+    : []
+  const nombreDe = (id: string) => exercises.find(e => e.id === id)?.nameEs ?? id
   const volumen = volumenDe(workout)
+  const volumenAntes = anterior ? volumenDe(anterior, hechosHoy) : 0
+  const seriesAntes = anterior ? seriesDe(anterior, hechosHoy) : 0
   const filas: { label: string; valor: string; antes?: string; d?: { texto: string; signo: number } }[] = [
     {
       label: 'Volumen', valor: `${Math.round(volumen).toLocaleString('es-AR')} kg`,
-      antes: anterior ? `${Math.round(volumenDe(anterior)).toLocaleString('es-AR')} kg` : undefined,
-      d: anterior ? delta(volumen, volumenDe(anterior), ' kg') : undefined,
+      antes: anterior ? `${Math.round(volumenAntes).toLocaleString('es-AR')} kg` : undefined,
+      d: anterior ? delta(volumen, volumenAntes, ' kg') : undefined,
     },
     {
       label: 'Series', valor: String(totalSets),
-      antes: anterior ? String(seriesDe(anterior)) : undefined,
-      d: anterior ? delta(totalSets, seriesDe(anterior)) : undefined,
+      antes: anterior ? String(seriesAntes) : undefined,
+      d: anterior ? delta(totalSets, seriesAntes) : undefined,
     },
     {
       label: 'Duración', valor: `${workout.durationMin ?? 0} min`,
@@ -107,6 +129,48 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
     ? new Date(anterior.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
     : null
 
+  // La próxima subís: la doble progresión, ya con este entreno en el historial.
+  // Antes eran avisos flotantes que tapaban el título del resumen.
+  const subir = routine
+    ? rutinaEnUso(routine).exercises.flatMap(re => {
+        const ex = exercises.find(e => e.id === re.exerciseId)
+        const sug = suggestNextWeight(ex, re, workouts, re.exerciseId)
+        return sug && sug.reason === 'subir' && hechosHoy.has(re.exerciseId)
+          ? [{ id: re.exerciseId, nombre: ex?.nameEs ?? re.exerciseId, kg: sug.kg }]
+          : []
+      })
+    : []
+
+  // Imagen para compartir: rutina, cifras, récords y el mapa de lo trabajado.
+  const [compartiendo, setCompartiendo] = useState(false)
+  const compartir = async () => {
+    setCompartiendo(true)
+    try {
+      const grupos = seriesPorGrupo([workout], exercises, workout.startedAt, workout.startedAt + 1)
+      const tope = Math.max(1, ...grupos.values())
+      const niveles = Object.fromEntries([...grupos].map(([g, n]) => [g, Math.max(0.35, n / tope)]))
+      const blob = await generarImagenEntreno({
+        rutina: routine?.name ?? 'Entreno',
+        fecha: workout.startedAt,
+        color: routineColor(workout.routineId, routines.map(r => r.id)),
+        duracionMin: workout.durationMin ?? 0,
+        series: totalSets,
+        volumenKg: volumen,
+        records: prCount,
+        niveles,
+        ejercicios: topExercises.map(({ ex, sets }) => {
+          const best = sets.reduce((a, st) => (st.kg > a.kg ? st : a), sets[0])
+          return { nombre: ex!.nameEs, detalle: `${formatKg(best.kg)} × ${best.reps}` }
+        }),
+      })
+      await compartirImagen(blob, `gympro-${new Date(workout.startedAt).toISOString().slice(0, 10)}.png`)
+    } catch {
+      useStore.getState().addToast('No se pudo armar la imagen', 'info')
+    } finally {
+      setCompartiendo(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-end"
       style={{ background: 'rgba(0,0,0,0.85)' }}>
@@ -118,8 +182,8 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
 
         {/* Header */}
         <div className="text-center px-6 pt-5 pb-4" style={{ flexShrink: 0 }}>
-          <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 10 }}>
-            {routine?.emoji ?? '🏋️'}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            {routine ? <RoutineIcon routine={routine} size={30} boxed /> : <span style={{ fontSize: 52, lineHeight: 1 }}>🏋️</span>}
           </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: S.ink, letterSpacing: -0.5 }}>
             ¡Entreno completado!
@@ -133,7 +197,9 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
         {/* Contra la vez anterior de esta rutina */}
         <div style={{ margin: '0 20px 16px', flexShrink: 0, background: S.surf2, borderRadius: 14, border: `1px solid ${S.line2}`, padding: '4px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '8px 0 6px', borderBottom: `1px solid ${S.line}` }}>
-            <span style={{ fontSize: 11, color: S.faint, fontWeight: 600 }}>{fechaAnterior ? `Contra el ${fechaAnterior}` : 'Primera vez con esta rutina'}</span>
+            <span style={{ fontSize: 11, color: S.faint, fontWeight: 600 }}>
+              {fechaAnterior ? `Contra el ${fechaAnterior}${sinHacer.length ? ', mismos ejercicios' : ''}` : 'Primera vez con esta rutina'}
+            </span>
             <span style={{ fontSize: 11, color: S.faint, fontWeight: 600, textAlign: 'right' }}>Hoy</span>
             <span style={{ fontSize: 11, color: S.faint, fontWeight: 600, textAlign: 'right', minWidth: 64 }}>{anterior ? 'Diferencia' : ''}</span>
           </div>
@@ -154,7 +220,31 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
             <span className="num" style={{ fontSize: 15, fontWeight: 700, color: prCount > 0 ? S.acc2 : S.ink, textAlign: 'right' }}>{prCount}</span>
             <span style={{ minWidth: 64 }} />
           </div>
+          {sinHacer.length > 0 && (
+            <p style={{ fontSize: 12, color: S.dim, padding: '0 0 10px', lineHeight: 1.4 }}>
+              <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{sinHacer.length}</span>
+              {sinHacer.length === 1 ? ' ejercicio sin hacer: ' : ' ejercicios sin hacer: '}
+              {sinHacer.map(re => nombreDe(re.exerciseId)).join(', ')}
+            </p>
+          )}
         </div>
+
+        {/* La próxima subís */}
+        {subir.length > 0 && (
+          <div style={{ margin: '0 20px 16px', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: S.faint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>
+              La próxima subís
+            </div>
+            <div style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 14, padding: '4px 14px' }}>
+              {subir.map((x, i) => (
+                <div key={x.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', padding: '9px 0', borderTop: i ? `1px solid ${S.line}` : 'none' }}>
+                  <span style={{ fontSize: 13, color: S.ink, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.nombre}</span>
+                  <span className="num" style={{ fontSize: 14, fontWeight: 700, color: S.good, flexShrink: 0 }}>▲ {formatKg(x.kg)} kg</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* PR banner */}
         {prCount > 0 && (
@@ -228,6 +318,21 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
             </div>
           </div>
         )}
+
+        {/* Compartir el entreno como imagen para historias */}
+        <div style={{ padding: '0 20px 10px', flexShrink: 0 }}>
+          <button
+            onClick={compartir}
+            disabled={compartiendo}
+            style={{
+              width: '100%', minHeight: 48, borderRadius: 14, background: 'none',
+              border: `1px solid ${S.line2}`, color: S.ink, fontSize: 14, fontWeight: 600,
+              cursor: compartiendo ? 'wait' : 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif',
+            }}
+          >
+            {compartiendo ? 'Armando la imagen…' : 'Compartir imagen ↗'}
+          </button>
+        </div>
 
         {/* CTA — dos salidas, y cada una va adonde dice */}
         <div style={{ padding: '4px 20px 48px', flexShrink: 0, display: 'flex', gap: 10 }}>

@@ -108,6 +108,21 @@ Cualquier rutina puede usar lo mismo: en modo edición, el menú ⋯ de cada
 ejercicio define su bloque y lo une en superserie con el siguiente, y con
 *Semanas 4-6* elegido se editan las series de ese bloque.
 
+**Semana del plan.** Inicio pregunta una vez en qué semana estás; con eso
+muestra *Semana N de 6* y en la semana 4 pasa solo todas las rutinas a
+Semanas 4-6 (`src/utils/program.ts`). Pasada la 6, pregunta si arrancás de
+nuevo. Un cambio manual del selector no se pisa: sólo se aplica cuando el plan
+cambia de bloque.
+
+**Plan en orden.** La semana tipo dice qué días se entrena y en qué orden van
+las rutinas, pero no ata una rutina a un día: toca la siguiente a la última que
+hiciste (`src/utils/planOrder.ts`). Si faltaste el miércoles, el viernes te
+espera brazos, y el calendario corre los días que vienen.
+
+**Descanso por ejercicio.** El temporizador lee el descanso de la nota
+("descanso 2 min", "descanso 1:30"; `src/utils/restFromNote.ts`). Elegir otro
+tiempo durante el descanso vale para ese ejercicio el resto del entreno.
+
 ## Iconos
 
 ```bash

@@ -66,3 +66,33 @@ export function muscleIconSpec(group: MuscleGroup): MuscleIconSpec {
     extra: group === 'cardio' ? [CORAZON] : [],
   }
 }
+
+/** Qué zonas pinta cada grupo, de frente y de espaldas, para la figura entera. */
+const ZONAS_POR_LADO: Record<'frente' | 'espalda', Partial<Record<MuscleGroup, string[]>>> = {
+  frente: {
+    pecho: ['pectorales'], hombros: ['deltoides'], biceps: ['brazos'],
+    piernas: ['cuadriceps', 'gemelos'], core: ['abdominales', 'cadera'],
+  },
+  espalda: {
+    espalda: ['dorsales', 'trapecio'], hombros: ['deltoides'], triceps: ['brazos'],
+    piernas: ['isquios', 'gemelos'], gluteos: ['gluteos'], core: ['lumbares'],
+  },
+}
+
+/**
+ * La figura de un lado con cada zona en un nivel de 0 a 1: el mayor de los
+ * grupos que la pintan. Sirve para el ícono de una rutina (niveles 0 o 1) y
+ * para el mapa de Progreso (proporcional a las series).
+ */
+export function figuraPorNiveles(
+  lado: 'frente' | 'espalda',
+  niveles: Partial<Record<MuscleGroup, number>>,
+): Array<{ paths: Zona; nivel: number }> {
+  const figura = lado === 'frente' ? FRENTE : ESPALDA
+  const nivelZona = new Map<string, number>()
+  for (const [grupo, zonas] of Object.entries(ZONAS_POR_LADO[lado]) as [MuscleGroup, string[]][]) {
+    const n = niveles[grupo] ?? 0
+    for (const z of zonas) nivelZona.set(z, Math.max(nivelZona.get(z) ?? 0, n))
+  }
+  return Object.entries(figura).map(([nombre, paths]) => ({ paths, nivel: nivelZona.get(nombre) ?? 0 }))
+}

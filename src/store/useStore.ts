@@ -8,6 +8,8 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
 import { buildMileRoutines, completarPlanMile, MILE_WEEK_PLAN } from '../data/mileRoutines'
 import { computeRecords } from '../utils/records'
+import { tieneVariante } from '../utils/routineVariant'
+import { faseDeSemana, inicioParaSemana, semanaDelPrograma, SEMANAS_PROGRAMA, type ProgramaEstado } from '../utils/program'
 
 interface AppState {
   // Navigation
@@ -39,6 +41,17 @@ interface AppState {
   avatarPhoto: string | null
   setAvatarPhoto: (photo: string | null) => void
   archivedRoutineNames: Record<string, { name: string; emoji: string }>
+  /** Plan por semanas (el de Mile). null = todavía no se dijo en qué semana estás. */
+  programa: ProgramaEstado | null
+  /** Hoy estás en la semana `semana` del plan: fija el inicio y aplica el bloque que corresponde. */
+  fijarSemanaPrograma: (semana: number) => void
+  /** Pasa las rutinas a Semanas 4-6 (o vuelve a 1-3) cuando el plan cambia de bloque. */
+  sincronizarPrograma: () => void
+  /** Después de la semana 6: no volver a preguntar. */
+  terminarPrograma: () => void
+  /** Lunes (dayKey) de la semana cuyo repaso ya se cerró en Inicio. */
+  repasoCerrado: string | null
+  cerrarRepaso: (lunesKey: string) => void
 
   // Actions
   setActiveTab: (tab: NavTab) => void
@@ -135,6 +148,8 @@ export const useStore = create<AppState>()(
       customExercises: [],
       avatarPhoto: null,
       archivedRoutineNames: {},
+      programa: null,
+      repasoCerrado: null,
 
       setActiveTab: (tab) => set({ activeTab: tab }),
       setCalendarSubTab: (tab) => set({ calendarSubTab: tab }),
@@ -252,6 +267,37 @@ export const useStore = create<AppState>()(
         set((s) => ({ weekPlan: { ...s.weekPlan, [dow]: routineId } })),
 
       setWeeklyGoal: (goal) => set({ weeklyGoal: goal }),
+
+      fijarSemanaPrograma: (semana) => {
+        const nowTs = Date.now()
+        const fase = faseDeSemana(semana)
+        set((s) => ({
+          programa: { inicio: inicioParaSemana(semana, nowTs), fase },
+          routines: s.routines.map((r) => (tieneVariante(r) ? { ...r, variante: fase } : r)),
+        }))
+      },
+
+      sincronizarPrograma: () => {
+        const { programa, routines } = get()
+        if (!programa || programa.terminado) return
+        const semana = semanaDelPrograma(programa.inicio, Date.now())
+        // Pasada la semana 6, Inicio pregunta si arrancás de nuevo; hasta entonces no se toca nada.
+        if (semana > SEMANAS_PROGRAMA) return
+        const fase = faseDeSemana(semana)
+        if (fase === programa.fase) return
+        set({
+          programa: { ...programa, fase },
+          routines: routines.map((r) => (tieneVariante(r) ? { ...r, variante: fase } : r)),
+        })
+        get().addToast(
+          fase === 'alt' ? `Semana ${semana}: las rutinas pasaron a Semanas 4-6` : `Semana ${semana}: las rutinas volvieron a Semanas 1-3`,
+          'info',
+        )
+      },
+
+      terminarPrograma: () => set((s) => (s.programa ? { programa: { ...s.programa, terminado: true } } : {})),
+
+      cerrarRepaso: (lunesKey) => set({ repasoCerrado: lunesKey }),
 
       addMeasure: (measure) =>
         set((s) => ({
@@ -374,6 +420,8 @@ export const useStore = create<AppState>()(
         customExercises: state.customExercises,
         avatarPhoto: state.avatarPhoto,
         archivedRoutineNames: state.archivedRoutineNames,
+        programa: state.programa,
+        repasoCerrado: state.repasoCerrado,
       }),
       // Los récords guardados por versiones anteriores pueden haber quedado
       // huérfanos (entrenos borrados, pesos corregidos, marcas de ejercicios que

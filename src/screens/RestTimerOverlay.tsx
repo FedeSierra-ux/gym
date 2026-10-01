@@ -1,14 +1,16 @@
 import { useAllExercises } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
-import { formatLoad } from '../utils/format'
+import { formatKg, formatLoad } from '../utils/format'
+import { parseDecimal } from '../utils/numberInput'
+import { durationUnit, isDurationExercise } from '../utils/duration'
 
 const PRESETS = [
   { label: '0:45', seconds: 45 },
   { label: '1:00', seconds: 60 },
   { label: '1:15', seconds: 75 },
+  { label: '1:30', seconds: 90 },
   { label: '2:00', seconds: 120 },
   { label: '3:00', seconds: 180 },
-  { label: '5:00', seconds: 300 },
 ]
 
 function formatTime(seconds: number) {
@@ -48,11 +50,12 @@ export function RestTimerOverlay({ onMinimize }: { onMinimize?: () => void }) {
     if (!currentEx) return null
     const nextSetInSame = currentEx.sets.findIndex((s, i) => i > lastCompletedSet.setIdx && !s.completed)
     if (nextSetInSame >= 0) {
-      return { exercise: exercises.find((e) => e.id === lastCompletedSet.exerciseId), setNum: nextSetInSame + 1 }
+      return { exercise: exercises.find((e) => e.id === lastCompletedSet.exerciseId), setNum: nextSetInSame + 1, set: currentEx.sets[nextSetInSame] }
     }
     const nextEx = activeWorkout.exercises[exIdx + 1]
     if (nextEx) {
-      return { exercise: exercises.find((e) => e.id === nextEx.exerciseId), setNum: 1 }
+      const idx = Math.max(0, nextEx.sets.findIndex((s) => !s.completed))
+      return { exercise: exercises.find((e) => e.id === nextEx.exerciseId), setNum: idx + 1, set: nextEx.sets[idx] }
     }
     return null
   })()
@@ -118,11 +121,23 @@ export function RestTimerOverlay({ onMinimize }: { onMinimize?: () => void }) {
             <p className="text-[11px] text-gray-600 uppercase tracking-wider">Siguiente</p>
             <p className="text-white font-semibold text-sm mt-0.5">{nextExercise.exercise.nameEs}</p>
             <p className="text-gray-500 text-xs">Serie {nextExercise.setNum}</p>
+            {/* Qué peso y reps tocan, para preparar la barra durante el descanso */}
+            {nextExercise.set && (isDurationExercise(nextExercise.exercise)
+              ? nextExercise.set.duration && (
+                <p className="num text-white font-bold" style={{ fontSize: 17, marginTop: 4 }}>
+                  {nextExercise.set.duration.replace('.', ',')} {durationUnit(nextExercise.exercise) === 'min' ? 'min' : 's'}
+                </p>
+              )
+              : (nextExercise.set.reps || nextExercise.set.kg) && (
+                <p className="num text-white font-bold" style={{ fontSize: 17, marginTop: 4 }}>
+                  {parseDecimal(nextExercise.set.kg) > 0 ? `${formatKg(parseDecimal(nextExercise.set.kg))} × ` : ''}{nextExercise.set.reps || '—'}
+                </p>
+              ))}
           </div>
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-4 w-full px-8">
+      <div className="flex flex-col items-center gap-4 w-full px-5">
         <div className="flex items-center gap-4">
           <button
             onClick={() => adjustRestTimer(-30)}
@@ -144,18 +159,20 @@ export function RestTimerOverlay({ onMinimize }: { onMinimize?: () => void }) {
           </button>
         </div>
 
-        <div className="flex gap-2 flex-wrap justify-center">
+        {/* Los seis en una fila: si se parten en dos, la segunda queda encima del botón de terminar. */}
+        <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${PRESETS.length}, minmax(0, 1fr))`, gap: 6, maxWidth: 360 }}>
           {PRESETS.map((p) => (
             <button
               key={p.seconds}
               onClick={() => setRestPreset(p.seconds)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+              aria-pressed={restTotalSeconds === p.seconds}
+              className={`num py-2 rounded-full text-[13px] font-medium transition-colors border ${
                 restTotalSeconds === p.seconds
-                  ? 'bg-primary/20 text-primary border-primary/40'
+                  ? 'bg-surface text-primary border-primary'
                   : 'bg-surface border-border text-gray-400 hover:border-primary/40 hover:text-primary'
               }`}
             >
-              {p.label}{restTotalSeconds === p.seconds ? ' ✓' : ''}
+              {p.label}
             </button>
           ))}
         </div>

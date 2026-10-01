@@ -5,6 +5,8 @@ import { CustomExercisesScreen } from './CustomExercisesScreen'
 import type { MuscleGroup, Routine } from '../types'
 import { useLongPress } from '../utils/useLongPress'
 import { MuscleIcon } from '../components/MuscleIcon'
+import { RoutineBadge, RoutineIcon } from '../components/RoutineIcon'
+import { routineColor } from '../utils/trainingDays'
 import { haceCuanto } from '../utils/relativeDate'
 import { rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
 
@@ -38,14 +40,18 @@ function RoutineCard({ routine, children, onOpen, onLongPress }: {
   )
 }
 
-function getRoutineMuscleGroups(exerciseIds: string[], exercises: { id: string; muscleGroup: MuscleGroup }[]) {
-  const groups = new Set<MuscleGroup>()
-  for (const id of exerciseIds) {
-    const ex = exercises.find((e) => e.id === id)
-    if (ex) groups.add(ex.muscleGroup)
+/** Grupos de la rutina ordenados por cantidad de series, de más a menos. */
+function getRoutineMuscleGroups(routine: Routine, exercises: { id: string; muscleGroup: MuscleGroup }[]) {
+  const series = new Map<MuscleGroup, number>()
+  for (const re of rutinaEnUso(routine).exercises) {
+    const ex = exercises.find((e) => e.id === re.exerciseId)
+    if (ex) series.set(ex.muscleGroup, (series.get(ex.muscleGroup) ?? 0) + re.sets)
   }
-  return Array.from(groups).slice(0, 4)
+  return [...series.entries()].sort((a, b) => b[1] - a[1]).map(([g]) => g)
 }
+
+/** Chips a la vista: los tres grupos con más series; el resto se cuenta en "+N". */
+const CHIPS_VISIBLES = 3
 
 function getApproxDuration(sets: number[]) {
   return Math.round(sets.reduce((a, s) => a + s * 2.5, 0))
@@ -61,7 +67,7 @@ export function RutinasScreen() {
   const sortedWorkouts = [...workouts]
     .filter((w) => w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
-  const lastRoutineId = sortedWorkouts[0]?.routineId
+  const routineIds = routines.map((r) => r.id)
   // Cuándo se hizo cada rutina por última vez, para "hace 2 días".
   const ultimaVez = new Map<string, number>()
   for (const w of sortedWorkouts) if (!ultimaVez.has(w.routineId)) ultimaVez.set(w.routineId, w.startedAt)
@@ -97,14 +103,11 @@ export function RutinasScreen() {
       {/* Routine cards */}
       <div style={{ padding: '20px 22px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {routines.map((routine) => {
-          const muscleGroups = getRoutineMuscleGroups(
-            routine.exercises.map((e) => e.exerciseId),
-            allExercises
-          )
+          const muscleGroups = getRoutineMuscleGroups(routine, allExercises)
+          const ocultos = muscleGroups.length - CHIPS_VISIBLES
           const totalSets = rutinaEnUso(routine).exercises.map((e) => e.sets)
           const duration = getApproxDuration(totalSets)
-          const isLast = routine.id === lastRoutineId
-          const primaryColor = muscleGroups[0] ? muscleGroupConfig[muscleGroups[0]].color : '#E8634A'
+          const color = routineColor(routine.id, routineIds)
 
           return (
             <RoutineCard
@@ -115,32 +118,15 @@ export function RutinasScreen() {
             >
               <div style={{
                 background: '#161821', borderRadius: 18, padding: 16, textAlign: 'left', width: '100%',
-                border: `1px solid ${isLast ? 'rgba(232,99,74,0.22)' : 'rgba(236,238,244,0.12)'}`,
-                borderLeft: `3px solid ${primaryColor}`,
+                border: '1px solid rgba(236,238,244,0.12)',
+                borderLeft: `3px solid ${color}`,
                 transition: 'all 0.15s',
                 fontFamily: 'DM Sans, system-ui, sans-serif',
               }}>
               <div className="flex items-start gap-3">
-                <div style={{
-                  width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                  background: primaryColor + '20',
-                  border: `1px solid ${primaryColor}40`,
-                }}>
-                  {routine.emoji}
-                </div>
+                <RoutineIcon routine={routine} size={19} boxed />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: 16, fontWeight: 700, color: '#ECEEF4' }}>{routine.name}</span>
-                    {isLast && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, color: '#E8634A',
-                        background: 'rgba(232,99,74,0.15)', padding: '2px 7px', borderRadius: 6, flexShrink: 0,
-                      }}>
-                        ÚLTIMO
-                      </span>
-                    )}
-                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#ECEEF4' }}>{routine.name}</div>
                   <div style={{ fontSize: 12, color: '#8A91A3', marginTop: 3 }}>
                     {routine.exercises.length} ejercicios · ~{duration} min
                     {ultimaVez.has(routine.id) && <> · {haceCuanto(ultimaVez.get(routine.id)!, nowTs)}</>}
@@ -152,7 +138,7 @@ export function RutinasScreen() {
 
               {muscleGroups.length > 0 && (
                 <div className="flex flex-wrap gap-[6px]" style={{ marginTop: 12 }}>
-                  {muscleGroups.map(mg => {
+                  {muscleGroups.slice(0, CHIPS_VISIBLES).map(mg => {
                     const cfg = muscleGroupConfig[mg]
                     return (
                       <span key={mg} style={{
@@ -164,6 +150,15 @@ export function RutinasScreen() {
                       </span>
                     )
                   })}
+                  {ocultos > 0 && (
+                    <span
+                      title={muscleGroups.slice(CHIPS_VISIBLES).map((g) => muscleGroupConfig[g].label).join(', ')}
+                      aria-label={`y ${ocultos} más: ${muscleGroups.slice(CHIPS_VISIBLES).map((g) => muscleGroupConfig[g].label).join(', ')}`}
+                      style={{ fontSize: 11, fontWeight: 600, color: '#8A91A3', background: '#1C1F2A', padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      +{ocultos}
+                    </span>
+                  )}
                 </div>
               )}
               </div>
@@ -227,7 +222,7 @@ export function RutinasScreen() {
           >
             <div style={{ width: 40, height: 4, background: '#1C1F2A', borderRadius: 2, margin: '0 auto 16px' }} />
             <p style={{ fontSize: 16, fontWeight: 700, color: '#ECEEF4', marginBottom: 2 }}>
-              {menuRoutine.emoji} {menuRoutine.name}
+              <RoutineBadge routineId={menuRoutine.id} size={16} />{menuRoutine.name}
             </p>
             <p style={{ fontSize: 12, color: '#8A91A3', marginBottom: 16 }}>
               {menuRoutine.exercises.length} ejercicios
