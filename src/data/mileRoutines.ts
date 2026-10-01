@@ -100,9 +100,12 @@ export function buildMileRoutines(createdAt = Date.now()): Routine[] {
   ]
 }
 
-/** Plan semanal sugerido: lunes piernas, miércoles brazos, viernes full body. */
+/**
+ * Plan semanal sugerido: lunes piernas, miércoles brazos, viernes full body.
+ * Las claves son 0 = lunes, como en el resto de la app (Agenda e Inicio).
+ */
 export const MILE_WEEK_PLAN: Record<number, string> = {
-  1: 'mile-piernas',
-  3: 'mile-brazos',
-  5: 'mile-fullbody',
+  0: 'mile-piernas',
+  2: 'mile-brazos',
+  4: 'mile-fullbody',
 }
