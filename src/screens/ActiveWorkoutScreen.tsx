@@ -577,9 +577,28 @@ export function ActiveWorkoutScreen() {
                   <span style={{ fontSize: 13, flexShrink: 0 }}>
                     {suggestion.reason === 'subir' ? '▲' : suggestion.reason === 'bajar' ? '▼' : suggestion.reason === 'primera-vez' ? '🎯' : '='}
                   </span>
-                  <span style={{ fontSize: 11, color: suggestion.reason === 'subir' ? S.good : S.dim, lineHeight: 1.4 }}>
+                  <span style={{ flex: 1, fontSize: 11, color: suggestion.reason === 'subir' ? S.good : S.dim, lineHeight: 1.4 }}>
                     {suggestion.note}
                   </span>
+                  {/* Las series arrancan con el máximo de la última vez; el
+                      peso sugerido se aplica sólo si el usuario lo pide. */}
+                  {suggestion.kg > 0 && activeEx.sets.some((st) => !st.completed && !st.isWarmup && parseDecimal(st.kg) !== suggestion.kg) && (
+                    <button
+                      onClick={() => activeEx.sets.forEach((st, si) => {
+                        if (!st.completed && !st.isWarmup) updateSetValue(exIdx, si, 'kg', String(suggestion.kg))
+                      })}
+                      aria-label={`Usar ${suggestion.kg} kg en las series que faltan`}
+                      style={{
+                        flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 8,
+                        background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.16)' : S.surf2,
+                        border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.40)' : S.line2}`,
+                        color: suggestion.reason === 'subir' ? S.good : S.ink,
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Usar {String(suggestion.kg).replace('.', ',')} kg
+                    </button>
+                  )}
                 </div>
               )}
 

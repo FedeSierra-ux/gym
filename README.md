@@ -70,8 +70,10 @@ barra, 2 kg mancuernas, 5 kg máquina/polea) y se redondea a lo que hay en un
 gimnasio.
 
 Es una sugerencia, no una imposición: aparece como un cartel arriba de cada
-ejercicio en el entreno y prellena los kilos, que se pueden editar. Si pasaron
-más de tres semanas desde la última vez, propone arrancar un 10 % abajo.
+ejercicio en el entreno, con un botón *"Usar X kg"* que la aplica a las series
+que faltan. Las series arrancan prellenadas con el **peso máximo de la última
+vez** (sin calentamiento), así subir o no lo decide el usuario. Si pasaron más
+de tres semanas desde la última vez, propone arrancar un 10 % abajo.
 
 ## Cierre automático del entreno
 

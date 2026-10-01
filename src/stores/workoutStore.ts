@@ -4,7 +4,7 @@ import type { ActiveWorkoutExercise, AppToast, Workout } from '../types'
 import { useStore } from '../store/useStore'
 import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
 import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
-import { suggestNextWeight } from '../utils/progression'
+import { lastTopKg, suggestNextWeight } from '../utils/progression'
 import { computeRecords, newRecords } from '../utils/records'
 
 export interface ActiveWorkout {
@@ -98,7 +98,7 @@ function clampValue(field: 'kg' | 'reps' | 'duration', value: string): string {
  *
  * Se usa al arrancar la rutina y también al agregar o cambiar un ejercicio en
  * el medio del entreno, para que en los dos casos se prellene igual: el peso
- * sugerido por la doble progresión, y las reps de la última vez que se hizo.
+ * máximo y las reps de la última vez que se hizo.
  */
 function buildActiveExercise(
   exerciseId: string,
@@ -145,11 +145,10 @@ function buildActiveExercise(
     }
   }
 
-  // Doble progresión: el peso que se prellena es el sugerido, no el de la
-  // sesión anterior, así el objetivo del día queda cargado solo.
-  const rango = routineEx ?? { sets: cantidad, repsMin: 8, repsMax: 12 }
-  const suggestion = suggestNextWeight(exercise, rango, workouts, exerciseId)
-  const suggestedKg = suggestion && suggestion.kg > 0 ? String(suggestion.kg) : ''
+  // Se prellena el peso máximo de la última vez, no el sugerido: subirlo es
+  // decisión del usuario (la sugerencia queda a un toque, arriba del ejercicio).
+  const topKg = lastTopKg(exerciseId, workouts)
+  const maxKg = topKg != null ? String(topKg) : ''
   const lastPrevSet = prevSets[prevSets.length - 1]
   return {
     exerciseId,
@@ -157,7 +156,7 @@ function buildActiveExercise(
       const prev = prevSets[i] ?? lastPrevSet
       const prevKg = prev && prev.kg > 0 ? String(prev.kg) : ''
       const prevReps = prev && prev.reps > 0 ? String(prev.reps) : ''
-      return { kg: suggestedKg || prevKg, reps: prevReps, completed: false }
+      return { kg: maxKg || prevKg, reps: prevReps, completed: false }
     }),
   }
 }

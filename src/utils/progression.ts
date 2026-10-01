@@ -83,6 +83,16 @@ function lastSessionFor(exerciseId: string, workouts: Workout[]): LastSession | 
   return null
 }
 
+/**
+ * El peso más alto (sin calentamiento) de la última vez que se hizo el
+ * ejercicio. Es lo que se prellena al arrancar: el máximo que ya se hizo, y
+ * subirlo o no lo decide el usuario mirando la sugerencia.
+ */
+export function lastTopKg(exerciseId: string, workouts: Workout[]): number | null {
+  const last = lastSessionFor(exerciseId, workouts)
+  return last && last.kg > 0 ? last.kg : null
+}
+
 export function suggestNextWeight(
   exercise: Exercise | undefined,
   routineExercise: Pick<RoutineExercise, 'sets' | 'repsMin' | 'repsMax'>,
