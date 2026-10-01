@@ -18,6 +18,7 @@ import type { Exercise, ActiveWorkoutSet, WorkoutSet } from '../types'
 import { S } from '../theme'
 import { estimate1RM } from '../utils/oneRM'
 import { formatKg } from '../utils/format'
+import { rutinaEnUso } from '../utils/routineVariant'
 
 
 
@@ -276,9 +277,9 @@ function SetRow({
     if (!prev || completada) return
     if (byTime) {
       const v = unit === 'min' ? Math.round(((prev.durationSec ?? 0) / 60) * 10) / 10 : prev.durationSec ?? 0
-      onUpdate(exIdx, setIdx, 'duration', String(v).replace('.', ','))
+      onUpdate(exIdx, setIdx, 'duration', String(v))
     } else {
-      onUpdate(exIdx, setIdx, 'kg', String(prev.kg).replace('.', ','))
+      onUpdate(exIdx, setIdx, 'kg', String(prev.kg))
       onUpdate(exIdx, setIdx, 'reps', String(prev.reps))
     }
     vibrate(15)
@@ -483,7 +484,8 @@ export function ActiveWorkoutScreen() {
 
   if (!activeWorkout) return null
 
-  const routine = routines.find((r) => r.id === activeWorkout.routineId)
+  const guardada = routines.find((r) => r.id === activeWorkout.routineId)
+  const routine = guardada ? rutinaEnUso(guardada) : undefined
   const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.length, 0)
   const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0

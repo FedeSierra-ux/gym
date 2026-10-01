@@ -6,7 +6,7 @@ import { exercises as exerciseDb } from '../data/exercises'
 import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { seedRoutines, seedWorkouts } from '../data/seedData'
-import { buildMileRoutines, MILE_WEEK_PLAN } from '../data/mileRoutines'
+import { buildMileRoutines, completarPlanMile, MILE_WEEK_PLAN } from '../data/mileRoutines'
 import { computeRecords } from '../utils/records'
 
 interface AppState {
@@ -386,6 +386,7 @@ export const useStore = create<AppState>()(
         queueMicrotask(() => {
           useStore.setState((s) => ({
             prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]),
+            routines: s.routines.map(completarPlanMile),
           }))
         })
       },

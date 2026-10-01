@@ -60,7 +60,7 @@ export function RestTimerOverlay({ onMinimize }: { onMinimize?: () => void }) {
   return (
     <div className="absolute inset-0 bg-background/97 backdrop-blur-sm flex flex-col items-center justify-between py-8 z-50 screen-enter">
       <div className="text-center flex flex-col items-center gap-2">
-        <p className="text-info font-bold text-sm tracking-widest uppercase">⏸ DESCANSANDO</p>
+        <p className="text-dim font-bold text-sm tracking-widest uppercase">Descanso</p>
         {onMinimize && (
           <button onClick={onMinimize}
             style={{ minHeight: 40, padding: '0 14px', borderRadius: 12, background: 'none', border: '1px solid rgba(236,238,244,0.12)', color: '#8A91A3', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>

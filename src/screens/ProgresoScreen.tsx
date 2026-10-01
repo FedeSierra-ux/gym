@@ -94,7 +94,7 @@ function SeriesTab({ nowTs }: { nowTs: number }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.acc }}>{resumen.series}</div>
+          <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.ink }}>{resumen.series}</div>
           <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>
             Series del mes
             {anterior.series > 0 && delta !== 0 && (
@@ -103,7 +103,7 @@ function SeriesTab({ nowTs }: { nowTs: number }) {
           </div>
         </div>
         <div style={{ background: S.surf2, borderRadius: 14, padding: '14px 12px', border: `1px solid ${S.line2}` }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>{resumen.sesiones}</div>
+          <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.ink }}>{resumen.sesiones}</div>
           <div style={{ fontSize: 11, color: S.dim, marginTop: 3 }}>{resumen.sesiones === 1 ? 'Entreno' : 'Entrenos'}</div>
         </div>
       </div>

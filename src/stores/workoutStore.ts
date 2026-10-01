@@ -7,6 +7,7 @@ import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils
 import { lastTopKg, suggestNextWeight } from '../utils/progression'
 import { computeRecords, newRecords } from '../utils/records'
 import { formatKg } from '../utils/format'
+import { rutinaEnUso } from '../utils/routineVariant'
 
 export interface ActiveWorkout {
   routineId: string
@@ -109,7 +110,9 @@ function buildActiveExercise(
   const { routines, workouts, exercises: exerciseDb, customExercises } = useStore.getState()
   const allExercises = [...exerciseDb, ...customExercises]
   const exercise = allExercises.find((e) => e.id === exerciseId)
-  const routine = routines.find((r) => r.id === routineId)
+  // Con las series y reps del bloque elegido (semanas 1-3 o 4-6).
+  const guardada = routines.find((r) => r.id === routineId)
+  const routine = guardada ? rutinaEnUso(guardada) : undefined
   const routineEx = routine?.exercises.find((re) => re.exerciseId === exerciseId)
 
   const finishedWorkouts = [...workouts]
@@ -465,7 +468,8 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         // Auto-progression suggestions (max 2)
         const progressionToasts: AppToast[] = []
-        const routine = routines.find((r) => r.id === activeWorkout.routineId)
+        const guardada = routines.find((r) => r.id === activeWorkout.routineId)
+        const routine = guardada ? rutinaEnUso(guardada) : undefined
         if (routine) {
           // Mismo criterio de doble progresión que usa la pantalla de entreno,
           // evaluado ya con el entreno recién terminado incluido.

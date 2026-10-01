@@ -6,7 +6,10 @@ import { ExercisePickerScreen } from './ExercisePickerScreen'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { CreateExerciseCard } from '../components/CreateExerciseCard'
 import { isDurationExercise, durationUnit, formatDuration, fromSeconds, toSeconds } from '../utils/duration'
-import type { Routine } from '../types'
+import type { Routine, RoutineExercise } from '../types'
+import { ejercicioEnUso, rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
+import { posicionEnSuperserie, separarDelSiguiente, unirConSiguiente } from '../utils/superset'
+import { S } from '../theme'
 
 function BackIcon() {
   return (
@@ -74,6 +77,8 @@ export function RoutineDetailScreen() {
   const [editMode, setEditMode] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [quickName, setQuickName] = useState('')
+  // Ejercicio cuyo menú de bloque/superserie está abierto (modo edición).
+  const [opcionesDe, setOpcionesDe] = useState<string | null>(null)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
 
@@ -89,6 +94,20 @@ export function RoutineDetailScreen() {
 
   if (!routine) return null
 
+  /**
+   * Series y reps: con "Semanas 4-6" elegido se editan las de ese bloque (se
+   * crean a partir de las de base la primera vez); si no, las de base.
+   */
+  const updateSerie = (re: RoutineExercise, patch: Partial<Pick<RoutineExercise, 'sets' | 'repsMin' | 'repsMax' | 'targetSeconds'>>) => {
+    if (routine.variante === 'alt') {
+      const base = re.alt ?? { sets: re.sets, repsMin: re.repsMin, repsMax: re.repsMax, targetSeconds: re.targetSeconds }
+      updateExerciseConfig(re.exerciseId, { alt: { ...base, ...patch } })
+    } else {
+      updateExerciseConfig(re.exerciseId, patch)
+    }
+  }
+  const mostrarVariante = tieneVariante(routine) || editMode
+
   const lastWorkout = [...workouts]
     .filter((w) => w.routineId === routine.id && w.finishedAt)
     .sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0))[0]
@@ -100,7 +119,7 @@ export function RoutineDetailScreen() {
       })
     : null
 
-  const totalDuration = routine.exercises.reduce((acc, re) => acc + re.sets * 2.5, 0)
+  const totalDuration = rutinaEnUso(routine).exercises.reduce((acc, re) => acc + re.sets * 2.5, 0)
 
   const moveExercise = (idx: number, dir: 'up' | 'down') => {
     const sorted = [...routine.exercises].sort((a, b) => a.order - b.order)
@@ -245,6 +264,27 @@ export function RoutineDetailScreen() {
         </button>
       </div>
 
+      {/* Bloque del plan: cambia series y reps de toda la rutina */}
+      {mostrarVariante && (
+        <div className="flex-shrink-0 px-4 pt-3">
+          <div style={{ display: 'flex', background: S.surf, borderRadius: 12, padding: 3, border: `1px solid ${S.line2}` }} role="radiogroup" aria-label="Bloque del plan">
+            {(['base', 'alt'] as const).map((v) => {
+              const activo = (routine.variante ?? 'base') === v
+              return (
+                <button key={v} role="radio" aria-checked={activo}
+                  onClick={() => updateRoutine({ ...routine, variante: v })}
+                  style={{ flex: 1, minHeight: 40, borderRadius: 9, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: activo ? S.surf2 : 'transparent', color: activo ? S.ink : S.dim }}>
+                  {VARIANTE_LABEL[v]}
+                </button>
+              )
+            })}
+          </div>
+          {editMode && routine.variante === 'alt' && (
+            <p style={{ fontSize: 11, color: S.dim, marginTop: 6 }}>Las series y reps que edites ahora son las de las semanas 4-6.</p>
+          )}
+        </div>
+      )}
+
       {/* Exercise list */}
       <div className="flex-1 min-h-0 scroll-area px-4 py-4">
         <div className="flex flex-col gap-2.5">
@@ -254,10 +294,36 @@ export function RoutineDetailScreen() {
             const config = muscleGroupConfig[ex.muscleGroup]
             const byTime = isDurationExercise(ex)
             const unit = durationUnit(ex)
+            const uso = ejercicioEnUso(re, routine.variante)
+            const prev = sortedExercises[idx - 1]
+            const nuevoBloque = !!re.block && re.block !== prev?.block
+            const ss = posicionEnSuperserie(sortedExercises, idx)
+            const bloqueCount = re.block ? sortedExercises.filter((e) => e.block === re.block).length : 0
 
             return (
+              <div key={re.exerciseId}>
+              {nuevoBloque && (
+                <div className="flex items-baseline justify-between" style={{ margin: idx === 0 ? '0 2px 8px' : '14px 2px 8px' }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: S.ink }}>{re.block}</h3>
+                  <span style={{ fontSize: 11, color: S.faint }}>{bloqueCount} {bloqueCount === 1 ? 'ejercicio' : 'ejercicios'}</span>
+                </div>
+              )}
+              {ss.primero && (
+                <p style={{ fontSize: 11, fontWeight: 700, color: S.acc, margin: '2px 0 6px 18px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Superserie</p>
+              )}
+              <div style={{ position: 'relative', paddingLeft: ss.dentro ? 18 : 0 }}>
+              {/* La llave que une los ejercicios de la superserie */}
+              {ss.dentro && (
+                <span aria-hidden="true" style={{
+                  position: 'absolute', left: 4, width: 8,
+                  top: ss.primero ? '50%' : -10, bottom: ss.ultimo ? '50%' : -10,
+                  borderLeft: `2px solid ${S.acc}`,
+                  borderTop: ss.primero ? `2px solid ${S.acc}` : 'none',
+                  borderBottom: ss.ultimo ? `2px solid ${S.acc}` : 'none',
+                  borderRadius: ss.primero ? '6px 0 0 0' : ss.ultimo ? '0 0 0 6px' : 0,
+                }} />
+              )}
               <div
-                key={re.exerciseId}
                 className="rounded-2xl p-3 flex items-center gap-3"
                 style={{
                   background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
@@ -310,13 +376,13 @@ export function RoutineDetailScreen() {
                         <input
                           type="number"
                           inputMode="numeric"
-                          value={re.sets}
+                          value={uso.sets}
                           min={1}
                           max={20}
                           aria-label="Series"
                           onChange={e => {
                             const v = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
-                            updateExerciseConfig(re.exerciseId, { sets: v })
+                            updateSerie(re, { sets: v })
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
@@ -324,11 +390,11 @@ export function RoutineDetailScreen() {
                         <input
                           type="number"
                           inputMode="decimal"
-                          value={fromSeconds(re.targetSeconds ?? 0, unit)}
+                          value={fromSeconds(uso.targetSeconds ?? 0, unit)}
                           min={0}
                           aria-label={unit === 'min' ? 'Minutos' : 'Segundos'}
                           onChange={e => {
-                            updateExerciseConfig(re.exerciseId, { targetSeconds: toSeconds(e.target.value, unit) })
+                            updateSerie(re, { targetSeconds: toSeconds(e.target.value, unit) })
                           }}
                           className="w-12 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
@@ -339,12 +405,12 @@ export function RoutineDetailScreen() {
                         <input
                           type="number"
                           inputMode="numeric"
-                          value={re.sets}
+                          value={uso.sets}
                           min={1}
                           max={20}
                           onChange={e => {
                             const v = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
-                            updateExerciseConfig(re.exerciseId, { sets: v })
+                            updateSerie(re, { sets: v })
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
@@ -352,12 +418,12 @@ export function RoutineDetailScreen() {
                         <input
                           type="number"
                           inputMode="numeric"
-                          value={re.repsMin}
+                          value={uso.repsMin}
                           min={1}
-                          max={re.repsMax}
+                          max={uso.repsMax}
                           onChange={e => {
-                            const v = Math.max(1, Math.min(re.repsMax, parseInt(e.target.value) || 1))
-                            updateExerciseConfig(re.exerciseId, { repsMin: v })
+                            const v = Math.max(1, Math.min(uso.repsMax, parseInt(e.target.value) || 1))
+                            updateSerie(re, { repsMin: v })
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
@@ -365,12 +431,12 @@ export function RoutineDetailScreen() {
                         <input
                           type="number"
                           inputMode="numeric"
-                          value={re.repsMax}
-                          min={re.repsMin}
+                          value={uso.repsMax}
+                          min={uso.repsMin}
                           max={100}
                           onChange={e => {
-                            const v = Math.max(re.repsMin, Math.min(100, parseInt(e.target.value) || re.repsMin))
-                            updateExerciseConfig(re.exerciseId, { repsMax: v })
+                            const v = Math.max(uso.repsMin, Math.min(100, parseInt(e.target.value) || uso.repsMin))
+                            updateSerie(re, { repsMax: v })
                           }}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:outline-none focus:border-primary text-white bg-surface border-border"
                         />
@@ -379,8 +445,8 @@ export function RoutineDetailScreen() {
                     ) : (
                       <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
                         {byTime
-                          ? `${re.sets > 1 ? `${re.sets} × ` : ''}${formatDuration(re.targetSeconds ?? 0)}`
-                          : `${re.sets} series · ${re.repsMin === re.repsMax ? re.repsMin : `${re.repsMin}–${re.repsMax}`} reps`}
+                          ? `${uso.sets > 1 ? `${uso.sets} × ` : ''}${formatDuration(uso.targetSeconds ?? 0)}`
+                          : `${uso.sets} series · ${uso.repsMin === uso.repsMax ? uso.repsMin : `${uso.repsMin}–${uso.repsMax}`} reps`}
                       </span>
                     )}
                   </div>
@@ -391,6 +457,16 @@ export function RoutineDetailScreen() {
                   )}
                 </div>
 
+                {editMode && (
+                  <button
+                    onClick={() => setOpcionesDe(re.exerciseId)}
+                    aria-label={`Bloque y superserie de ${ex.nameEs}`}
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontSize: 16 }}
+                  >
+                    ⋯
+                  </button>
+                )}
                 {editMode ? (
                   <button
                     onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
@@ -413,6 +489,8 @@ export function RoutineDetailScreen() {
                     {idx + 1}
                   </span>
                 )}
+              </div>
+              </div>
               </div>
             )
           })}
@@ -459,6 +537,60 @@ export function RoutineDetailScreen() {
 
         <div className="h-6" />
       </div>
+
+      {/* Bloque y superserie de un ejercicio */}
+      {opcionesDe && (() => {
+        const idx = sortedExercises.findIndex((e) => e.exerciseId === opcionesDe)
+        const re = sortedExercises[idx]
+        const ex = exercises.find((e) => e.id === opcionesDe)
+        if (!re) return null
+        const siguiente = sortedExercises[idx + 1]
+        const unidoAlSiguiente = !!re.supersetGroup && siguiente?.supersetGroup === re.supersetGroup
+        const bloques = [...new Set(sortedExercises.map((e) => e.block).filter(Boolean))] as string[]
+        const guardar = (exs: RoutineExercise[]) => updateRoutine({ ...routine, exercises: exs })
+        return (
+          <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setOpcionesDe(null)}>
+            <div className="w-full rounded-t-3xl px-4 pt-4 sheet-enter" onClick={(e) => e.stopPropagation()}
+              style={{ background: S.surf, borderTop: `1px solid ${S.line2}`, paddingBottom: 'max(24px, env(safe-area-inset-bottom, 0px))' }}>
+              <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 14px' }} />
+              <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 14 }}>{ex?.nameEs}</p>
+
+              <label htmlFor="bloque-input" style={{ fontSize: 12, fontWeight: 600, color: S.dim }}>Bloque</label>
+              <input
+                id="bloque-input"
+                list="bloques-rutina"
+                value={re.block ?? ''}
+                onChange={(e) => updateExerciseConfig(re.exerciseId, { block: e.target.value || undefined })}
+                placeholder="Ej: Circuito de entrada · 3 rondas"
+                className="w-full rounded-xl px-3 py-3 text-sm focus:outline-none"
+                style={{ marginTop: 6, background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink }}
+              />
+              <datalist id="bloques-rutina">{bloques.map((b) => <option key={b} value={b} />)}</datalist>
+              <p style={{ fontSize: 11, color: S.faint, marginTop: 6 }}>Se muestra como título arriba del primer ejercicio del bloque.</p>
+
+              {siguiente && (
+                <button
+                  onClick={() => guardar(unidoAlSiguiente
+                    ? separarDelSiguiente(sortedExercises, idx, `ss-${Date.now()}`)
+                    : unirConSiguiente(sortedExercises, idx, `ss-${Date.now()}`))}
+                  className="w-full text-left"
+                  style={{ marginTop: 16, padding: '14px 16px', borderRadius: 14, background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  {unidoAlSiguiente ? '☑ En superserie con el siguiente' : '☐ Superserie con el siguiente'}
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
+                    {exercises.find((e) => e.id === siguiente.exerciseId)?.nameEs}
+                  </span>
+                </button>
+              )}
+
+              <button onClick={() => setOpcionesDe(null)}
+                style={{ width: '100%', marginTop: 10, padding: '14px 16px', borderRadius: 14, background: 'none', border: `1px solid ${S.line2}`, color: S.dim, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Listo
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
