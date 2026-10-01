@@ -22,7 +22,7 @@ export const seedRoutines: Routine[] = [
   {
     id: 'routine-pull',
     name: 'Pull Day',
-    emoji: '🦅',
+    emoji: '🏋️',
     createdAt: now - DAY * 9,
     exercises: [
       { exerciseId: 'espalda-01', sets: 4, repsMin: 5, repsMax: 8, order: 0 },

@@ -3,6 +3,7 @@ import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { exerciseDetails } from '../data/exerciseDetails'
 import { MuscleBodyMap } from './MuscleBodyMap'
+import { MuscleIcon } from './MuscleIcon'
 
 interface WgerInfo {
   imageUrl?: string
@@ -130,10 +131,10 @@ export function ExerciseDetailSheet({ exercise, onClose, actionLabel, onAction, 
                   )}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      className="text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1"
                       style={{ color: config.color, backgroundColor: config.color + '20', border: `1px solid ${config.color}40` }}
                     >
-                      {config.emoji} {config.label}
+                      <MuscleIcon group={exercise.muscleGroup} size={16} /> {config.label}
                     </span>
                     <span className="text-xs px-2.5 py-1 rounded-full text-gray-400 bg-surface border border-border">
                       {exercise.equipment}

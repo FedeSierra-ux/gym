@@ -4,6 +4,7 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
 import { S } from '../theme'
 import { estimate1RM } from '../utils/oneRM'
+import { MuscleIcon } from './MuscleIcon'
 
 
 
@@ -84,8 +85,8 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
               {exercise?.nameEs ?? 'Ejercicio'}
             </div>
             {config && (
-              <div style={{ fontSize: 12, color: config.color, fontWeight: 600, marginTop: 2 }}>
-                {config.emoji} {config.label}
+              <div style={{ fontSize: 12, color: config.color, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {exercise && <MuscleIcon group={exercise.muscleGroup} size={16} />} {config.label}
               </div>
             )}
           </div>

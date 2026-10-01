@@ -6,6 +6,7 @@ import { ExerciseFrames } from './ExerciseFrames'
 import { MuscleBodyMap } from './MuscleBodyMap'
 import { vibrate } from '../utils/haptics'
 import type { Exercise, MuscleGroup } from '../types'
+import { MuscleIcon } from './MuscleIcon'
 
 interface Props {
   /** Lo que escribió el usuario. */
@@ -60,10 +61,10 @@ export function CreateExerciseCard({ name, groupHint, onCreated, label = 'Crear 
         <p className="font-semibold text-white text-sm truncate">{trimmed}</p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
           <span
-            className="text-[11px] px-1.5 py-0.5 rounded font-medium"
+            className="text-[11px] px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1"
             style={{ color: config.color, backgroundColor: config.color + '18' }}
           >
-            {config.emoji} {config.label}
+            <MuscleIcon group={draft.group} size={14} /> {config.label}
           </span>
           <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {draft.equipment}

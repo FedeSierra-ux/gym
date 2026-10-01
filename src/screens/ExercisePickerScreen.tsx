@@ -6,6 +6,7 @@ import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { CreateExerciseCard } from '../components/CreateExerciseCard'
 import { getExerciseSuggestion } from '../utils/aiCoach'
 import type { MuscleGroup, Exercise } from '../types'
+import { MuscleIcon } from '../components/MuscleIcon'
 
 interface Props {
   routineName: string
@@ -216,14 +217,14 @@ export function ExercisePickerScreen({ routineName }: Props) {
               <button
                 key={mg}
                 onClick={() => setSelectedGroup(isSelected ? null : mg)}
-                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all inline-flex items-center gap-1"
                 style={{
                   backgroundColor: isSelected ? cfg.color + '25' : '#13131c',
                   borderColor: isSelected ? cfg.color + '60' : '#1e1e2a',
                   color: isSelected ? cfg.color : '#6b7280',
                 }}
               >
-                {cfg.emoji} {cfg.label}
+                <MuscleIcon group={mg} size={17} color={isSelected ? cfg.color : '#6b7280'} /> {cfg.label}
               </button>
             )
           })}
@@ -262,7 +263,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
             {groupedExercises.map(({ group, config, exercises: exs }) => (
               <div key={group}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">{config.emoji}</span>
+                  <MuscleIcon group={group} size={20} />
                   <h3 className="font-bold text-sm text-white">{config.label}</h3>
                   <span
                     className="text-[11px] px-1.5 py-0.5 rounded font-medium"

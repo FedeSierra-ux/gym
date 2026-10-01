@@ -4,6 +4,7 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { CustomExercisesScreen } from './CustomExercisesScreen'
 import type { MuscleGroup, Routine } from '../types'
 import { useLongPress } from '../utils/useLongPress'
+import { MuscleIcon } from '../components/MuscleIcon'
 
 /**
  * Detecta el "mantener apretado" sobre una tarjeta. Se usa pointer events para
@@ -149,8 +150,9 @@ export function RutinasScreen() {
                       <span key={mg} style={{
                         fontSize: 11, fontWeight: 600, color: cfg.color,
                         background: cfg.color + '22', padding: '4px 10px', borderRadius: 20,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
                       }}>
-                        {cfg.emoji} {cfg.label}
+                        <MuscleIcon group={mg} size={17} /> {cfg.label}
                       </span>
                     )
                   })}

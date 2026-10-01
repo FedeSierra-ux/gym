@@ -204,7 +204,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
               >
                 {muscleGroups.map((mg) => (
                   <option key={mg} value={mg} style={{ background: 'var(--surf)' }}>
-                    {muscleGroupConfig[mg].emoji} {muscleGroupConfig[mg].label}
+                    {muscleGroupConfig[mg].label}
                   </option>
                 ))}
               </select>
