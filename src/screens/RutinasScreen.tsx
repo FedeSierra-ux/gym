@@ -152,7 +152,7 @@ export function RutinasScreen() {
                         background: cfg.color + '22', padding: '4px 10px', borderRadius: 20,
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                       }}>
-                        <MuscleIcon group={mg} size={17} /> {cfg.label}
+                        <MuscleIcon group={mg} size={20} /> {cfg.label}
                       </span>
                     )
                   })}

@@ -224,7 +224,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
                   color: isSelected ? cfg.color : '#6b7280',
                 }}
               >
-                <MuscleIcon group={mg} size={17} color={isSelected ? cfg.color : '#6b7280'} /> {cfg.label}
+                <MuscleIcon group={mg} size={20} color={isSelected ? cfg.color : '#6b7280'} /> {cfg.label}
               </button>
             )
           })}
@@ -263,7 +263,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
             {groupedExercises.map(({ group, config, exercises: exs }) => (
               <div key={group}>
                 <div className="flex items-center gap-2 mb-2">
-                  <MuscleIcon group={group} size={20} />
+                  <MuscleIcon group={group} size={26} />
                   <h3 className="font-bold text-sm text-white">{config.label}</h3>
                   <span
                     className="text-[11px] px-1.5 py-0.5 rounded font-medium"

@@ -65,7 +65,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
           </h2>
           <div className="flex flex-wrap gap-2 mb-5">
             <span style={{ fontSize: 11, fontWeight: 600, color: config.color, background: config.color + '20', padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <MuscleIcon group={exercise.muscleGroup} size={16} /> {config.label}
+              <MuscleIcon group={exercise.muscleGroup} size={20} /> {config.label}
             </span>
             <span style={{ fontSize: 11, fontWeight: 600, color: S.dim, background: 'rgba(255,255,255,0.07)', padding: '4px 10px', borderRadius: 20 }}>
               {exercise.equipment}

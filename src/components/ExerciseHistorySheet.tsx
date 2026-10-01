@@ -86,7 +86,7 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
             </div>
             {config && (
               <div style={{ fontSize: 12, color: config.color, fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {exercise && <MuscleIcon group={exercise.muscleGroup} size={16} />} {config.label}
+                {exercise && <MuscleIcon group={exercise.muscleGroup} size={20} />} {config.label}
               </div>
             )}
           </div>

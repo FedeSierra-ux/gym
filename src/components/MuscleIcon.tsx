@@ -1,6 +1,6 @@
 import type { MuscleGroup } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import { CARDIO_PULSE, muscleIconPaths } from '../data/muscleIcons'
+import { muscleIconSpec } from '../data/muscleIcons'
 
 interface Props {
   group: MuscleGroup
@@ -9,26 +9,23 @@ interface Props {
   color?: string
 }
 
-/** Ícono del grupo muscular: la silueta tenue y el músculo pintado. */
-export function MuscleIcon({ group, size = 16, color }: Props) {
-  const paths = muscleIconPaths[group]
-  if (!paths) return null
+/** Ícono del grupo muscular: la figura entera tenue, con la zona que trabaja pintada. */
+export function MuscleIcon({ group, size = 18, color }: Props) {
+  const { zonas, extra } = muscleIconSpec(group)
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      style={{ color: color ?? muscleGroupConfig[group].color, flexShrink: 0, display: 'inline-block', verticalAlign: 'middle' }}
+      style={{ color: color ?? muscleGroupConfig[group]?.color, flexShrink: 0, display: 'inline-block', verticalAlign: 'middle' }}
     >
-      {paths.outline.map((d) => (
-        <path key={d} d={d} fill="currentColor" fillOpacity={0.16} stroke="currentColor" strokeOpacity={0.55}
-          strokeWidth={1.2} strokeLinejoin="round" strokeLinecap="round" />
+      {zonas.map(({ paths, pintada }, i) => (
+        <g key={i} fill="currentColor" opacity={pintada ? 1 : 0.25}>
+          {paths.map((d) => <path key={d} d={d} />)}
+        </g>
       ))}
-      {paths.muscle.map((d) => <path key={d} d={d} fill="currentColor" />)}
-      {group === 'cardio' && (
-        <path d={CARDIO_PULSE} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
-      )}
+      {extra.map((d) => <path key={d} d={d} fill="currentColor" />)}
     </svg>
   )
 }

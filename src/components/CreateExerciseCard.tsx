@@ -64,7 +64,7 @@ export function CreateExerciseCard({ name, groupHint, onCreated, label = 'Crear 
             className="text-[11px] px-1.5 py-0.5 rounded font-medium inline-flex items-center gap-1"
             style={{ color: config.color, backgroundColor: config.color + '18' }}
           >
-            <MuscleIcon group={draft.group} size={14} /> {config.label}
+            <MuscleIcon group={draft.group} size={18} /> {config.label}
           </span>
           <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {draft.equipment}
