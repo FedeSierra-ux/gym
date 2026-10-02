@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { lunesDe } from '../utils/program'
 import { dayKey, plannedDowSet } from '../utils/trainingDays'
+import { planDeSemana } from '../utils/weekPlan'
 import { seriesEfectivas } from '../utils/volume'
 
 /**
@@ -9,7 +10,7 @@ import { seriesEfectivas } from '../utils/volume'
  * el lunes siguiente. Si la semana pasada no hubo entrenos, no se muestra.
  */
 export function WeeklyReview() {
-  const { workouts, prs, weekPlan, routines, repasoCerrado, cerrarRepaso } = useStore()
+  const { workouts, prs, weekPlan, weekOverrides, routines, repasoCerrado, cerrarRepaso } = useStore()
   const [nowTs] = useState(() => Date.now())
   const lunes = lunesDe(nowTs)
   const clave = dayKey(lunes)
@@ -20,7 +21,7 @@ export function WeeklyReview() {
   const semana = workouts.filter((w) => w.finishedAt && w.startedAt >= lunesPasado && w.startedAt < lunes)
   if (!semana.length) return null
 
-  const planificados = plannedDowSet(weekPlan, routines.map((r) => r.id)).size
+  const planificados = plannedDowSet(planDeSemana(weekPlan, weekOverrides, lunesPasado), routines.map((r) => r.id)).size
   const series = seriesEfectivas(semana)
   const fechas = new Set(semana.map((w) => w.startedAt))
   const records = prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter((h) => fechas.has(h.date)).length, 0)

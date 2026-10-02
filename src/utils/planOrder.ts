@@ -1,5 +1,6 @@
 import type { Workout } from '../types'
 import { dayKey } from './trainingDays'
+import { planDeSemana, type WeekOverrides } from './weekPlan'
 
 /**
  * Plan en orden: la semana tipo fija qué días se entrena y en qué orden van
@@ -51,6 +52,7 @@ export function proximaDelPlan(
  */
 export function prediccionDelPlan(
   weekPlan: Record<number, string | null>, routineIds: string[], workouts: Workout[], nowTs: number, dias = 42,
+  overrides: WeekOverrides = {},
 ): Map<string, string> {
   const orden = ordenDelPlan(weekPlan, routineIds)
   const out = new Map<string, string>()
@@ -61,10 +63,19 @@ export function prediccionDelPlan(
   for (let d = entrenoHoy ? 1 : 0; d < dias; d++) {
     const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + d, 12)
     const dow = (fecha.getDay() + 6) % 7
-    const id = weekPlan[dow]
+    const delaSemana = planDeSemana(weekPlan, overrides, fecha.getTime())
+    const id = delaSemana[dow]
     if (!id || !routineIds.includes(id)) continue
-    out.set(dayKey(fecha.getTime()), orden[pos])
-    pos = (pos + 1) % orden.length
+    if (delaSemana === weekPlan) {
+      out.set(dayKey(fecha.getTime()), orden[pos])
+      pos = (pos + 1) % orden.length
+    } else {
+      // Una semana con plan propio manda: cada día es la rutina que se puso,
+      // y el orden por defecto sigue desde ahí.
+      out.set(dayKey(fecha.getTime()), id)
+      const i = orden.indexOf(id)
+      if (i >= 0) pos = (i + 1) % orden.length
+    }
   }
   return out
 }

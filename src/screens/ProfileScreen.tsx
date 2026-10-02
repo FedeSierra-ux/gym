@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore, useAllExercises } from '../store/useStore'
 import { SettingsScreen } from './SettingsScreen'
 import { MedidasSheet } from './MedidasSheet'
@@ -46,7 +46,6 @@ function lapso(ms: number): string {
 
 export function ProfileScreen() {
   const { userName, updateUserName, workouts, prs, measures, avatarPhoto, setAvatarPhoto, addToast } = useStore()
-  const fotoInput = useRef<HTMLInputElement>(null)
   const allExercises = useAllExercises()
 
   const [editingName, setEditingName] = useState(false)
@@ -95,8 +94,15 @@ export function ProfileScreen() {
       {/* Avatar + Name */}
       <div className="px-4 mb-4">
         <div className="bg-card border border-border-hi rounded-2xl p-5 flex items-center gap-4">
-          <button
-            onClick={() => fotoInput.current?.click()}
+          {/*
+            El input va adentro de un <label>: abrir el selector con un .click()
+            sobre un input display:none no funciona en varias WebViews de
+            Android (ni siempre en iOS), y así lo dispara el navegador solo.
+            Sin `capture`, para que ofrezca galería y cámara.
+          */}
+          <label
+            htmlFor="avatar-foto"
+            role="button"
             aria-label={avatarPhoto ? 'Cambiar la foto de perfil' : 'Elegir una foto de perfil'}
             className="w-16 h-16 rounded-2xl bg-primary-muted border border-primary/30 flex items-center justify-center flex-shrink-0 overflow-hidden relative"
             style={{ padding: 0, cursor: 'pointer' }}
@@ -109,8 +115,14 @@ export function ProfileScreen() {
               background: S.surf, border: `1px solid ${S.line2}`, fontSize: 11,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>📷</span>
-          </button>
-          <input ref={fotoInput} type="file" accept="image/*" onChange={elegirFoto} style={{ display: 'none' }} />
+            <input
+              id="avatar-foto"
+              type="file"
+              accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
+              onChange={elegirFoto}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+            />
+          </label>
           <div className="flex-1 min-w-0">
             {editingName ? (
               <div className="flex gap-2">

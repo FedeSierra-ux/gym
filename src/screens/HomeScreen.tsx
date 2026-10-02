@@ -4,6 +4,7 @@ import { useWorkoutStore } from '../stores/workoutStore'
 import { BackupReminder } from '../components/BackupReminder'
 import { getWorkoutStreak } from '../utils/streak'
 import { plannedDowSet, dayKey } from '../utils/trainingDays'
+import { planDeSemana } from '../utils/weekPlan'
 import { proximaDelPlan } from '../utils/planOrder'
 import { ProgramCard } from '../components/ProgramCard'
 import { WeeklyReview } from '../components/WeeklyReview'
@@ -21,7 +22,7 @@ function formatDate() {
 }
 
 export function HomeScreen() {
-  const { userName, avatarPhoto, workouts, routines, prs, weekPlan, setActiveTab, openAgendaDay, getArchivedRoutineName } = useStore()
+  const { userName, avatarPhoto, workouts, routines, prs, weekPlan: planBase, weekOverrides, setActiveTab, openAgendaDay, getArchivedRoutineName } = useStore()
   const allExercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
@@ -34,6 +35,8 @@ export function HomeScreen() {
     : null
 
   const [nowTs] = useState(() => Date.now())
+  // La semana en curso puede tener un plan propio distinto de la semana por defecto.
+  const weekPlan = planDeSemana(planBase, weekOverrides, nowTs)
   // Racha por entrenos encadenados, no por días corridos: entrenar día por
   // medio (o tres veces por semana cambiando los días) no la corta.
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
@@ -149,7 +152,7 @@ export function HomeScreen() {
                   </span>
                   {esDelPlan && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--acc)', background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.22)', padding: '3px 9px', borderRadius: 20 }}>
-                      sigue tu plan
+                      Sigue tu plan
                     </span>
                   )}
                   {esDescansoPlanificado && (
