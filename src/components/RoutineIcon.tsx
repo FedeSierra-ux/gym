@@ -20,7 +20,7 @@ export function RoutineIcon({ routine, size = 18, boxed = false }: Props) {
   const exercises = useAllExercises()
   const routineIds = useStore((s) => s.routines.map((r) => r.id).join('|'))
   const color = routineColor(routine.id, routineIds.split('|'))
-  const figura = <BodyFigure niveles={gruposDeRutina(routine, exercises)} size={size} color={color} />
+  const figura = <BodyFigure niveles={gruposDeRutina(routine, exercises)} size={boxed ? size * 2 : size * 1.3} color={color} />
   if (!boxed) return figura
   return (
     <span style={{

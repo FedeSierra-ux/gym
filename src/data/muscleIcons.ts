@@ -1,98 +1,72 @@
 import type { MuscleGroup } from '../types'
+import { MODELOS, MUSCULOS_POR_LADO, ICONO_GRUPO, ZOOM_GRUPO, type Lado, type Sexo } from './bodyModels'
 
 /**
- * Íconos de los grupos musculares: la misma figura entera siempre, de frente o
- * de espaldas, con la zona que trabaja pintada (el estilo de los mapas
- * musculares de Hevy o Strong). No hay emojis de músculos: antes pecho era 🫁 y
- * espalda 🦅.
+ * Íconos de los grupos musculares: el cuerpo entero tenue con los músculos del
+ * grupo pintados, y encuadrado sobre ellos (zoom con contexto), como los mapas
+ * musculares de Hevy. Los trazados vienen de `bodyModels.ts`.
  *
- * Grilla de 24×24. Cada zona es un grupo de trazados; las que no se pintan se
- * dibujan tenues para que se lea el cuerpo completo.
+ * Las piernas y los glúteos se muestran con el cuerpo femenino: la app es para
+ * entrenar el plan de Mile.
  */
-type Zona = string[]
+const GRUPOS_FEMENINOS: MuscleGroup[] = ['piernas', 'gluteos']
+/** Grupos que, si son los únicos de una rutina, hacen que su figura sea femenina. */
+const GRUPOS_DE_TREN_INFERIOR: MuscleGroup[] = ['piernas', 'gluteos', 'core']
 
-const COMUNES = {
-  cabeza: ['M12 0.5A2.1 2.1 0 1 1 12 4.7A2.1 2.1 0 1 1 12 0.5Z'],
-  deltoides: ['M8.4 5.5Q6 5.4 5.7 8.4L7.6 8.8L8.6 7Z', 'M15.6 5.5Q18 5.4 18.3 8.4L16.4 8.8L15.4 7Z'],
-  brazos: ['M5.7 9.2L7.5 9.6L7.1 12.6L5.4 12.4Z', 'M18.3 9.2L16.5 9.6L16.9 12.6L18.6 12.4Z'],
-  antebrazos: ['M5.3 13L7 13.2L6.3 16.6L4.8 16.4Z', 'M18.7 13L17 13.2L17.7 16.6L19.2 16.4Z'],
-  gemelos: ['M9.6 20.6H11.3L11.1 23.4H9.9Z', 'M14.4 20.6H12.7L12.9 23.4H14.1Z'],
+export function sexoDeGrupo(group: MuscleGroup): Sexo {
+  return GRUPOS_FEMENINOS.includes(group) ? 'm' : 'h'
 }
 
-const FRENTE: Record<string, Zona> = {
-  ...COMUNES,
-  pectorales: ['M8.9 6.2H11.7V9.6Q10 10.4 8.7 9.4Z', 'M15.1 6.2H12.3V9.6Q14 10.4 15.3 9.4Z'],
-  abdominales: ['M9.2 10.3H14.8L14.4 14.4H9.6Z'],
-  cadera: ['M9.5 14.9H14.5L14.8 16.4H9.2Z'],
-  cuadriceps: ['M9.2 16.8H11.7L11.4 20.2H9.5Z', 'M14.8 16.8H12.3L12.6 20.2H14.5Z'],
+/** Femenina si lo que se trabaja es sólo tren inferior (y core) y hay piernas o glúteos. */
+export function sexoDeNiveles(niveles: Partial<Record<MuscleGroup, number>>): Sexo {
+  const activos = (Object.keys(niveles) as MuscleGroup[]).filter((g) => (niveles[g] ?? 0) > 0)
+  const hayInferior = activos.some((g) => GRUPOS_FEMENINOS.includes(g))
+  return hayInferior && activos.every((g) => GRUPOS_DE_TREN_INFERIOR.includes(g)) ? 'm' : 'h'
 }
 
-const ESPALDA: Record<string, Zona> = {
-  ...COMUNES,
-  trapecio: ['M10 5.2H14L13.6 7.4L12 8.4L10.4 7.4Z'],
-  dorsales: ['M8.8 7.4L11.6 8.8V13.4L9.6 13.8Z', 'M15.2 7.4L12.4 8.8V13.4L14.4 13.8Z'],
-  lumbares: ['M9.8 14H14.2L14.4 14.8H9.6Z'],
-  gluteos: ['M9.2 15.2H11.8V17.3Q10.3 17.9 9.1 17.1Z', 'M14.8 15.2H12.2V17.3Q13.7 17.9 14.9 17.1Z'],
-  isquios: ['M9.2 17.9H11.7L11.4 20.2H9.5Z', 'M14.8 17.9H12.3L12.6 20.2H14.5Z'],
+/** Un corazón chico en un lienzo de 24×24: el cardio no es un músculo que se pinte. */
+export const CORAZON = 'M12 20.5L4.6 13Q2.2 10.2 4.2 7.2Q6.8 4.2 10 6.6L12 8.4L14 6.6Q17.2 4.2 19.8 7.2Q21.8 10.2 19.4 13Z'
+
+export interface FiguraIcono {
+  vb: [number, number, number, number]
+  /** Todas las partes del cuerpo de ese lado, con las pintadas marcadas. */
+  partes: Array<{ paths: string[]; pintada: boolean }>
 }
 
-/** Un corazón chico en el pecho: el cardio no es un músculo que se pinte. */
-const CORAZON = 'M12 12.6L9.6 10.3Q8.7 9.2 9.4 8.1Q10.3 7 11.4 7.6L12 8.2L12.6 7.6Q13.7 7 14.6 8.1Q15.3 9.2 14.4 10.3Z'
-
-export interface MuscleIconSpec {
-  /** Todas las zonas de la figura, con las que van pintadas marcadas. */
-  zonas: Array<{ paths: Zona; pintada: boolean }>
-  /** Trazados extra que van siempre pintados (el corazón del cardio). */
-  extra: string[]
-}
-
-const PINTAR: Record<MuscleGroup, { lado: 'frente' | 'espalda'; zonas: string[] }> = {
-  pecho: { lado: 'frente', zonas: ['pectorales'] },
-  espalda: { lado: 'espalda', zonas: ['dorsales', 'trapecio'] },
-  hombros: { lado: 'frente', zonas: ['deltoides'] },
-  biceps: { lado: 'frente', zonas: ['brazos'] },
-  triceps: { lado: 'espalda', zonas: ['brazos'] },
-  piernas: { lado: 'frente', zonas: ['cuadriceps', 'gemelos'] },
-  gluteos: { lado: 'espalda', zonas: ['gluteos'] },
-  core: { lado: 'frente', zonas: ['abdominales'] },
-  cardio: { lado: 'frente', zonas: [] },
-}
-
-export function muscleIconSpec(group: MuscleGroup): MuscleIconSpec {
-  const { lado, zonas } = PINTAR[group] ?? PINTAR.core
-  const figura = lado === 'frente' ? FRENTE : ESPALDA
+/** El cuerpo de un grupo para su ícono: lado, encuadre cuadrado sobre lo que trabaja y partes. */
+export function figuraDeGrupo(group: MuscleGroup, sexo: Sexo = sexoDeGrupo(group)): FiguraIcono | null {
+  const spec = ICONO_GRUPO[group]
+  if (!spec) return null
+  const [lado, musculos] = spec
+  const modelo = MODELOS[sexo][lado]
+  const [x, y, w, h] = ZOOM_GRUPO[sexo][group]
+  const lado_ = Math.max(w, h) * 1.9
+  const cx = x + w / 2
+  const cy = y + h / 2
   return {
-    zonas: Object.entries(figura).map(([nombre, paths]) => ({ paths, pintada: zonas.includes(nombre) })),
-    extra: group === 'cardio' ? [CORAZON] : [],
+    vb: [cx - lado_ / 2, cy - lado_ / 2, lado_, lado_],
+    partes: Object.entries(modelo.partes).map(([nombre, paths]) => ({ paths, pintada: musculos.includes(nombre) })),
   }
 }
 
-/** Qué zonas pinta cada grupo, de frente y de espaldas, para la figura entera. */
-const ZONAS_POR_LADO: Record<'frente' | 'espalda', Partial<Record<MuscleGroup, string[]>>> = {
-  frente: {
-    pecho: ['pectorales'], hombros: ['deltoides'], biceps: ['brazos'],
-    piernas: ['cuadriceps', 'gemelos'], core: ['abdominales', 'cadera'],
-  },
-  espalda: {
-    espalda: ['dorsales', 'trapecio'], hombros: ['deltoides'], triceps: ['brazos'],
-    piernas: ['isquios', 'gemelos'], gluteos: ['gluteos'], core: ['lumbares'],
-  },
-}
-
 /**
- * La figura de un lado con cada zona en un nivel de 0 a 1: el mayor de los
- * grupos que la pintan. Sirve para el ícono de una rutina (niveles 0 o 1) y
+ * La figura entera de un lado con cada músculo en un nivel de 0 a 1: el mayor de
+ * los grupos que lo pintan. Sirve para el ícono de una rutina (niveles 0 o 1) y
  * para el mapa de Progreso (proporcional a las series).
  */
 export function figuraPorNiveles(
-  lado: 'frente' | 'espalda',
+  lado: Lado,
   niveles: Partial<Record<MuscleGroup, number>>,
-): Array<{ paths: Zona; nivel: number }> {
-  const figura = lado === 'frente' ? FRENTE : ESPALDA
-  const nivelZona = new Map<string, number>()
-  for (const [grupo, zonas] of Object.entries(ZONAS_POR_LADO[lado]) as [MuscleGroup, string[]][]) {
-    const n = niveles[grupo] ?? 0
-    for (const z of zonas) nivelZona.set(z, Math.max(nivelZona.get(z) ?? 0, n))
+  sexo: Sexo,
+): { vb: [number, number, number, number]; partes: Array<{ paths: string[]; nivel: number }> } {
+  const modelo = MODELOS[sexo][lado]
+  const nivelMusculo = new Map<string, number>()
+  for (const [grupo, musculos] of Object.entries(MUSCULOS_POR_LADO[lado])) {
+    const n = niveles[grupo as MuscleGroup] ?? 0
+    for (const m of musculos) nivelMusculo.set(m, Math.max(nivelMusculo.get(m) ?? 0, n))
   }
-  return Object.entries(figura).map(([nombre, paths]) => ({ paths, nivel: nivelZona.get(nombre) ?? 0 }))
+  return {
+    vb: modelo.vb,
+    partes: Object.entries(modelo.partes).map(([nombre, paths]) => ({ paths, nivel: nivelMusculo.get(nombre) ?? 0 })),
+  }
 }
