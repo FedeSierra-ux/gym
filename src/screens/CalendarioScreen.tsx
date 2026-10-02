@@ -7,6 +7,8 @@ import { formatKg, formatLoad } from '../utils/format'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { getWorkoutStreak } from '../utils/streak'
 import { prediccionDelPlan } from '../utils/planOrder'
+import { lunesDe } from '../utils/program'
+import { claveDeSemana, planDeSemana } from '../utils/weekPlan'
 import { recordsPorReps, REPS_TABLA } from '../utils/records'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleIcon } from '../components/MuscleIcon'
@@ -390,25 +392,96 @@ function WeekPlanDayRow({
   )
 }
 
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+/** "5–11 oct" o "28 sep–4 oct" para la semana que arranca en `lunes`. */
+function rangoSemana(lunes: Date): string {
+  const dom = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + 6)
+  const ini = lunes.getMonth() === dom.getMonth() ? `${lunes.getDate()}` : `${lunes.getDate()} ${MESES_CORTOS[lunes.getMonth()]}`
+  return `${ini}–${dom.getDate()} ${MESES_CORTOS[dom.getMonth()]}`
+}
+
+const botonModo = (activo: boolean): React.CSSProperties => ({
+  flex: 1, minHeight: 36, borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+  fontFamily: 'DM Sans, system-ui, sans-serif',
+  background: activo ? S.surf2 : 'transparent', border: `1px solid ${activo ? S.line2 : 'transparent'}`,
+  color: activo ? S.ink : S.dim,
+})
+
+const botonFlecha: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 10, background: S.surf2, border: `1px solid ${S.line2}`,
+  color: S.ink, fontSize: 16, cursor: 'pointer',
+}
+
+/**
+ * La semana por defecto (la que rige siempre) y, aparte, el plan de cada semana
+ * puntual: no todas son iguales, y una semana sin plan propio sigue la de por defecto.
+ */
 function WeekPlanner() {
-  const { weekPlan, setWeekPlanDay, routines } = useStore()
+  const { weekPlan, weekOverrides, setWeekPlanDay, setWeekOverrideDay, clearWeekOverride, routines } = useStore()
+  const [modo, setModo] = useState<'default' | 'semana'>('default')
+  const [offset, setOffset] = useState(0) // 0 = esta semana
+  const [nowTs] = useState(() => Date.now())
+
+  const lunes = new Date(lunesDe(nowTs))
+  lunes.setDate(lunes.getDate() + offset * 7)
+  const clave = claveDeSemana(lunes.getTime())
+  const propio = weekOverrides[clave]
+  const plan = modo === 'default' ? weekPlan : propio ?? weekPlan
+  const titulo = offset === 0 ? 'Esta semana' : offset === 1 ? 'Próxima semana' : offset === -1 ? 'Semana pasada' : 'Semana'
+
   return (
     <div style={{ background: S.surf, borderRadius: 14, padding: '14px 16px', border: `1px solid ${S.line2}` }}>
-      <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 2 }}>Semana tipo</p>
-      <p style={{ fontSize: 11, color: S.dim, marginBottom: 10 }}>
-        Los días que entrenás y el orden de las rutinas. Si faltás un día, te toca la que sigue. Mantené apretado un día para marcarlo descanso.
-      </p>
+      <div className="flex gap-1" style={{ marginBottom: 12, padding: 3, borderRadius: 12, background: S.bg, border: `1px solid ${S.line}` }}>
+        <button onClick={() => setModo('default')} style={botonModo(modo === 'default')}>Por defecto</button>
+        <button onClick={() => setModo('semana')} style={botonModo(modo === 'semana')}>Por semana</button>
+      </div>
+
+      {modo === 'default' ? (
+        <>
+          <p style={{ fontSize: 12, fontWeight: 600, color: S.dim, marginBottom: 2 }}>Semana por defecto</p>
+          <p style={{ fontSize: 11, color: S.dim, marginBottom: 10 }}>
+            Rige en todas las semanas que no tengan su propio plan. Los días que entrenás y el orden de las rutinas: si faltás un día, te toca la que sigue. Mantené apretado un día para marcarlo descanso.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2" style={{ marginBottom: 6 }}>
+            <button onClick={() => setOffset((o) => Math.max(-4, o - 1))} aria-label="Semana anterior" style={botonFlecha}>‹</button>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: S.ink }}>{titulo}</p>
+              <p className="num" style={{ fontSize: 11, color: S.dim }}>{rangoSemana(lunes)}</p>
+            </div>
+            <button onClick={() => setOffset((o) => o + 1)} aria-label="Semana siguiente" style={botonFlecha}>›</button>
+          </div>
+          <p style={{ fontSize: 11, color: S.dim, marginBottom: 10 }}>
+            {propio
+              ? 'Esta semana tiene su propio plan. Lo que cambies acá no toca la semana por defecto.'
+              : 'Sigue la semana por defecto. Si cambiás un día, esta semana pasa a tener su propio plan.'}
+          </p>
+        </>
+      )}
+
       <div className="flex flex-col gap-1.5">
         {DOW_LABELS.map((label, dow) => (
           <WeekPlanDayRow
             key={dow}
             label={label}
-            routineId={weekPlan[dow] ?? null}
+            routineId={plan[dow] ?? null}
             routines={routines}
-            onSet={(routineId) => setWeekPlanDay(dow, routineId)}
+            onSet={(routineId) => modo === 'default' ? setWeekPlanDay(dow, routineId) : setWeekOverrideDay(clave, dow, routineId)}
           />
         ))}
       </div>
+
+      {modo === 'semana' && propio && (
+        <button
+          onClick={() => clearWeekOverride(clave)}
+          style={{ marginTop: 10, width: '100%', minHeight: 40, borderRadius: 10, background: 'none', border: `1px solid ${S.line2}`, color: S.dim, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, system-ui, sans-serif' }}
+        >
+          Volver a la semana por defecto
+        </button>
+      )}
     </div>
   )
 }
@@ -458,7 +531,7 @@ function HistoryRow({ workout: w, routines, onOpen, onLongPress }: {
 }
 
 function CalendarioTab({ year, month }: { year: number; month: number }) {
-  const { workouts, routines, weekPlan, deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
+  const { workouts, routines, weekPlan, weekOverrides, deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const agendaDayTs = useStore((s) => s.agendaDayTs)
   const clearAgendaDay = useStore((s) => s.clearAgendaDay)
@@ -481,14 +554,15 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const [nowTs] = useState(() => Date.now())
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
-  const plannedDows = plannedDowSet(weekPlan, routines.map(r => r.id))
+  const routineIdsVivos = routines.map(r => r.id)
+  const plannedDows = (d: Date) => plannedDowSet(planDeSemana(weekPlan, weekOverrides, d.getTime()), routineIdsVivos).has((d.getDay() + 6) % 7)
   // Se mide contra los días que la semana tipo pedía entrenar, no contra los 31
   // del mes: ir tres veces por semana es cumplir el plan.
   const { trained: gymDaysCount, planned } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
   const streak = getWorkoutStreak(finishedWorkouts, nowTs)
   const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
   // Plan en orden: los días que vienen muestran la rutina que de verdad te toca.
-  const planPorDia = prediccionDelPlan(weekPlan, routines.map(r => r.id), finishedWorkouts, nowTs, 70)
+  const planPorDia = prediccionDelPlan(weekPlan, routines.map(r => r.id), finishedWorkouts, nowTs, 70, weekOverrides)
 
   return (
     <div className="flex flex-col gap-3">
@@ -505,6 +579,7 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
           workouts={finishedWorkouts}
           routines={routines}
           weekPlan={weekPlan}
+          weekOverrides={weekOverrides}
           planPorDia={planPorDia}
           onSelectDay={(ts) => {
             const d = new Date(ts)

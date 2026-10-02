@@ -292,6 +292,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               </a>{' '}
               (CC BY-SA 4.0).
             </p>
+            <p className="text-xs text-gray-400">
+              Figuras de los músculos:{' '}
+              <a href="https://github.com/HichamELBSI/react-native-body-highlighter" target="_blank" rel="noreferrer" className="text-primary">
+                react-native-body-highlighter
+              </a>{' '}
+              (licencia MIT), recortadas y encuadradas para cada grupo.
+            </p>
             <p className="text-xs text-gray-600">
               Cambios respecto del original: se redimensionaron a 256 px y se recomprimieron para que la app funcione
               sin conexión.

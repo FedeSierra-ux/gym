@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Routine, Workout } from '../types'
 import { dayKey, setsByDay, routineByDay, routineColor } from '../utils/trainingDays'
+import { planDeSemana, type WeekOverrides } from '../utils/weekPlan'
 import { S } from '../theme'
 
 /** Semana que arranca en lunes, como el calendario de acá. */
@@ -23,7 +24,7 @@ interface DayCell {
  * lee de un vistazo qué días se fue y si se están alternando bien las rutinas.
  */
 export function MonthCalendar({
-  year, month, workouts, routines, onSelectDay, weekPlan, planPorDia,
+  year, month, workouts, routines, onSelectDay, weekPlan, weekOverrides, planPorDia,
 }: {
   year: number
   month: number
@@ -34,6 +35,8 @@ export function MonthCalendar({
   onSelectDay?: (ts: number) => void
   /** Semana tipo (0 = lunes → rutina): los días planificados llevan un aro del color de esa rutina. */
   weekPlan?: Record<number, string | null>
+  /** Semanas con plan propio (por la clave de su lunes): mandan sobre la semana tipo. */
+  weekOverrides?: WeekOverrides
   /**
    * Plan en orden: qué rutina cae en cada día de hoy en adelante. Si se pasa,
    * manda sobre la semana tipo para los días que vienen (si faltaste uno, las
@@ -97,7 +100,8 @@ export function MonthCalendar({
               const dow = (date.getDay() + 6) % 7
               // Entrenado: relleno. Planificado: aro con el color de la rutina
               // (tenue si ya pasó y no se hizo). Descanso: vacío.
-              const rutinaSemana = weekPlan?.[dow] && routineIds.includes(weekPlan[dow]!) ? weekPlan[dow]! : null
+              const planDelDia = weekPlan ? planDeSemana(weekPlan, weekOverrides ?? {}, cell.ts) : undefined
+              const rutinaSemana = planDelDia?.[dow] && routineIds.includes(planDelDia[dow]!) ? planDelDia[dow]! : null
               const rutinaPlan = planPorDia && rutinaSemana && (cell.isFuture || cell.isToday)
                 ? planPorDia.get(cell.key) ?? rutinaSemana
                 : rutinaSemana

@@ -9,6 +9,7 @@ import { seedRoutines, seedWorkouts } from '../data/seedData'
 import { buildMileRoutines, completarPlanMile, MILE_WEEK_PLAN } from '../data/mileRoutines'
 import { computeRecords } from '../utils/records'
 import { tieneVariante } from '../utils/routineVariant'
+import type { WeekOverrides } from '../utils/weekPlan'
 import { faseDeSemana, inicioParaSemana, semanaDelPrograma, SEMANAS_PROGRAMA, type ProgramaEstado } from '../utils/program'
 
 interface AppState {
@@ -29,7 +30,10 @@ interface AppState {
   onboarded: boolean
   anthropicApiKey: string
   toasts: AppToast[]
+  /** La semana por defecto: rige en toda semana que no tenga plan propio. */
   weekPlan: Record<number, string | null>
+  /** Plan propio de algunas semanas, por la clave (dayKey) de su lunes. */
+  weekOverrides: WeekOverrides
   /** Entrenos por semana que se propone el usuario. null = los que pide la semana tipo. */
   weeklyGoal: number | null
   /** Peso corporal y circunferencias, de la medición más vieja a la más nueva. */
@@ -95,6 +99,10 @@ interface AppState {
 
   // Week plan
   setWeekPlanDay: (dow: number, routineId: string | null) => void
+  /** Cambia un día de una semana puntual; la primera vez parte de la semana por defecto. */
+  setWeekOverrideDay: (lunesKey: string, dow: number, routineId: string | null) => void
+  /** Esa semana vuelve a seguir la semana por defecto. */
+  clearWeekOverride: (lunesKey: string) => void
   setWeeklyGoal: (goal: number | null) => void
 
   // Medidas
@@ -142,6 +150,7 @@ export const useStore = create<AppState>()(
       anthropicApiKey: '',
       toasts: [],
       weekPlan: {},
+      weekOverrides: {},
       weeklyGoal: null,
       measures: [],
       lastBackupAt: null,
@@ -173,11 +182,18 @@ export const useStore = create<AppState>()(
         const weekPlan = Object.fromEntries(
           Object.entries(s.weekPlan).map(([dow, routineId]) => [dow, routineId === id ? null : routineId])
         )
+        const weekOverrides = Object.fromEntries(
+          Object.entries(s.weekOverrides).map(([lunes, plan]) => [
+            lunes,
+            Object.fromEntries(Object.entries(plan).map(([dow, routineId]) => [dow, routineId === id ? null : routineId])),
+          ])
+        )
         return {
           routines: s.routines.filter((r) => r.id !== id),
           activeRoutineId: s.activeRoutineId === id ? null : s.activeRoutineId,
           archivedRoutineNames: archived,
           weekPlan,
+          weekOverrides,
         }
       }),
 
@@ -265,6 +281,21 @@ export const useStore = create<AppState>()(
 
       setWeekPlanDay: (dow, routineId) =>
         set((s) => ({ weekPlan: { ...s.weekPlan, [dow]: routineId } })),
+
+      setWeekOverrideDay: (lunesKey, dow, routineId) =>
+        set((s) => ({
+          weekOverrides: {
+            ...s.weekOverrides,
+            [lunesKey]: { ...(s.weekOverrides[lunesKey] ?? s.weekPlan), [dow]: routineId },
+          },
+        })),
+
+      clearWeekOverride: (lunesKey) =>
+        set((s) => {
+          const resto = { ...s.weekOverrides }
+          delete resto[lunesKey]
+          return { weekOverrides: resto }
+        }),
 
       setWeeklyGoal: (goal) => set({ weeklyGoal: goal }),
 
@@ -414,6 +445,7 @@ export const useStore = create<AppState>()(
         onboarded: state.onboarded,
         anthropicApiKey: state.anthropicApiKey,
         weekPlan: state.weekPlan,
+        weekOverrides: state.weekOverrides,
         weeklyGoal: state.weeklyGoal,
         measures: state.measures,
         lastBackupAt: state.lastBackupAt,

@@ -98,7 +98,7 @@ export function monthStats(
   year: number,
   month: number,
   nowTs: number,
-  plannedDows?: Set<number>,
+  plannedDows?: Set<number> | ((date: Date) => boolean),
 ): MonthStats {
   const byDay = setsByDay(workouts)
   const now = new Date(nowTs)
@@ -111,7 +111,7 @@ export function monthStats(
     daysCounted++
     // 0 = lunes, igual que el calendario y la semana tipo.
     const dow = (date.getDay() + 6) % 7
-    if (plannedDows?.has(dow)) planned++
+    if (typeof plannedDows === 'function' ? plannedDows(date) : plannedDows?.has(dow)) planned++
     const sets = byDay.get(dayKey(date.getTime())) ?? 0
     if (sets > 0) { trained++; totalSets += sets }
   }

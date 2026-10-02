@@ -1,5 +1,5 @@
 import type { MuscleGroup } from '../types'
-import { figuraPorNiveles } from '../data/muscleIcons'
+import { figuraPorNiveles, sexoDeNiveles } from '../data/muscleIcons'
 
 /**
  * Imagen de un entreno terminado, en formato historia (1080 × 1920), para
@@ -30,13 +30,15 @@ const SANS = '"DM Sans", system-ui, sans-serif'
 const MONO = '"JetBrains Mono", ui-monospace, monospace'
 
 function figura(ctx: CanvasRenderingContext2D, lado: 'frente' | 'espalda', niveles: DatosImagen['niveles'], x: number, y: number, alto: number, color: string) {
-  const escala = alto / 24
+  const { vb, partes } = figuraPorNiveles(lado, niveles, sexoDeNiveles(niveles))
+  const escala = alto / vb[3]
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(escala, escala)
+  ctx.translate(-vb[0], -vb[1])
   ctx.fillStyle = color
-  for (const { paths, nivel } of figuraPorNiveles(lado, niveles)) {
-    ctx.globalAlpha = 0.16 + 0.84 * nivel
+  for (const { paths, nivel } of partes) {
+    ctx.globalAlpha = 0.2 + 0.8 * nivel
     for (const d of paths) ctx.fill(new Path2D(d))
   }
   ctx.restore()
@@ -76,10 +78,10 @@ export async function generarImagenEntreno(d: DatosImagen): Promise<Blob> {
   ctx.fillText(ajustar(ctx, d.rutina, W - 2 * M), M, 290)
 
   // Mapa del cuerpo de lo trabajado, frente y espalda.
-  const alto = 560
-  // La figura ocupa el centro de su caja: se solapan las cajas para que queden cerca.
-  figura(ctx, 'frente', d.niveles, W / 2 - alto + 70, 370, alto, d.color)
-  figura(ctx, 'espalda', d.niveles, W / 2 - 70, 370, alto, d.color)
+  const alto = 600
+  const ancho = alto * 0.5
+  figura(ctx, 'frente', d.niveles, W / 2 - ancho - 20, 360, alto, d.color)
+  figura(ctx, 'espalda', d.niveles, W / 2 + 20, 360, alto, d.color)
 
   // Cifras en una grilla de 2 × 2.
   const cifras: [string, string, string?][] = [

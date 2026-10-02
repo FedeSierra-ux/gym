@@ -212,7 +212,7 @@ function MusculosTab({ desde, nowTs, dias }: { desde: number; nowTs: number; dia
     <div className="flex flex-col gap-3">
       <div style={{ background: S.surf, borderRadius: 18, padding: '18px 16px 14px', border: `1px solid ${S.line2}` }}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <BodyFigure niveles={niveles} size={140} color={S.acc} base={0.1} />
+          <BodyFigure niveles={niveles} size={250} color={S.acc} base={0.14} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 110, fontSize: 11, color: S.faint, marginTop: 4 }}>
           <span>Frente</span><span>Espalda</span>

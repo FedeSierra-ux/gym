@@ -4,6 +4,7 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleIcon } from './MuscleIcon'
 import { seriesPorGrupo, SERIES_SEMANA_MIN, SERIES_SEMANA_MAX } from '../utils/volume'
 import { lunesDe } from '../utils/program'
+import { planDeSemana } from '../utils/weekPlan'
 import type { MuscleGroup } from '../types'
 
 /**
@@ -12,10 +13,11 @@ import type { MuscleGroup } from '../types'
  * grupo que quedó corto se ve aunque todavía tenga cero.
  */
 export function WeeklyMuscleSets() {
-  const { workouts, routines, weekPlan } = useStore()
+  const { workouts, routines, weekPlan: planBase, weekOverrides } = useStore()
   const allExercises = useAllExercises()
   const [nowTs] = useState(() => Date.now())
   const desde = lunesDe(nowTs)
+  const weekPlan = planDeSemana(planBase, weekOverrides, nowTs)
   const porGrupo = seriesPorGrupo(workouts, allExercises, desde, nowTs + 1)
 
   // Los grupos de las rutinas del plan (o de todas, si no hay plan).
