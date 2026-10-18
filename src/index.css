@@ -1,3 +1,15 @@
+/* Fuentes locales (@fontsource): antes venían de Google Fonts, que bloqueaba
+   el render, mandaba una petición a Google en cada apertura y offline caía a
+   la fuente del sistema. Sólo el subset latin (alcanza para el castellano) y
+   los pesos que usa la app. */
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
