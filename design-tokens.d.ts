@@ -30,6 +30,22 @@ export declare const text: {
 
 export declare const TAP_MIN: number
 
+export declare const space: {
+  1: number
+  2: number
+  3: number
+  4: number
+  5: number
+  6: number
+  8: number
+}
+
+export declare const row: {
+  compact: number
+  regular: number
+  loose: number
+}
+
 export declare const routinePalette: string[]
 
 export declare const muscleColors: {
