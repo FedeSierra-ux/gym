@@ -1,20 +1,25 @@
 import { useHoy } from '../utils/useHoy'
-import { useStore, useAllExercises } from '../store/useStore'
+import { useStore } from '../store/useStore'
 import { useWorkoutStore } from '../stores/workoutStore'
 import { BackupReminder } from '../components/BackupReminder'
-import { getWorkoutStreak } from '../utils/streak'
-import { plannedDowSet, dayKey, inicioDeFaltas } from '../utils/trainingDays'
+import { plannedDowSet, dayKey, inicioDeFaltas, routineColor } from '../utils/trainingDays'
 import { planDeSemana } from '../utils/weekPlan'
 import { prediccionDelPlan } from '../utils/planOrder'
 import { haceCuanto } from '../utils/relativeDate'
+import { seriesEfectivas } from '../utils/volume'
 import { ProgramCard } from '../components/ProgramCard'
 import { WeeklyReview } from '../components/WeeklyReview'
 import { ResumenMesCard } from '../components/ResumenMesCard'
 import { WrappedCard } from '../components/WrappedCard'
 import { WeeklyMuscleSets } from '../components/WeeklyMuscleSets'
 import { RoutineIcon } from '../components/RoutineIcon'
+import { R, S, T } from '../theme'
+import { ROW, SP } from '../utils/_pendiente3'
 
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+/** Margen lateral de Inicio; el hero y la franja de cifras lo anulan para ir de borde a borde. */
+const LADO = 22
 
 function formatDate() {
   const now = new Date()
@@ -26,7 +31,6 @@ function formatDate() {
 
 export function HomeScreen() {
   const { userName, avatarPhoto, workouts, routines, prs, weekPlan: planBase, weekOverrides, weeklyGoal, setActiveTab, openAgendaDay, getArchivedRoutineName, inicioUso } = useStore()
-  const allExercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
   const finishedWorkouts = workouts.filter(w => w.finishedAt)
@@ -40,9 +44,6 @@ export function HomeScreen() {
   const nowTs = useHoy()
   // La semana en curso puede tener un plan propio distinto de la semana por defecto.
   const weekPlan = planDeSemana(planBase, weekOverrides, nowTs)
-  // Racha por entrenos encadenados, no por días corridos: entrenar día por
-  // medio (o tres veces por semana cambiando los días) no la corta.
-  const streak = getWorkoutStreak(finishedWorkouts, nowTs)
   const diasPlanificados = plannedDowSet(weekPlan, routines.map(r => r.id)).size
 
   // La semana en curso, de lunes a domingo: hecho, planificado o descanso.
@@ -68,10 +69,22 @@ export function HomeScreen() {
   // La meta de Ajustes manda; sin meta, los días de la semana tipo.
   const metaSemana = weeklyGoal ?? semana.filter(d => d.planificado).length
 
+  // La franja de cifras: entrenos del mes, y series y récords de los últimos
+  // 7 días (no desde el lunes: un domingo "esta semana" ya casi terminó).
+  const entrenosDelMes = finishedWorkouts.filter(w => {
+    const d = new Date(w.startedAt)
+    return d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth()
+  }).length
+  const hace7 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 6).getTime()
+  const ultimos7 = finishedWorkouts.filter(w => w.startedAt >= hace7)
+  const series7 = seriesEfectivas(ultimos7)
+  // Los récords quedan fechados con el inicio del entreno en que se hicieron.
+  const fechas7 = new Set(ultimos7.map(w => w.startedAt))
+  const records7 = prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter(h => fechas7.has(h.date)).length, 0)
+
   // Last session stats (con días de calendario: el cambio de horario no corre la cuenta)
   const daysAgoStr = lastWorkout ? haceCuanto(lastWorkout.startedAt, nowTs) : ''
   const lastTotalSets = lastWorkout?.exercises.reduce((a, e) => a + e.sets.filter(s => !s.isWarmup).length, 0) ?? 0
-  // Los récords quedan fechados con el inicio del entreno en que se hicieron.
   const lastRecords = lastWorkout
     ? prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter(h => h.date === lastWorkout.startedAt).length, 0)
     : 0
@@ -79,7 +92,7 @@ export function HomeScreen() {
   // Qué toca hoy. La semana tipo dice qué días se entrena y en qué orden van
   // las rutinas, pero no ata cada rutina a un día: toca la siguiente a la
   // última que hiciste. Si faltaste el miércoles, el viernes te espera brazos.
-  const hoyDow = (new Date(nowTs).getDay() + 6) % 7  // 0 = lunes
+  const hoyDow = hoyIdx  // 0 = lunes
   const routineIds = routines.map(r => r.id)
   // La misma cuenta que la Agenda: en una semana con plan propio manda la
   // rutina que se puso ese día, y si no, la siguiente en el orden.
@@ -110,25 +123,65 @@ export function HomeScreen() {
   const esDescansoPlanificado = diasPlanificados > 0 && !hoySeEntrena && !yaEntreneHoy
   const suggestedExerciseCount = suggestedRoutine?.exercises.length ?? 0
   const approxMinutes = Math.round((suggestedRoutine?.exercises.reduce((a, e) => a + e.sets * 2.5, 0) ?? 0))
-  const previewExercises = suggestedRoutine?.exercises.slice(0, 4).map(re => {
-    const ex = allExercises.find(e => e.id === re.exerciseId)
-    return ex ? { name: ex.nameEs, sets: re.sets } : null
-  }).filter(Boolean) ?? []
+  const etiquetaHoy = yaEntreneHoy ? 'Próximo entreno' : esDelPlan ? 'Hoy te toca' : esDescansoPlanificado ? 'Hoy descansás · podés adelantar' : 'Próximo entreno'
 
   const userInitial = userName?.charAt(0)?.toUpperCase() ?? '?'
+
+  /* El bloque Semana: los días (relleno = entrenado, aro = planificado) y la línea de cifras. */
+  const bloqueSemana = (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: `${SP[4]}px 4px 0` }} role="list" aria-label="Esta semana">
+        {semana.map((d) => {
+          const estado = d.hecho ? 'entrenado' : d.planificado ? (d.pasado ? 'planificado, no se hizo' : 'planificado') : 'descanso'
+          const borde = d.hecho ? 'none'
+            : d.esHoy ? `2px dashed ${d.planificado ? S.acc : S.faint}`
+            : d.planificado ? `2px solid ${d.pasado ? S.faint : S.mute}` : 'none'
+          return (
+            <div key={d.letra} role="listitem" aria-label={`${d.letra}: ${estado}`}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: SP[2], width: 36 }}>
+              <span style={{ fontSize: T.caption, fontWeight: 700, color: d.esHoy ? S.ink : S.dim }}>{d.letra}</span>
+              <span style={{
+                width: 28, height: 28, borderRadius: 14, boxSizing: 'border-box',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: d.hecho ? S.good : 'transparent', border: borde,
+              }}>
+                {d.hecho
+                  ? <span style={{ color: S.onAcc, fontSize: T.caption, fontWeight: 700 }}>✓</span>
+                  : (!d.planificado || d.esHoy) && <span style={{ width: 6, height: 6, borderRadius: 3, background: d.esHoy ? S.dim : S.faint }} />}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: SP[2], rowGap: SP[1], marginTop: SP[3], paddingTop: SP[3], borderTop: `1px solid ${S.line}`, fontSize: T.caption, color: S.dim }}>
+        <span style={{ whiteSpace: 'nowrap' }}>
+          Esta semana <b className="num" style={{ color: S.ink }}>{hechosSemana}</b>
+          {metaSemana > 0 ? <span className="num">/{metaSemana}</span> : hechosSemana === 1 ? ' entreno' : ' entrenos'}
+        </span>
+        <WeeklyReview />
+      </div>
+    </>
+  )
+
+  const cifra = (valor: number, etiqueta: string, color = S.ink) => (
+    <div style={{ flex: 1, minWidth: 0, padding: `${SP[3]}px ${SP[3]}px` }}>
+      <div className="num" style={{ fontSize: T.h2, fontWeight: 700, lineHeight: 1.1, color }}>{valor}</div>
+      <div style={{ fontSize: T.micro, color: S.dim, marginTop: SP[1], textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{etiqueta}</div>
+    </div>
+  )
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
       <div className="flex-1 min-h-0 scroll-area">
 
         {/* Header */}
-        <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
+        <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: LADO, paddingRight: LADO }}>
           <div className="flex justify-between items-center">
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--dim)', letterSpacing: 0.3 }}>
+              <div style={{ fontSize: T.caption, fontWeight: 500, color: S.dim, letterSpacing: 0.3 }}>
                 {formatDate()}
               </div>
-              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.4, marginTop: 2, color: 'var(--ink)' }}>
+              <div style={{ fontSize: T.h1, fontWeight: 700, letterSpacing: -0.4, marginTop: 2, color: S.ink }}>
                 Hola, {userName}
               </div>
             </div>
@@ -137,9 +190,9 @@ export function HomeScreen() {
               aria-label="Abrir perfil"
               style={{
                 flexShrink: 0, width: 44, height: 44, borderRadius: 22,
-                background: 'var(--surf2)', border: '2px solid var(--acc)', overflow: 'hidden', padding: 0,
+                background: S.surf2, border: `2px solid ${S.acc}`, overflow: 'hidden', padding: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 17, fontWeight: 700, color: 'var(--acc)',
+                fontSize: T.title, fontWeight: 700, color: S.acc,
               }}
             >
               {avatarPhoto
@@ -149,159 +202,131 @@ export function HomeScreen() {
           </div>
         </div>
 
-        {/* Qué toca hoy — lo primero, con el botón de arrancar sobre el pliegue */}
-        <div style={{ padding: '16px 22px 0' }}>
-          {suggestedRoutine ? (
-            <div style={{ background: 'var(--surf)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--line2)' }}>
-              <div style={{ padding: '16px 18px 14px' }}>
-                <div className="flex items-center justify-between gap-2" style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dim)', letterSpacing: 0.3 }}>
-                    {yaEntreneHoy ? 'Próximo entreno' : esDelPlan ? 'Hoy te toca' : esDescansoPlanificado ? 'Hoy descansás' : 'Próximo entreno'}
-                  </span>
-                  {esDelPlan && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--acc)', background: 'rgba(232,99,74,0.12)', border: '1px solid rgba(232,99,74,0.22)', padding: '3px 9px', borderRadius: 24 }}>
-                      Sigue tu plan
-                    </span>
-                  )}
-                  {esDescansoPlanificado && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dim)', background: 'var(--surf2)', border: '1px solid var(--line2)', padding: '3px 9px', borderRadius: 24 }}>
-                      podés adelantar
-                    </span>
-                  )}
+        {/* Hoy: la acción del día, sin tarjeta. La jerarquía la hacen el tamaño y el espacio. */}
+        {suggestedRoutine ? (
+          <section
+            aria-label={etiquetaHoy}
+            style={{
+              marginTop: SP[3], padding: `${SP[4]}px ${LADO}px ${SP[4]}px`,
+              background: 'linear-gradient(180deg, rgba(232,99,74,0.14), rgba(232,99,74,0) 85%)',
+              borderBottom: `1px solid ${S.line}`,
+            }}
+          >
+            <div className="eyebrow" style={{ color: S.acc }}>{etiquetaHoy}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SP[3], marginTop: SP[2] }}>
+              <RoutineIcon routine={suggestedRoutine} size={18} boxed />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {suggestedRoutine.name}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--ink)' }}>
-                  <RoutineIcon routine={suggestedRoutine} size={20} />
-                  <span style={{ minWidth: 0 }}>{suggestedRoutine.name}</span>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--dim)', marginTop: 4 }}>
-                  {suggestedExerciseCount} ejercicios · ~{approxMinutes} min · {previewExercises.map(e => e?.name).filter(Boolean).slice(0, 2).join(', ')}
-                  {suggestedExerciseCount > 2 ? '…' : ''}
+                <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>
+                  <span className="num">{suggestedExerciseCount}</span> ejercicios · ~<span className="num">{approxMinutes}</span> min
                 </div>
               </div>
-              <button
-                onClick={() => startWorkout(suggestedRoutine.id)}
-                style={{
-                  width: '100%', background: 'linear-gradient(135deg, var(--acc) 0%, var(--acc-dim) 100%)', border: 'none',
-                  color: 'var(--on-acc)', fontSize: 17, fontWeight: 700, minHeight: 56,
-                  cursor: 'pointer', letterSpacing: 0.3,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>▶</span> Iniciar entreno
-              </button>
-              {/* Cualquier otra rutina, sin pasar por la pestaña Rutinas */}
-              {conEjercicios.length > 1 && (
-                <div
-                  className="flex gap-2"
-                  style={{ padding: '10px 14px 12px', overflowX: 'auto', scrollbarWidth: 'none', borderTop: '1px solid var(--line)' }}
-                >
-                  {conEjercicios.filter(r => r.id !== suggestedRoutine.id).map(r => (
-                    <button
-                      key={r.id}
-                      onClick={() => startWorkout(r.id)}
-                      style={{
-                        flexShrink: 0, minHeight: 40, padding: '0 14px', borderRadius: 12,
-                        background: 'var(--surf2)', border: '1px solid var(--line2)',
-                        color: 'var(--dim)', fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <RoutineIcon routine={r} size={14} /> {r.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
-          ) : (
-            <div style={{ borderRadius: 16, padding: 20, border: '1.5px dashed var(--line2)', textAlign: 'center' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🏋️</div>
-              <p style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 13 }}>¡Tu primera sesión te espera!</p>
+            <button
+              onClick={() => startWorkout(suggestedRoutine.id)}
+              style={{
+                width: '100%', marginTop: SP[4], background: S.acc, border: 'none', borderRadius: R.md,
+                color: S.onAcc, fontSize: T.title, fontWeight: 700, minHeight: ROW.regular,
+                cursor: 'pointer', letterSpacing: 0.3,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SP[2],
+              }}
+            >
+              <span style={{ fontSize: T.body }} aria-hidden="true">▶</span> Iniciar entreno
+            </button>
+            {/* Cualquier otra rutina, sin pasar por la pestaña Rutinas */}
+            {conEjercicios.length > 1 && (
+              <div
+                className="flex gap-2"
+                style={{ marginTop: SP[3], overflowX: 'auto', scrollbarWidth: 'none' }}
+              >
+                {conEjercicios.filter(r => r.id !== suggestedRoutine.id).map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => startWorkout(r.id)}
+                    aria-label={`Iniciar ${r.name}`}
+                    style={{
+                      flexShrink: 0, minHeight: 40, padding: `0 ${SP[4]}px`, borderRadius: 999,
+                      background: 'transparent', border: `1px solid ${S.line2}`,
+                      color: S.dim, fontSize: T.body, fontWeight: 600,
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                    }}
+                  >
+                    <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, background: routineColor(r.id, routines), flexShrink: 0 }} />
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : (
+          <div style={{ padding: `${SP[4]}px ${LADO}px 0` }}>
+            <div style={{ borderRadius: R.lg, padding: SP[5], border: `1.5px dashed ${S.line2}`, textAlign: 'center' }}>
+              <div style={{ fontSize: T.display, marginBottom: SP[2] }} aria-hidden="true">🏋️</div>
+              <p style={{ color: S.ink, fontWeight: 600, fontSize: T.body }}>¡Tu primera sesión te espera!</p>
               <button
                 onClick={() => setActiveTab('rutinas')}
-                style={{ color: 'var(--acc)', fontSize: 13, fontWeight: 600, marginTop: 8, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: S.acc, fontSize: T.body, fontWeight: 600, marginTop: SP[2], minHeight: ROW.compact, background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Crear primera rutina →
               </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Tres cifras sin tarjeta: el mes, la semana y los récords de la semana. */}
+        {finishedWorkouts.length > 0 && (
+          <div
+            role="list"
+            aria-label="Cifras del mes y de los últimos 7 días"
+            style={{ display: 'flex', padding: `0 ${LADO - SP[3]}px`, borderBottom: `1px solid ${S.line}` }}
+          >
+            <div role="listitem" aria-label={`${entrenosDelMes} entrenos en ${MESES_CORTOS[hoy.getMonth()]}`} style={{ flex: 1, minWidth: 0, display: 'flex', borderRight: `1px solid ${S.line}` }}>
+              {cifra(entrenosDelMes, `Entrenos · ${MESES_CORTOS[hoy.getMonth()]}`)}
+            </div>
+            <div role="listitem" aria-label={`${series7} series en los últimos 7 días`} style={{ flex: 1, minWidth: 0, display: 'flex', borderRight: `1px solid ${S.line}` }}>
+              {cifra(series7, 'Series · 7 d')}
+            </div>
+            <div role="listitem" aria-label={`${records7} récords en los últimos 7 días`} style={{ flex: 1, minWidth: 0, display: 'flex' }}>
+              {cifra(records7, 'Récords · 7 d', records7 > 0 ? S.acc2 : S.ink)}
+            </div>
+          </div>
+        )}
 
         {/* Del 1/12 al 15/1: "Tu año en el gym" */}
         <WrappedCard />
 
-        {/* En qué semana del plan estás */}
-        <ProgramCard />
-
-        {/* La semana: un punto por día. Relleno = entrenado, aro = planificado. */}
-        <div style={{ padding: '12px 22px 0' }}>
-          <div style={{ background: 'var(--surf)', borderRadius: 16, border: '1px solid var(--line2)', padding: '12px 14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }} role="list" aria-label="Esta semana">
-              {semana.map((d) => {
-                const estado = d.hecho ? 'entrenado' : d.planificado ? (d.pasado ? 'planificado, no se hizo' : 'planificado') : 'descanso'
-                return (
-                  <div key={d.letra} role="listitem" aria-label={`${d.letra}: ${estado}`}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: d.esHoy ? 700 : 500, color: d.esHoy ? 'var(--ink)' : 'var(--dim)' }}>{d.letra}</span>
-                    <span style={{
-                      width: 22, height: 22, borderRadius: 11, boxSizing: 'border-box',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: d.hecho ? 'var(--good)' : 'transparent',
-                      border: d.hecho ? 'none' : d.planificado ? `2px solid ${d.pasado ? 'var(--faint)' : 'var(--acc)'}` : 'none',
-                    }}>
-                      {!d.hecho && !d.planificado && <span style={{ width: 4, height: 4, borderRadius: 2, background: 'var(--faint)' }} />}
-                      {d.hecho && <span style={{ color: 'var(--bg)', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line)' }}>
-              <span style={{ fontSize: 12, color: 'var(--dim)' }}>
-                Racha: <b className="num" style={{ color: 'var(--ink)', fontSize: 13 }}>{streak.current}</b> {streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos'}
-                {streak.atRisk && streak.current > 0 && <span style={{ color: 'var(--acc)' }}> · entrená hoy o mañana</span>}
-              </span>
-              {metaSemana > 0 && (
-                <span style={{ fontSize: 12, color: 'var(--dim)' }}>
-                  <b className="num" style={{ color: 'var(--ink)' }}>{hechosSemana}</b> de <span className="num">{metaSemana}</span>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Desde el lunes, cómo fue la semana pasada */}
-        <WeeklyReview />
+        {/* Semana: en qué semana del plan estás, los días y las cifras de esta semana y la pasada */}
+        <ProgramCard>{bloqueSemana}</ProgramCard>
 
         {/* Del 1 al 7 de cada mes, cómo fue el mes pasado */}
         <ResumenMesCard />
 
-        {/* Última sesión: una línea que abre el entreno en la Agenda */}
+        {/* Última sesión: una fila que abre el entreno en la Agenda */}
         {lastWorkout && lastRoutine && (
-          <div style={{ padding: '12px 22px 0' }}>
+          <div style={{ padding: `${SP[1]}px ${LADO}px 0` }}>
             <button
               onClick={() => openAgendaDay(lastWorkout.startedAt)}
               style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
-                background: 'var(--surf)', borderRadius: 12, border: '1px solid var(--line2)',
-                padding: '12px 14px', minHeight: 52, cursor: 'pointer', color: 'var(--ink)',
+                width: '100%', display: 'flex', alignItems: 'center', gap: SP[3], textAlign: 'left',
+                background: 'none', border: 'none', padding: `${SP[3]}px 4px`, minHeight: ROW.compact,
+                cursor: 'pointer', color: S.ink,
               }}
             >
               {lastRoutineVigente
-                ? <RoutineIcon routine={lastRoutineVigente} size={14} />
-                : <span style={{ fontSize: 17, flexShrink: 0 }}>{lastRoutine.emoji}</span>}
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 11, color: 'var(--dim)', fontWeight: 600 }}>Última sesión · {daysAgoStr}</span>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {lastRoutine.name}
-                  <span style={{ color: 'var(--dim)', fontWeight: 500 }}>
-                    {' · '}<span className="num">{lastWorkout.durationMin ?? 0}</span> min · <span className="num">{lastTotalSets}</span> series
-                    {lastRecords > 0 && <> · <span className="num" style={{ color: 'var(--acc2)' }}>{lastRecords}</span> {lastRecords === 1 ? 'récord' : 'récords'}</>}
-                  </span>
+                ? <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, flexShrink: 0, background: routineColor(lastRoutineVigente.id, routines) }} />
+                : <span style={{ fontSize: T.bodyLg, flexShrink: 0 }} aria-hidden="true">{lastRoutine.emoji}</span>}
+              <span style={{ flex: 1, minWidth: 0, fontSize: T.caption, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ color: S.dim }}>Última sesión · {daysAgoStr} · </span>
+                <b style={{ color: S.ink }}>{lastRoutine.name}</b>
+                <span style={{ color: S.dim }}>
+                  {' · '}<span className="num">{lastWorkout.durationMin ?? 0}</span> min · <span className="num">{lastTotalSets}</span> series
+                  {lastRecords > 0 && <> · <span className="num" style={{ color: S.acc2 }}>{lastRecords}</span> {lastRecords === 1 ? 'récord' : 'récords'}</>}
                 </span>
               </span>
-              <span style={{ color: 'var(--mute)', fontSize: 17, flexShrink: 0 }} aria-hidden="true">›</span>
+              <span style={{ color: S.dim, fontSize: T.title, flexShrink: 0 }} aria-hidden="true">›</span>
             </button>
           </div>
         )}
@@ -312,7 +337,7 @@ export function HomeScreen() {
         {/* La copia de seguridad, abajo de todo y en una línea */}
         <BackupReminder />
 
-        <div style={{ height: 24 }} />
+        <div style={{ height: SP[6] }} />
       </div>
 
     </div>
