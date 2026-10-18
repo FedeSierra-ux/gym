@@ -6,7 +6,7 @@ import { useStore } from '../store/useStore'
 import { isDurationExercise, durationUnit, toSeconds, fromSeconds } from '../utils/duration'
 import { clampDecimalInput, normalizeIntegerInput, parseDecimal } from '../utils/numberInput'
 import { lastTopKg } from '../utils/progression'
-import { computeRecords, newRecords } from '../utils/records'
+import { computeRecords, esMejor, newRecords, recordKindFor, type Marca } from '../utils/records'
 import { rutinaEnUso, tieneVariante } from '../utils/routineVariant'
 import { semanaDeEntreno } from '../utils/program'
 import { descansoDeNota } from '../utils/restFromNote'
@@ -283,6 +283,47 @@ function buildActiveExercise(
   }
 }
 
+/**
+ * Si la serie recién tildada es un récord, con el mismo criterio que los
+ * récords de verdad (`computeRecords`): la unidad del ejercicio sale de todo
+ * su historial más lo hecho hoy, y la marca tiene que superar al récord
+ * guardado y a las series ya hechas en esta sesión (dos series mejores
+ * seguidas son un récord, no dos). Si no es récord devuelve null: el cartel
+ * anterior se apaga.
+ */
+function recordEnVivo(
+  ex: ActiveWorkoutExercise,
+  setIdx: number,
+  exercise: Exercise | undefined,
+): ActiveWorkout['livePr'] {
+  const { prs, workouts } = useStore.getState()
+  const serie = ex.sets[setIdx]
+  const unit = durationUnit(exercise)
+  const aMarca = (s: ActiveWorkoutSet): Marca => ({
+    kg: parseDecimal(s.kg) || 0,
+    reps: parseInt(s.reps) || 0,
+    durationSec: isDurationExercise(exercise) ? toSeconds(s.duration ?? '', unit) : undefined,
+  })
+  const historial: { kg: number }[] = []
+  for (const w of workouts) {
+    if (!w.finishedAt) continue
+    for (const we of w.exercises) {
+      if (we.exerciseId !== ex.exerciseId) continue
+      for (const s of we.sets) if (!s.isWarmup) historial.push(s)
+    }
+  }
+  const deHoy = ex.sets
+    .filter((s, i) => i !== setIdx && s.completed && !s.isWarmup)
+    .map(aMarca)
+  const kind = recordKindFor(exercise, [...historial, ...deHoy])
+  const candidato = aMarca(serie)
+  // Una serie vacía no es una marca (igual que en computeRecords).
+  if (kind === 'tiempo' ? !candidato.durationSec : candidato.reps <= 0) return null
+  const guardado = prs.find((p) => p.exerciseId === ex.exerciseId)
+  const esRecord = esMejor(kind, candidato, guardado) && deHoy.every((s) => esMejor(kind, candidato, s))
+  return esRecord ? { exerciseId: ex.exerciseId, kg: candidato.kg, reps: candidato.reps } : null
+}
+
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
@@ -291,6 +332,16 @@ export const useWorkoutStore = create<WorkoutState>()(
       summaryPrCount: 0,
 
       startWorkout: (routineId, dateOverride) => {
+        // La app abierta en dos lugares (la PWA y una pestaña): si en el otro
+        // ya hay un entreno en curso, arrancar acá lo pisaba y la instancia
+        // que se cerrara perdía sus series. Se relee lo guardado y, si hay
+        // uno que esta instancia no tenía, se sigue con ese.
+        const enMemoria = get().activeWorkout
+        void useWorkoutStore.persist.rehydrate()
+        if (!enMemoria && get().activeWorkout) {
+          useStore.getState().addToast('Ya hay un entreno en curso abierto en otra pestaña: seguimos con ese', 'info')
+          return
+        }
         // Que las series sean las de la semana del plan en curso (4-6 o 1-3).
         useStore.getState().sincronizarPrograma()
         const { routines } = useStore.getState()
@@ -366,11 +417,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           if (!s.activeWorkout) return {}
           const targetSet = s.activeWorkout.exercises[exerciseIdx]?.sets[setIdx]
           if (!targetSet) return {}
+          const { exercises: exDb, customExercises: customEx } = useStore.getState()
+          const exercise = [...exDb, ...customEx].find(
+            (e) => e.id === s.activeWorkout?.exercises[exerciseIdx]?.exerciseId
+          )
           if (!targetSet.completed) {
-            const { exercises: exDb, customExercises: customEx } = useStore.getState()
-            const exercise = [...exDb, ...customEx].find(
-              (e) => e.id === s.activeWorkout?.exercises[exerciseIdx]?.exerciseId
-            )
             if (isDurationExercise(exercise)) {
               const seconds = toSeconds(targetSet.duration ?? '', durationUnit(exercise))
               if (seconds <= 0) {
@@ -418,21 +469,11 @@ export const useWorkoutStore = create<WorkoutState>()(
               }
             : s.activeWorkout.lastCompletedSet
 
-          // Detect live PR (warm-up sets never count as PRs)
-          let livePr = s.activeWorkout.livePr
-          if (completedSet.completed && !completedSet.isWarmup) {
-            const { prs } = useStore.getState()
-            const exerciseId = exercises[exerciseIdx].exerciseId
-            const kg = parseDecimal(completedSet.kg) || 0
-            const reps = parseInt(completedSet.reps) || 0
-            if (kg > 0) {
-              const existing = prs.find((p) => p.exerciseId === exerciseId)
-              const isPr = !existing || kg > existing.kg || (kg === existing.kg && reps > existing.reps)
-              livePr = isPr ? { exerciseId, kg, reps } : null
-            }
-          } else {
-            livePr = null
-          }
+          // Récord en vivo (el calentamiento nunca cuenta), con el criterio de
+          // records.ts: kilos, reps o tiempo según el ejercicio.
+          const livePr = completedSet.completed && !completedSet.isWarmup
+            ? recordEnVivo(exercises[exerciseIdx], setIdx, exercise)
+            : null
 
           // El descanso de este ejercicio (la nota de la rutina, o lo elegido a mano).
           const descanso = !startRest
@@ -834,15 +875,56 @@ export const useWorkoutStore = create<WorkoutState>()(
       storage: createSafeStorage<{ activeWorkout: ActiveWorkout | null }>(),
       // El segundero del descanso no se guarda: sale de restEndsAt. Guardarlo
       // era escribir el entreno entero en el teléfono una vez por segundo.
-      partialize: (s) => ({
-        activeWorkout: s.activeWorkout ? { ...s.activeWorkout, restSecondsLeft: 0 } : null,
-      }),
+      partialize: (s) => ({ activeWorkout: s.activeWorkout ? sinSegundero(s.activeWorkout) : null }),
       merge: (persisted, current) => {
         const aw = (persisted as { activeWorkout?: ActiveWorkout | null } | undefined)?.activeWorkout ?? null
         if (!aw) return { ...current, activeWorkout: null }
         const left = aw.restEndsAt ? Math.max(0, Math.ceil((aw.restEndsAt - Date.now()) / 1000)) : aw.restTotalSeconds
-        return { ...current, activeWorkout: { ...aw, restSecondsLeft: left } }
+        // Un descanso que venció con la app cerrada no vuelve como panel
+        // clavado en 0:00: se cierra acá, que es donde se sabe que venció.
+        const vigente = left > 0
+        return {
+          ...current,
+          activeWorkout: {
+            ...aw,
+            restSecondsLeft: left,
+            restTimerVisible: aw.restTimerVisible && vigente,
+            restEndsAt: vigente ? aw.restEndsAt : undefined,
+          },
+        }
       },
     }
   )
 )
+
+/**
+ * El entreno sin el segundero, para guardarlo. Devuelve la misma referencia
+ * mientras lo único que cambió sea `restSecondsLeft`: así el almacenamiento
+ * ve "nada cambió" y no serializa el entreno entero (2,5 KB) en cada tick
+ * del descanso. Antes el spread daba un objeto nuevo por segundo y la
+ * comparación por referencia nunca acertaba.
+ */
+let ultimoGuardado: { fuente: ActiveWorkout; parcial: ActiveWorkout } | null = null
+function sinSegundero(aw: ActiveWorkout): ActiveWorkout {
+  if (ultimoGuardado && soloCambioElSegundero(aw, ultimoGuardado.fuente)) {
+    ultimoGuardado.fuente = aw
+    return ultimoGuardado.parcial
+  }
+  const parcial = aw.restSecondsLeft === 0 ? aw : { ...aw, restSecondsLeft: 0 }
+  ultimoGuardado = { fuente: aw, parcial }
+  return parcial
+}
+
+function soloCambioElSegundero(a: ActiveWorkout, b: ActiveWorkout): boolean {
+  const ka = Object.keys(a) as (keyof ActiveWorkout)[]
+  if (ka.length !== Object.keys(b).length) return false
+  return ka.every((k) => k === 'restSecondsLeft' || Object.is(a[k], b[k]))
+}
+
+// La app abierta en dos lugares (la PWA instalada y una pestaña): cuando la
+// otra guarda el entreno en curso, esta lo relee en vez de pisarlo con el suyo.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'gympro-active-workout') void useWorkoutStore.persist.rehydrate()
+  })
+}
