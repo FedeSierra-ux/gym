@@ -5,9 +5,10 @@ import { MedidasSheet } from './MedidasSheet'
 import { HistorialBuscadorSheet } from './HistorialBuscadorSheet'
 import { getWorkoutStreak } from '../utils/streak'
 import { seriesEfectivas } from '../utils/volume'
-import { formatKg } from '../utils/format'
-import { Sparkline } from '../components/Sparkline'
-import { S } from '../theme'
+import { MESES } from '../utils/informes'
+import { useHoy } from '../utils/useHoy'
+import { R, S, T, tappable } from '../theme'
+import { deltaColor, formatMedida, formatNum, ROW, SP } from '../utils/_pendiente3'
 
 /**
  * Achica la foto elegida a 256 px y la devuelve como JPEG en data URL: así
@@ -44,9 +45,28 @@ function lapso(ms: number): string {
   return `en ${meses} ${meses === 1 ? 'mes' : 'meses'}`
 }
 
+/** "Entrenando desde febrero" (con el año si no es este). */
+function desdeCuando(ts: number, nowTs: number): string {
+  const d = new Date(ts)
+  const mes = MESES[d.getMonth()]
+  return `Entrenando desde ${mes}${d.getFullYear() === new Date(nowTs).getFullYear() ? '' : ` ${d.getFullYear()}`}`
+}
+
+const fila = {
+  width: '100%', background: S.surf, border: `1px solid ${S.line2}`, borderRadius: R.lg,
+  minHeight: ROW.loose + 4, padding: `${SP[2]}px ${SP[2]}px ${SP[2]}px ${SP[4]}px`,
+  display: 'flex', alignItems: 'center', gap: SP[3], textAlign: 'left', cursor: 'pointer', color: S.ink,
+} as const
+const tile = {
+  width: ROW.compact, height: ROW.compact, borderRadius: R.md, flexShrink: 0, background: S.surf2,
+  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: T.h2,
+} as const
+const chevron = { width: ROW.compact, height: ROW.compact, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: T.h2 } as const
+
 export function ProfileScreen() {
-  const { userName, updateUserName, workouts, prs, measures, avatarPhoto, setAvatarPhoto, addToast } = useStore()
+  const { userName, updateUserName, workouts, prs, measures, avatarPhoto, setAvatarPhoto, addToast, inicioUso } = useStore()
   const allExercises = useAllExercises()
+  const nowTs = useHoy()
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(userName)
@@ -57,17 +77,19 @@ export function ProfileScreen() {
   const finished = useMemo(() => workouts.filter((w) => w.finishedAt), [workouts])
   const totalWorkouts = finished.length
   const totalMinutes = finished.reduce((a, w) => a + (w.durationMin ?? 0), 0)
-  const streak = useMemo(() => getWorkoutStreak(finished), [finished])
+  const streak = useMemo(() => getWorkoutStreak(finished, nowTs), [finished, nowTs])
+  const primerEntreno = finished.length ? Math.min(...finished.map((w) => w.startedAt)) : null
+  const desde = inicioUso ?? primerEntreno
 
   const initials = userName.slice(0, 2).toUpperCase()
   const seriesTotales = useMemo(() => seriesEfectivas(finished), [finished])
   const ultimaMedida = measures.length > 0 ? measures[measures.length - 1] : null
-  // Las últimas mediciones de peso, para la línea de la tarjeta.
+  // Las últimas mediciones de peso, para la variación de la fila.
   const pesos = useMemo(
     () => measures.filter(m => m.weightKg).sort((a, b) => a.date - b.date).slice(-8),
     [measures]
   )
-  const difPeso = pesos.length > 1 ? pesos[pesos.length - 1].weightKg! - pesos[0].weightKg! : 0
+  const difPeso = pesos.length > 1 ? Math.round((pesos[pesos.length - 1].weightKg! - pesos[0].weightKg!) * 10) / 10 : 0
 
   const elegirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -91,188 +113,161 @@ export function ProfileScreen() {
         <h1 className="text-2xl font-bold text-ink">Perfil</h1>
       </div>
 
-      {/* Avatar + Name */}
+      {/* Identidad y números en una sola tarjeta: una cifra grande y tres secundarias */}
       <div className="px-4 mb-4">
-        <div className="bg-card border border-border-hi rounded-2xl p-5 flex items-center gap-4">
-          {/*
-            El input va adentro de un <label>: abrir el selector con un .click()
-            sobre un input display:none no funciona en varias WebViews de
-            Android (ni siempre en iOS), y así lo dispara el navegador solo.
-            Sin `capture`, para que ofrezca galería y cámara.
-          */}
-          <label
-            htmlFor="avatar-foto"
-            role="button"
-            aria-label={avatarPhoto ? 'Cambiar la foto de perfil' : 'Elegir una foto de perfil'}
-            className="w-16 h-16 rounded-2xl bg-primary-muted border border-primary/30 flex items-center justify-center flex-shrink-0 overflow-hidden relative"
-            style={{ padding: 0, cursor: 'pointer' }}
-          >
-            {avatarPhoto
-              ? <img src={avatarPhoto} alt="" className="w-full h-full object-cover" />
-              : <span className="text-primary text-2xl font-bold">{initials}</span>}
-            <span aria-hidden="true" style={{
-              position: 'absolute', right: 3, bottom: 3, width: 20, height: 20, borderRadius: 10,
-              background: S.surf, border: `1px solid ${S.line2}`, fontSize: 11,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>📷</span>
-            <input
-              id="avatar-foto"
-              type="file"
-              accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
-              onChange={elegirFoto}
-              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
-            />
-          </label>
-          <div className="flex-1 min-w-0">
-            {editingName ? (
-              <div className="flex gap-2">
-                <input
-                  autoFocus
-                  aria-label="Editar nombre"
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                  maxLength={24}
-                  className="flex-1 bg-surface border border-border-hi rounded-lg px-3 py-1.5 text-ink text-sm focus:border-primary"
-                />
-                <button
-                  onClick={handleSaveName}
-                  aria-label="Guardar nombre"
-                  className="text-primary text-sm font-bold px-2"
-                >
-                  ✓
+        <section aria-label="Tu perfil" style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: R.lg, padding: `${SP[4]}px ${SP[2]}px ${SP[4]}px ${SP[4]}px` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SP[3] }}>
+            {/*
+              El input va adentro de un <label>: abrir el selector con un .click()
+              sobre un input display:none no funciona en varias WebViews de
+              Android (ni siempre en iOS), y así lo dispara el navegador solo.
+              Sin `capture`, para que ofrezca galería y cámara.
+            */}
+            <label
+              htmlFor="avatar-foto"
+              role="button"
+              aria-label={avatarPhoto ? 'Cambiar la foto de perfil' : 'Elegir una foto de perfil'}
+              className="w-16 h-16 rounded-2xl bg-primary-muted border border-primary/30 flex items-center justify-center flex-shrink-0 overflow-hidden relative"
+              style={{ padding: 0, cursor: 'pointer' }}
+            >
+              {avatarPhoto
+                ? <img src={avatarPhoto} alt="" className="w-full h-full object-cover" />
+                : <span className="text-primary text-2xl font-bold">{initials}</span>}
+              <span aria-hidden="true" style={{
+                position: 'absolute', right: 3, bottom: 3, width: 20, height: 20, borderRadius: 10,
+                background: S.surf, border: `1px solid ${S.line2}`, fontSize: T.micro,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>📷</span>
+              <input
+                id="avatar-foto"
+                type="file"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                onChange={elegirFoto}
+                style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+              />
+            </label>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {editingName ? (
+                <div style={{ display: 'flex', gap: SP[2] }}>
+                  <input
+                    autoFocus
+                    aria-label="Editar nombre"
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                    maxLength={24}
+                    className="flex-1 min-w-0 bg-surface border border-border-hi rounded-lg px-3 text-ink text-sm focus:border-primary"
+                    style={{ minHeight: ROW.compact }}
+                  />
+                  <button
+                    onClick={handleSaveName}
+                    aria-label="Guardar nombre"
+                    className="text-primary font-bold"
+                    style={{ ...tappable, fontSize: T.title, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    ✓
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: T.h2, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName}</div>
+              )}
+              {desde != null
+                ? <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>{desdeCuando(desde, nowTs)}</div>
+                : <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>Tocá el cuadrado para poner una foto</div>}
+              {avatarPhoto && (
+                <button onClick={() => setAvatarPhoto(null)} className="text-dim text-xs" style={{ background: 'none', border: 'none', padding: `${SP[1]}px 0`, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  Quitar la foto
                 </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <p className="font-bold text-ink text-lg">{userName}</p>
-                <button
-                  onClick={() => { setNameDraft(userName); setEditingName(true) }}
-                  aria-label="Editar nombre"
-                  className="text-dim transition-colors text-sm"
-                >
-                  ✏️
-                </button>
-              </div>
-            )}
-            {avatarPhoto ? (
-              <button onClick={() => setAvatarPhoto(null)} className="text-dim text-xs mt-0.5" style={{ background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                Quitar la foto
+              )}
+            </div>
+            {!editingName && (
+              <button
+                onClick={() => { setNameDraft(userName); setEditingName(true) }}
+                aria-label="Editar nombre"
+                style={{ ...tappable, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: S.dim, fontSize: T.title, cursor: 'pointer' }}
+              >
+                <span aria-hidden="true">✏️</span>
               </button>
-            ) : (
-              <p className="text-dim text-xs mt-0.5">Tocá el cuadrado para poner una foto</p>
             )}
           </div>
-        </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: SP[4], marginTop: SP[4], paddingRight: SP[2] }}>
+            <div>
+              <div className="num" style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: S.ink }}>{totalWorkouts}</div>
+              <div style={{ fontSize: T.caption, color: S.dim, marginTop: SP[1] }}>{totalWorkouts === 1 ? 'entreno' : 'entrenos'}</div>
+            </div>
+            <div aria-hidden="true" style={{ width: 1, height: 40, background: S.line2, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'space-between', gap: SP[2] }}>
+              <div>
+                <div className="num" style={{ fontSize: T.title, fontWeight: 700, color: S.ink }}>{formatNum(Math.round(totalMinutes / 60))} h</div>
+                <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>totales</div>
+              </div>
+              <div>
+                <div className="num" style={{ fontSize: T.title, fontWeight: 700, color: S.ink }}>{formatNum(seriesTotales)}</div>
+                <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>series</div>
+              </div>
+              <div>
+                <div className="num" style={{ fontSize: T.title, fontWeight: 700, color: prs.length ? S.acc2 : S.ink }}>{formatNum(prs.length)}</div>
+                <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>récords</div>
+              </div>
+            </div>
+          </div>
+
+          {/* La mejor racha, no la actual: un 0 al lado del récord desmotiva. */}
+          {streak.best > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: SP[3], fontSize: T.caption, color: S.dim }}>
+              <span aria-hidden="true">🔥</span>
+              Mejor racha: <b className="num" style={{ color: S.ink }}>{streak.best}</b> {streak.best === 1 ? 'entreno seguido' : 'entrenos seguidos'}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Stats */}
-      <div className="px-4 mb-4">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-ink num">{totalWorkouts}</p>
-            <p className="text-micro text-dim mt-0.5">Entrenos</p>
-          </div>
-          <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-ink num">{Math.round(totalMinutes / 60)}h</p>
-            <p className="text-micro text-dim mt-0.5">Horas totales</p>
-          </div>
-          <div className="bg-card border border-border-hi rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-ink num">{prs.length}</p>
-            <p className="text-micro text-dim mt-0.5">Récords</p>
-          </div>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <div className="bg-card border border-border-hi rounded-xl p-3">
-            <p className="text-lg font-bold text-ink num">{seriesTotales.toLocaleString('es-AR')}</p>
-            <p className="text-micro text-dim mt-0.5">Series en total</p>
-          </div>
-          <div className="bg-card border border-border-hi rounded-xl p-3 flex items-center gap-2">
-            <span className="text-lg" aria-hidden="true">🔥</span>
-            <span className="text-lg font-bold text-ink num">{streak.current}</span>
-            <span className="text-xs text-dim">
-              {streak.current === 1 ? 'entreno seguido' : 'entrenos seguidos'}
-              {streak.best > streak.current && ` · mejor: ${streak.best}`}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Peso y medidas · buscador del historial */}
+      {/* Peso y medidas · buscador del historial · ajustes */}
       <div className="px-4 mb-4 flex flex-col gap-2">
-        <button
-          onClick={() => setShowMedidas(true)}
-          className="w-full bg-card border border-border-hi rounded-2xl p-4 flex items-center gap-3"
-          style={{ minHeight: 64 }}
-        >
-          <span className="text-xl" aria-hidden="true">⚖️</span>
-          <span className="flex-1 text-left min-w-0">
-            <span className="block font-semibold text-ink text-sm">Peso y medidas</span>
-            <span className="block text-dim text-xs mt-0.5">
+        <button onClick={() => setShowMedidas(true)} style={fila}>
+          <span style={tile} aria-hidden="true">⚖️</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: T.bodyLg, fontWeight: 700 }}>Peso y medidas</span>
+            <span style={{ display: 'block', fontSize: T.caption, color: S.dim, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {ultimaMedida?.weightKg
-                ? <><span className="num">{formatKg(ultimaMedida.weightKg)}</span> kg · {new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>
+                ? <><span className="num" style={{ color: S.ink }}>{formatMedida(ultimaMedida.weightKg, 'kg')}</span> · {new Date(ultimaMedida.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>
                 : 'Todavía sin anotar'}
             </span>
-            {pesos.length > 1 && difPeso !== 0 && (
-              <span className="block text-xs mt-0.5" style={{ color: S.ink }}>
-                <span className="num">{difPeso > 0 ? '+' : '−'}{formatKg(Math.abs(Math.round(difPeso * 10) / 10))} kg</span>
-                <span className="text-dim"> {lapso(pesos[pesos.length - 1].date - pesos[0].date)}</span>
-              </span>
-            )}
           </span>
-          {pesos.length > 1 && (
-            <span style={{ width: 84, height: 34, flexShrink: 0 }}>
-              <Sparkline values={pesos.map(m => m.weightKg!)} color={S.dim} width={84} height={34} />
+          {pesos.length > 1 && difPeso !== 0 && (
+            <span
+              className="num"
+              aria-label={`${difPeso > 0 ? 'subió' : 'bajó'} ${formatMedida(Math.abs(difPeso), 'kg')} ${lapso(pesos[pesos.length - 1].date - pesos[0].date)}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, height: 24, padding: `0 ${SP[2]}px`, borderRadius: 999, background: S.surf2, fontSize: T.caption, fontWeight: 700, color: deltaColor(difPeso, 'neutral'), whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <span aria-hidden="true">{difPeso > 0 ? '↑' : '↓'}</span>{formatMedida(Math.abs(difPeso), 'kg')}
             </span>
           )}
-          <span className="text-dim text-lg" aria-hidden="true">›</span>
+          <span style={chevron} aria-hidden="true">›</span>
         </button>
-        <button
-          onClick={() => setShowBuscador(true)}
-          className="w-full bg-card border border-border-hi rounded-2xl p-4 flex items-center gap-3"
-          style={{ minHeight: 64 }}
-        >
-          <span className="text-xl" aria-hidden="true">🔎</span>
-          <span className="flex-1 text-left">
-            <span className="block font-semibold text-ink text-sm">Buscar en el historial</span>
-            <span className="block text-dim text-xs mt-0.5">Cuándo hiciste un ejercicio y con cuánto</span>
+        <button onClick={() => setShowBuscador(true)} style={fila}>
+          <span style={tile} aria-hidden="true">🔎</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: T.bodyLg, fontWeight: 700 }}>Buscar en el historial</span>
+            <span style={{ display: 'block', fontSize: T.caption, color: S.dim, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Cuándo hiciste un ejercicio y con cuánto</span>
           </span>
-          <span className="text-dim text-lg" aria-hidden="true">›</span>
+          <span style={chevron} aria-hidden="true">›</span>
+        </button>
+        <button onClick={() => setShowSettings(true)} style={fila}>
+          <span style={tile} aria-hidden="true">⚙️</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: T.bodyLg, fontWeight: 700 }}>Ajustes</span>
+            <span style={{ display: 'block', fontSize: T.caption, color: S.dim, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Nombre, meta semanal, backup, IA</span>
+          </span>
+          <span style={chevron} aria-hidden="true">›</span>
         </button>
       </div>
 
-      {/* Ajustes */}
-      <div className="px-4 mb-4">
-        <button
-          onClick={() => setShowSettings(true)}
-          className="w-full bg-card border border-border-hi rounded-2xl p-4 flex items-center gap-3"
-        >
-          <span className="text-xl" aria-hidden="true">⚙️</span>
-          <span className="flex-1 text-left font-semibold text-ink text-sm">Ajustes</span>
-          <span className="text-dim text-lg" aria-hidden="true">›</span>
-        </button>
-      </div>
-
-      {/* App info */}
-      <div className="px-4">
-        <div className="bg-card border border-border-hi rounded-2xl p-4">
-          <h2 className="font-bold text-ink text-base mb-3">Información</h2>
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-dim">Versión</span>
-              <span className="text-ink/80">{__APP_VERSION__}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-dim">Actualizada</span>
-              <span className="text-ink/80">{__BUILD_DATE__}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-dim">Ejercicios disponibles</span>
-              <span className="text-ink/80">{allExercises.length}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Versión, como pie */}
+      <p style={{ fontSize: T.caption, color: S.mute, textAlign: 'center', padding: `${SP[2]}px ${SP[4]}px 0` }}>
+        GymPro {__APP_VERSION__} · actualizada {__BUILD_DATE__} · <span className="num">{allExercises.length}</span> ejercicios
+      </p>
 
       {showSettings && <SettingsScreen onClose={() => setShowSettings(false)} />}
       {showMedidas && <MedidasSheet onClose={() => setShowMedidas(false)} />}
