@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+// Firma de release: sale de variables de entorno (en CI, de los secrets del
+// repo; ver la sección Android del README). Si faltan, el release se firma
+// con la clave de debug para que el build no se caiga, pero ese APK no se
+// puede actualizar sobre uno firmado con otra clave: hay que desinstalar.
+def keystorePath = System.getenv('GYMPRO_KEYSTORE_PATH')
+def tieneKeystore = keystorePath != null && !keystorePath.isEmpty() && new File(keystorePath).exists()
+
 android {
     namespace 'com.fedesierra.gympro'
     compileSdk 34
@@ -10,13 +17,34 @@ android {
         applicationId "com.fedesierra.gympro"
         minSdk 21
         targetSdk 34
-        versionCode 7
-        versionName "1.4.1"
+        // Subir versionCode en cada versión: Android no instala un APK con el
+        // mismo o menor código sobre el que ya está. Mantener en sintonía con
+        // twa-manifest.json (appVersionCode/appVersionName) y package.json.
+        versionCode 8
+        versionName "1.5.0"
+    }
+
+    signingConfigs {
+        if (tieneKeystore) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv('GYMPRO_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('GYMPRO_KEY_ALIAS')
+                keyPassword System.getenv('GYMPRO_KEY_PASSWORD')
+            }
+        }
     }
 
     buildTypes {
         debug {
             debuggable true
+        }
+        release {
+            // Sin minify: el APK es un WebView y un par de clases, no hay
+            // nada que achicar y ProGuard sólo sumaría riesgo.
+            minifyEnabled false
+            shrinkResources false
+            signingConfig tieneKeystore ? signingConfigs.release : signingConfigs.debug
         }
     }
 
@@ -27,6 +55,8 @@ android {
 }
 
 dependencies {
+    // appcompat trae androidx.activity (ComponentActivity y
+    // OnBackPressedDispatcher, que usa MainActivity).
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.8.0'
 }
