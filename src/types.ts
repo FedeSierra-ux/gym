@@ -17,13 +17,11 @@ export interface Exercise {
   id: string
   nameEs: string
   nameArg?: string   // nombre vernacular argentino (ej: "Press de Banco")
-  nameEn?: string    // nombre en inglés para búsqueda en wger API
+  nameEn?: string    // nombre en inglés: lo usa el buscador de ejercicios
   muscleGroup: MuscleGroup
   primaryMuscles: string[]
   equipment: string
   equipmentType?: ExerciseEquipment
-  wgerId?: number
-  image?: string     // GIF URL de ExerciseDB (hardcodeado para los 79 ejercicios base)
   /** Slug del catálogo de ilustraciones (public/exercise-frames). Ver utils/exerciseMatch. */
   frameSlug?: string
   /** true para los ejercicios que creó el usuario a mano. */
@@ -187,9 +185,3 @@ export interface ActiveWorkoutExercise {
 }
 
 export type ExerciseTips = Record<string, string>
-
-export interface AppSettings {
-  anthropicApiKey: string
-  openAiApiKey: string
-  aiProvider: 'anthropic' | 'openai' | 'none'
-}

@@ -224,4 +224,4 @@ usa iOS al agregar a pantalla de inicio, y los mipmaps del TWA de Android.
 ## Documentación
 
 - `docs/ideas-opengym.md` — relevamiento de openGym y qué conviene implementar.
-- `docs/evidencia-ejercicios.md`, `docs/auditoria-gifs.md` — notas previas.
+- `twa-manifest.json` — configuración del TWA de Android (ver la sección Android).
