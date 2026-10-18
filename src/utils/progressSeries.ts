@@ -1,4 +1,5 @@
 import type { Exercise, Workout } from '../types'
+import { kindsPorEjercicio } from './periodSummary'
 import { recordKindFor, type RecordKind } from './records'
 
 /**
@@ -107,21 +108,18 @@ export function buildProgressSeries(
     .filter((w) => w.finishedAt && w.startedAt >= desde)
     .sort((a, b) => a.startedAt - b.startedAt)
 
-  // Con qué unidad se mide cada ejercicio: hace falta ver todas sus series.
-  const seriesTodas = new Map<string, { kg: number }[]>()
-  for (const w of terminados) {
-    for (const we of w.exercises) {
-      const acc = seriesTodas.get(we.exerciseId) ?? []
-      for (const s of we.sets) if (!s.isWarmup) acc.push(s)
-      seriesTodas.set(we.exerciseId, acc)
-    }
-  }
+  // Con qué unidad se mide cada ejercicio: con todo el historial, no sólo el
+  // rango visible, que es lo que miran los récords. Unas dominadas con lastre
+  // en los últimos tres meses pasaban Progreso a kilos mientras Récords seguía
+  // en reps, y "estancado" se calculaba con distinta unidad en cada pantalla.
+  const kinds = kindsPorEjercicio(workouts, exercises)
+  const kindDe = (exerciseId: string) => kinds.get(exerciseId) ?? recordKindFor(porId.get(exerciseId), [])
 
   const porEjercicio = new Map<string, SessionPoint[]>()
   const puntajes = new Map<string, number[]>()
   for (const w of terminados) {
     for (const we of w.exercises) {
-      const kind = recordKindFor(porId.get(we.exerciseId), seriesTodas.get(we.exerciseId) ?? [])
+      const kind = kindDe(we.exerciseId)
       let mejor: SessionPoint | null = null
       let mejorPuntaje = -Infinity
       for (const s of we.sets) {
@@ -146,7 +144,7 @@ export function buildProgressSeries(
   const salida: ExerciseSeries[] = []
   for (const [exerciseId, points] of porEjercicio) {
     if (points.length === 0) continue
-    const kind = recordKindFor(porId.get(exerciseId), seriesTodas.get(exerciseId) ?? [])
+    const kind = kindDe(exerciseId)
     const ultimo = points[points.length - 1]
     // La referencia es la mejor marca anterior a la ventana de comparación; si
     // el ejercicio es nuevo y no hay nada antes, se usa la primera sesión.

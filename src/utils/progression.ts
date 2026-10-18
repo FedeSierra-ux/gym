@@ -128,9 +128,9 @@ export function suggestNextWeight(
     // dar lo mismo o más (4 kg en máquina → 5): ahí se baja un salto entero.
     let kg = roundToStep(last.kg * 0.9, paso)
     if (kg >= last.kg) kg = last.kg - paso
-    // Si bajar un salto es demasiado (10 kg en polea → 5) o deja la barra en
-    // cero, no se inventa un peso: se mantiene y se pide calma.
-    if (kg <= 0 || kg < last.kg * 0.75) {
+    // Si bajar un salto es demasiado (más del 20 %: 20 kg en máquina → 15) o
+    // deja la barra en cero, no se inventa un peso: se mantiene y se pide calma.
+    if (kg <= 0 || kg < last.kg * 0.8) {
       return {
         kg: last.kg,
         reason: 'mantener',
