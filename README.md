@@ -223,5 +223,6 @@ usa iOS al agregar a pantalla de inicio, y los mipmaps del TWA de Android.
 
 ## Documentación
 
+- `docs/auditoria-2026-10.md` — auditoría completa de la 1.4.1: hallazgos verificados, simulación de meses de uso y plan sugerido.
 - `docs/ideas-opengym.md` — relevamiento de openGym y qué conviene implementar.
 - `docs/evidencia-ejercicios.md`, `docs/auditoria-gifs.md` — notas previas.
