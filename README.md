@@ -10,7 +10,19 @@ npm install
 npm run dev      # servidor local
 npm run build    # tsc -b + vite build
 npm run lint
+npm test
 ```
+
+Las fuentes (DM Sans y JetBrains Mono) vienen de `@fontsource` y se importan al principio
+de `src/index.css`, sólo el subset latin y los pesos que se usan: no hay petición a Google
+Fonts y entran al precache del service worker, así que offline se ven igual. Por eso
+`index.html` lleva una Content-Security-Policy que cierra todo al propio origen salvo
+`connect-src` a `api.anthropic.com`; si se suma un recurso externo hay que agregarlo ahí.
+
+Los dibujos de `public/exercise-frames/` no se precachean (son 600 y pesan 2,4 MB): el
+service worker los guarda en la caché `exercise-frames` a medida que se muestran, por un
+año. Para capturar pantallas con Playwright hace falta instalarlo aparte
+(`npm i --no-save playwright`), no es dependencia del repo.
 
 ## Ilustraciones de los ejercicios
 
@@ -211,6 +223,48 @@ en un solo lugar. El
 cronómetro es un vidrio sobre el entreno, que se ve detrás desenfocado; si el
 navegador no desenfoca, o el teléfono pide menos transparencia, el fondo va
 opaco.
+
+## Android
+
+`android/` es un envoltorio mínimo de la PWA en un WebView (no es un TWA; `twa-manifest.json`
+queda para regenerar el proyecto con Bubblewrap si se decide). `MainActivity` cubre lo que
+un WebView pelado no hace: el selector de archivos para importar backup y foto de perfil,
+guardar en Descargas lo que la app exporta (backup, imágenes para compartir), una pantalla
+"Sin conexión" si falla la primera carga y abrir los links externos en el navegador.
+`allowBackup` está en `false` para que el Auto Backup de Google no se lleve el storage del
+WebView (ahí está la API key).
+
+El workflow `build-apk.yml` compila el APK en cada push a `main` y lo publica en el release
+`apk-latest`. **Sin los secrets de firma, el APK sale firmado con la clave de debug, que
+cambia en cada build: Android no lo deja actualizar sobre el instalado y hay que
+desinstalar la versión anterior, lo que borra los datos** (hacer backup antes). Con una
+clave estable, cada versión se instala encima y los datos quedan.
+
+Para generar la clave una sola vez y cargarla como secrets del repo
+(Settings → Secrets and variables → Actions):
+
+```bash
+keytool -genkeypair -v -keystore gympro.keystore -alias gympro \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 gympro.keystore > gympro.keystore.b64   # en macOS: base64 -i gympro.keystore
+```
+
+| Secret                     | Valor                                     |
+|----------------------------|-------------------------------------------|
+| `ANDROID_KEYSTORE_BASE64`  | contenido de `gympro.keystore.b64`        |
+| `ANDROID_KEYSTORE_PASSWORD`| contraseña del keystore                   |
+| `ANDROID_KEY_ALIAS`        | `gympro` (el alias de arriba)             |
+| `ANDROID_KEY_PASSWORD`     | contraseña de la clave (suele ser la misma)|
+
+Guardar `gympro.keystore` fuera del repo y con copia: si se pierde, no hay forma de firmar
+una actualización instalable sobre la anterior. Para compilar a mano con la misma clave,
+`build.gradle` lee `GYMPRO_KEYSTORE_PATH`, `GYMPRO_KEYSTORE_PASSWORD`, `GYMPRO_KEY_ALIAS` y
+`GYMPRO_KEY_PASSWORD` del entorno y corre `./gradlew assembleRelease`; sin ellas, el release
+se firma con la clave de debug.
+
+En cada versión hay que subir `versionCode` (y `versionName`) en `android/app/build.gradle`
+y `twa-manifest.json`, a la par de `version` en `package.json`: Android no instala un APK
+con el mismo código de versión sobre el que ya está.
 
 ## Iconos
 
