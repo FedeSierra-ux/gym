@@ -4,9 +4,14 @@
  * y el día en que se empezó a usar la app. Más "Terminar" con series cargadas
  * sin tildar.
  */
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { finDeCiclo, inicioParaSemana, lunesDe } from '../program'
 import { DIA } from './helpers'
+
+// Hora fija (un martes): estos tests fallaban los domingos, cuando "la semana
+// actual" es la que arranca mañana, y deploy.yml corre los tests antes de publicar.
+const MARTES = new Date(2026, 9, 13, 10).getTime()
+const DOMINGO = new Date(2026, 9, 18, 18).getTime()
 
 const memoria = new Map<string, string>()
 vi.stubGlobal('localStorage', {
@@ -37,9 +42,13 @@ const ws = () => workout.useWorkoutStore.getState()
 const ultimo = () => store.useStore.getState().workouts.at(-1)!
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(MARTES)
   workout.useWorkoutStore.setState({ activeWorkout: null })
-  store.useStore.setState({ routines: [rutina], workouts: [], programa: null, ciclosPrograma: [], inicioUso: null })
+  store.useStore.setState({ routines: [rutina], workouts: [], programa: null, ciclosPrograma: [], inicioUso: null, toasts: [] })
 })
+
+afterEach(() => { vi.useRealTimers() })
 
 function hacerUnaSerie() {
   ws().updateSetValue(0, 0, 'reps', '8')
@@ -85,6 +94,24 @@ describe('de dónde salió cada entreno', () => {
     workout.useWorkoutStore.setState((s) => ({ activeWorkout: { ...s.activeWorkout!, realStartedAt: Date.now() - 5 * 3600000 } }))
     expect(ws().autoCloseStaleWorkout()).toBe(true)
     expect(ultimo().origen).toBe('auto')
+  })
+})
+
+describe('plan por semanas un domingo', () => {
+  it('fijar la semana 4 no vuelve a Semanas 1-3, y el entreno del domingo es de la semana 4', () => {
+    vi.setSystemTime(DOMINGO)
+    store.useStore.getState().fijarSemanaPrograma(4)
+    store.useStore.getState().sincronizarPrograma()
+    const { programa, routines, toasts } = store.useStore.getState()
+    expect(programa?.fase).toBe('alt')
+    expect(routines[0].variante).toBe('alt')
+    expect(toasts.map((t) => t.message)).toEqual([])
+
+    ws().startWorkout('r')
+    hacerUnaSerie()
+    ws().finishWorkout()
+    expect(ultimo().semanaPrograma).toBe(4)
+    expect(ultimo().variante).toBe('alt')
   })
 })
 
