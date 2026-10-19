@@ -5,7 +5,6 @@ import type { Exercise, Routine, Workout, PR, NavTab, CalendarSubTab, ExerciseTi
 import { exercises as exerciseDb } from '../data/exercises'
 import { buildCustomExercise, draftFromName, inferEquipmentType } from '../utils/exerciseMatch'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import { seedRoutines, seedWorkouts } from '../data/seedData'
 import { buildMileRoutines, completarPlanMile, MILE_WEEK_PLAN } from '../data/mileRoutines'
 import { computeRecords } from '../utils/records'
 import { conColores } from '../utils/trainingDays'
@@ -28,7 +27,6 @@ interface AppState {
   prs: PR[]
   exerciseTips: ExerciseTips
   userName: string
-  seeded: boolean
   onboarded: boolean
   anthropicApiKey: string
   toasts: AppToast[]
@@ -161,8 +159,6 @@ interface AppState {
   /** Carga (o repone) las tres rutinas del plan de Mile. Devuelve cuántas agregó. */
   installMileRoutines: () => number
 
-  // Seed
-  seedData: () => void
 }
 
 /** Un informe a pantalla completa: el de un ciclo del plan o el resumen del año. */
@@ -184,7 +180,6 @@ function partialize(state: AppState) {
     prs: state.prs,
     exerciseTips: state.exerciseTips,
     userName: state.userName,
-    seeded: state.seeded,
     onboarded: state.onboarded,
     anthropicApiKey: state.anthropicApiKey,
     weekPlan: state.weekPlan,
@@ -272,6 +267,8 @@ export function migrarEstado(persisted: unknown, version: number): Record<string
     }
     if (!Array.isArray(state.ciclosPrograma)) state.ciclosPrograma = []
   }
+  // Resto de la acción seedData, que ya no existe.
+  delete state.seeded
   return state
 }
 
@@ -289,7 +286,6 @@ export const useStore = create<AppState>()(
       prs: [],
       exerciseTips: {},
       userName: 'Atleta',
-      seeded: false,
       onboarded: false,
       anthropicApiKey: '',
       toasts: [],
@@ -622,29 +618,6 @@ export const useStore = create<AppState>()(
           weekPlan: Object.values(s.weekPlan).some(Boolean) ? s.weekPlan : { ...s.weekPlan, ...MILE_WEEK_PLAN },
         }))
         return nuevas.length
-      },
-
-      seedData: () => {
-        const { seeded } = get()
-        if (seeded) return
-
-        const prs: PR[] = [
-          { exerciseId: 'pecho-01', kg: 85, reps: 6, date: Date.now() - 86400000 * 2 },
-          { exerciseId: 'espalda-01', kg: 120, reps: 4, date: Date.now() - 86400000 * 4 },
-          { exerciseId: 'piernas-01', kg: 105, reps: 5, date: Date.now() - 86400000 * 6 },
-          { exerciseId: 'biceps-01', kg: 42, reps: 10, date: Date.now() - 86400000 * 4 },
-          { exerciseId: 'hombros-01', kg: 62.5, reps: 7, date: Date.now() - 86400000 * 2 },
-        ]
-
-        set({
-          // Las rutinas de Mile vienen prearmadas desde el primer arranque.
-          routines: conColores([...buildMileRoutines(), ...seedRoutines]),
-          workouts: seedWorkouts,
-          prs,
-          weekPlan: { ...MILE_WEEK_PLAN },
-          seeded: true,
-          planMileCompletado: true,
-        })
       },
     }),
     {
