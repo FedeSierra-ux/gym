@@ -27,11 +27,14 @@ export const ROW: Record<keyof typeof row, number> = row
 
 /**
  * El color de una diferencia: verde si sube, `dim` si baja o no cambia (bajar
- * no es un error: el rojo queda para los errores), ámbar si es un récord.
+ * no es un error: el rojo queda para los errores), ámbar si es un récord y
+ * `dim` siempre si la diferencia es neutra.
  * Es la misma semántica en toda la app, salvo Progreso → Resumen del mes.
  */
-export function deltaColor(delta: number, kind?: 'record'): string {
+export function deltaColor(delta: number, kind?: 'record' | 'neutral'): string {
   if (kind === 'record') return S.acc2
+  // `neutral`: el peso corporal, donde bajar no es ni bueno ni malo.
+  if (kind === 'neutral') return S.dim
   return delta > 0 ? S.good : S.dim
 }
 

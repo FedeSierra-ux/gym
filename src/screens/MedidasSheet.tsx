@@ -5,8 +5,8 @@ import { Sparkline } from '../components/Sparkline'
 import { toDateInputValue, fromDateInputValue } from '../utils/dates'
 import { decimalInputProps, parseDecimal, clampDecimalInput } from '../utils/numberInput'
 import { useHoy } from '../utils/useHoy'
-import { R, S, T, tappable } from '../theme'
-import { deltaColor, formatMedida, formatNum, ROW, SP } from '../utils/_pendiente3'
+import { R, S, T, tappable, deltaColor, ROW, SP } from '../theme'
+import { formatMedida, formatNum } from '../utils/format'
 import type { BodyMeasure, MedidaKey } from '../types'
 
 /** Qué se puede anotar, con su unidad y su tope razonable. */

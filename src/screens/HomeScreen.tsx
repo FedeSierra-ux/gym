@@ -13,8 +13,7 @@ import { ResumenMesCard } from '../components/ResumenMesCard'
 import { WrappedCard } from '../components/WrappedCard'
 import { WeeklyMuscleSets } from '../components/WeeklyMuscleSets'
 import { RoutineIcon } from '../components/RoutineIcon'
-import { R, S, T } from '../theme'
-import { ROW, SP } from '../utils/_pendiente3'
+import { R, S, T, ROW, SP } from '../theme'
 
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']

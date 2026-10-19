@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Dialog } from '../components/Dialog'
 import { Sparkline } from '../components/Sparkline'
 import { useAllExercises, useStore } from '../store/useStore'
-import { R, S, T } from '../theme'
+import { R, S, T, deltaColor, ROW, SP } from '../theme'
 import { informeCiclo, type FilaEjercicioCiclo } from '../utils/cycleReport'
 import {
   candidatosACambiar, losQueMasSubieron, planificadasPorSemana, rangoCiclo, textoMarca, textoPct,
@@ -12,7 +12,6 @@ import { compartirImagen } from '../utils/shareImage'
 import { generarImagenCiclo, type TonoCambio } from '../utils/shareInformes'
 import { dayKey } from '../utils/trainingDays'
 import { useHoy } from '../utils/useHoy'
-import { deltaColor, ROW, SP } from '../utils/_pendiente3'
 
 // Subida en verde, baja en gris: una baja no es un error.
 const colorCambio = (p: number | null) => (p == null ? S.mute : deltaColor(p))

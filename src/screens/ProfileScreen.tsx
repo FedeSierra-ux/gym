@@ -7,8 +7,8 @@ import { getWorkoutStreak } from '../utils/streak'
 import { seriesEfectivas } from '../utils/volume'
 import { MESES } from '../utils/informes'
 import { useHoy } from '../utils/useHoy'
-import { R, S, T, tappable } from '../theme'
-import { deltaColor, formatMedida, formatNum, ROW, SP } from '../utils/_pendiente3'
+import { R, S, T, tappable, deltaColor, ROW, SP } from '../theme'
+import { formatMedida, formatNum } from '../utils/format'
 
 /**
  * Achica la foto elegida a 256 px y la devuelve como JPEG en data URL: así

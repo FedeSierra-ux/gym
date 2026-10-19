@@ -9,10 +9,9 @@ import { resumenMensual, seriesPorGrupo } from '../utils/volume'
 import { BodyFigure } from '../components/BodyFigure'
 import { MuscleIcon } from '../components/MuscleIcon'
 import { formatDuration } from '../utils/duration'
-import { R, S, T } from '../theme'
+import { R, S, T, deltaColor, ROW, SP } from '../theme'
 import type { MuscleGroup } from '../types'
 import { formatKg } from '../utils/format'
-import { deltaColor, ROW, SP } from '../utils/_pendiente3'
 import { compararPeriodos, resumenPeriodo, type Delta } from '../utils/periodSummary'
 import {
   ciclosParaListar, fechaLarga, rangoCiclo, rangosParaComparar, textoHoras, textoMarca, textoPct, type ModoComparacion,

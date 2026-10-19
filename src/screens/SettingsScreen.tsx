@@ -4,10 +4,9 @@ import { useStore } from '../store/useStore'
 import { exportBackup, readBackupFile, applyBackup, hasPreviousBackup, restorePreviousBackup } from '../utils/backup'
 import { MILE_ROUTINE_IDS } from '../data/mileRoutines'
 import { plannedDowSet } from '../utils/trainingDays'
-import { semanaDelPrograma, SEMANAS_PROGRAMA } from '../utils/program'
+import { semanaActual, SEMANAS_PROGRAMA } from '../utils/program'
 import { useHoy } from '../utils/useHoy'
-import { R, S, T } from '../theme'
-import { ROW, SP } from '../utils/_pendiente3'
+import { R, S, T, ROW, SP } from '../theme'
 import { estadoAlmacenamiento, pedirAlmacenamientoPersistente, type EstadoAlmacenamiento } from '../utils/persistentStorage'
 
 /** Si el navegador puede borrar los datos por su cuenta o no. */
@@ -139,8 +138,8 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const mileFaltantes = MILE_ROUTINE_IDS.filter(id => !routines.some(r => r.id === id)).length
   const diasDelPlan = plannedDowSet(weekPlan, routines.map(r => r.id)).size
   // El domingo se habla de la semana que arranca mañana, como en Inicio.
-  const arrancaManana = new Date(nowTs).getDay() === 0
-  const semanaPlan = programa && !programa.terminado ? semanaDelPrograma(programa.inicio, arrancaManana ? nowTs + 86400000 : nowTs) : null
+  // Misma regla del domingo que Inicio y el store (`semanaActual`).
+  const semanaPlan = programa && !programa.terminado ? semanaActual(programa, nowTs) : null
 
   const handleInstallMile = () => {
     const n = installMileRoutines()

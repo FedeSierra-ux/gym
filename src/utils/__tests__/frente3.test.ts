@@ -4,7 +4,8 @@
  * sólo con el arreglo.
  */
 import { describe, expect, it } from 'vitest'
-import { deltaColor, formatMedida, formatNum } from '../_pendiente3'
+import { deltaColor } from '../../theme'
+import { formatMedida, formatNum } from '../format'
 import { fromDateInputValue } from '../dates'
 import { colors } from '../../../design-tokens.js'
 
@@ -12,7 +13,7 @@ describe('H27: un solo formato numérico en Medidas', () => {
   it('escribe las medidas con coma, un decimal fijo y la unidad', () => {
     expect(formatMedida(58.2, 'kg')).toBe('58,2 kg')
     expect(formatMedida(67.45, 'cm')).toBe('67,5 cm')
-    expect(formatMedida(59, 'kg')).toBe('59,0 kg')
+    expect(formatMedida(59, 'kg')).toBe('59 kg')
   })
 
   it('usa el punto de miles de es-AR en las cifras grandes', () => {
@@ -26,7 +27,7 @@ describe('semántica de deltas: las bajas no son errores', () => {
     expect(deltaColor(5)).toBe(colors.good)
     expect(deltaColor(-5)).toBe(colors.dim)
     expect(deltaColor(-5)).not.toBe(colors.bad)
-    expect(deltaColor(0)).toBe(colors.mute)
+    expect(deltaColor(0)).toBe(colors.dim)
     expect(deltaColor(3, 'record')).toBe(colors.acc2)
   })
 

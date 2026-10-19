@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -60,4 +61,8 @@ export default defineConfig({
       },
     }),
   ],
+  test: {
+    // Los worktrees de Claude Code viven en .claude/worktrees con una copia entera del repo.
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
+  },
 })

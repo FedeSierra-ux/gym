@@ -2,9 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useHoy } from '../utils/useHoy'
 import { useStore } from '../store/useStore'
 import { tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
-import { finDeCiclo, SEMANAS_PROGRAMA, SEMANA_CAMBIO, semanaDelPrograma } from '../utils/program'
-import { R, S, T } from '../theme'
-import { ROW, SP } from '../utils/_pendiente3'
+import { finDeCiclo, SEMANAS_PROGRAMA, SEMANA_CAMBIO, semanaActual } from '../utils/program'
+import { R, S, T, ROW, SP } from '../theme'
 
 const fechaCorta = (ts: number) => new Date(ts).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 
@@ -30,7 +29,8 @@ export function ProgramCard({ children }: { children?: ReactNode }) {
   // El domingo la tarjeta ya habla de la semana que arranca mañana: es el día
   // en que uno se organiza, y la semana que se elige ese día es la que viene.
   const arrancaManana = programa != null && new Date(nowTs).getDay() === 0
-  const semana = !sinPlan && programa ? semanaDelPrograma(programa.inicio, arrancaManana ? nowTs + 86400000 : nowTs) : null
+  // La misma regla del domingo que el store (`semanaActual`): el domingo ya se habla de la semana que arranca mañana.
+  const semana = !sinPlan && programa ? semanaActual(programa, nowTs) : null
   const terminado = semana != null && semana > SEMANAS_PROGRAMA
 
   const chips = (
