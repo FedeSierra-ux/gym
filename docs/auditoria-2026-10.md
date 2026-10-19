@@ -8,6 +8,18 @@ antes y después están en la página del informe: https://claude.ai/artifact/YC
 **31 hallazgos**: 7 de severidad alta, 12 media, 12 baja. Todos verificados
 (test, código, medición o captura). Ningún archivo del repo se modificó durante la auditoría.
 
+> **Estado en la 1.5.0.** Los 31 hallazgos quedaron resueltos en la versión 1.5.0, junto
+> con las propuestas visuales aceptadas (formato numérico único, semántica de deltas,
+> escala de espaciado y alturas de fila, Inicio en tres bloques con hero, puntitos de
+> rutina en la Agenda, cuánto subió cada récord, una fila de filtros en Marcas,
+> asistencia por semana en el informe, Perfil con una cifra grande, Medidas, Ajustes en
+> cuatro grupos y el descanso con "Siguiente"). Cada arreglo con lógica testeable tiene
+> su test de regresión en `src/utils/__tests__/` (`auditoria150`, `auditoriaPantallas`,
+> `frente3`). Los dos puntos que siguen abiertos a propósito: tailwind 3 y sharp quedan
+> con avisos de `npm audit` (sólo en desarrollo; subirlos es tarea aparte) y el APK se
+> firma como release recién cuando el repo tenga los secrets del keystore (ver README →
+> Android).
+
 ## En dos minutos
 
 La base está muy por encima del promedio para una app personal sin backend: récords
