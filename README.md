@@ -10,7 +10,19 @@ npm install
 npm run dev      # servidor local
 npm run build    # tsc -b + vite build
 npm run lint
+npm test
 ```
+
+Las fuentes (DM Sans y JetBrains Mono) vienen de `@fontsource` y se importan al principio
+de `src/index.css`, sólo el subset latin y los pesos que se usan: no hay petición a Google
+Fonts y entran al precache del service worker, así que offline se ven igual. Por eso
+`index.html` lleva una Content-Security-Policy que cierra todo al propio origen salvo
+`connect-src` a `api.anthropic.com`; si se suma un recurso externo hay que agregarlo ahí.
+
+Los dibujos de `public/exercise-frames/` no se precachean (son 600 y pesan 2,4 MB): el
+service worker los guarda en la caché `exercise-frames` a medida que se muestran, por un
+año. Para capturar pantallas con Playwright hace falta instalarlo aparte
+(`npm i --no-save playwright`), no es dependencia del repo.
 
 ## Ilustraciones de los ejercicios
 
@@ -139,7 +151,10 @@ Cada rutina está armada en bloques (circuito de entrada, principal, tabata),
 con la superserie del full body marcada. Las series y reps de base son las de
 las semanas 1-2-3; las de las semanas 4-5-6 van en `alt` y se eligen con el
 selector *Semanas 1-3 / 4-6* de la rutina, que cambia también lo que se carga
-en el entreno. Los descansos y las aclaraciones ("por pierna") quedan en la
+en el entreno. La semana del plan la calcula `semanaActual`
+(`src/utils/program.ts`) en un solo lugar, y los domingos ya habla de la semana
+que arranca al día siguiente: Inicio, Ajustes, el informe y la estampa de cada
+entreno dicen lo mismo. Los descansos y las aclaraciones ("por pierna") quedan en la
 nota. Las rutinas guardadas antes de esto se completan solas al abrir la app
 (`completarPlanMile`).
 
@@ -212,6 +227,64 @@ cronómetro es un vidrio sobre el entreno, que se ve detrás desenfocado; si el
 navegador no desenfoca, o el teléfono pide menos transparencia, el fondo va
 opaco.
 
+Tres reglas más, desde la 1.5.0:
+
+- **Un solo formato numérico.** Todo lo que sólo se lee sale de `formatNum` /
+  `formatMedida` (`src/utils/format.ts`): coma decimal, punto de miles y sin
+  ceros de más ("58,2 kg", "67,5 cm", "3.650"). Los campos que se editan siguen
+  aceptando punto.
+- **Las bajas no son errores.** `deltaColor` (`src/theme.ts`) pinta una
+  diferencia en verde si sube, en `dim` si baja o no cambia, en ámbar si es un
+  récord y en `dim` siempre cuando es neutra (el peso corporal). El rojo queda
+  para los errores. La única excepción es Progreso → Resumen del mes, que sigue
+  marcando las bajas en rojo.
+- **Escala de 4 px y dos alturas de fila.** `space` y `row` en
+  `design-tokens.js` (`SP[1]`…`SP[8]` = 4…32, `ROW.compact` 44, `ROW.regular`
+  56, `ROW.loose` 60) salen como clases de Tailwind (`p-sp-4`, `h-row-compact`)
+  y variables CSS (`--sp-4`, `--row-regular`).
+
+## Android
+
+`android/` es un envoltorio mínimo de la PWA en un WebView (no es un TWA; `twa-manifest.json`
+queda para regenerar el proyecto con Bubblewrap si se decide). `MainActivity` cubre lo que
+un WebView pelado no hace: el selector de archivos para importar backup y foto de perfil,
+guardar en Descargas lo que la app exporta (backup, imágenes para compartir), una pantalla
+"Sin conexión" si falla la primera carga y abrir los links externos en el navegador.
+`allowBackup` está en `false` para que el Auto Backup de Google no se lleve el storage del
+WebView (ahí está la API key).
+
+El workflow `build-apk.yml` compila el APK en cada push a `main` y lo publica en el release
+`apk-latest`. **Sin los secrets de firma, el APK sale firmado con la clave de debug, que
+cambia en cada build: Android no lo deja actualizar sobre el instalado y hay que
+desinstalar la versión anterior, lo que borra los datos** (hacer backup antes). Con una
+clave estable, cada versión se instala encima y los datos quedan.
+
+Para generar la clave una sola vez y cargarla como secrets del repo
+(Settings → Secrets and variables → Actions):
+
+```bash
+keytool -genkeypair -v -keystore gympro.keystore -alias gympro \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 gympro.keystore > gympro.keystore.b64   # en macOS: base64 -i gympro.keystore
+```
+
+| Secret                     | Valor                                     |
+|----------------------------|-------------------------------------------|
+| `ANDROID_KEYSTORE_BASE64`  | contenido de `gympro.keystore.b64`        |
+| `ANDROID_KEYSTORE_PASSWORD`| contraseña del keystore                   |
+| `ANDROID_KEY_ALIAS`        | `gympro` (el alias de arriba)             |
+| `ANDROID_KEY_PASSWORD`     | contraseña de la clave (suele ser la misma)|
+
+Guardar `gympro.keystore` fuera del repo y con copia: si se pierde, no hay forma de firmar
+una actualización instalable sobre la anterior. Para compilar a mano con la misma clave,
+`build.gradle` lee `GYMPRO_KEYSTORE_PATH`, `GYMPRO_KEYSTORE_PASSWORD`, `GYMPRO_KEY_ALIAS` y
+`GYMPRO_KEY_PASSWORD` del entorno y corre `./gradlew assembleRelease`; sin ellas, el release
+se firma con la clave de debug.
+
+En cada versión hay que subir `versionCode` (y `versionName`) en `android/app/build.gradle`
+y `twa-manifest.json`, a la par de `version` en `package.json`: Android no instala un APK
+con el mismo código de versión sobre el que ya está.
+
 ## Iconos
 
 ```bash
@@ -223,5 +296,6 @@ usa iOS al agregar a pantalla de inicio, y los mipmaps del TWA de Android.
 
 ## Documentación
 
+- `docs/auditoria-2026-10.md` — auditoría completa de la 1.4.1: hallazgos verificados, simulación de meses de uso y plan sugerido.
 - `docs/ideas-opengym.md` — relevamiento de openGym y qué conviene implementar.
-- `docs/evidencia-ejercicios.md`, `docs/auditoria-gifs.md` — notas previas.
+- `twa-manifest.json` — configuración del TWA de Android (ver la sección Android).

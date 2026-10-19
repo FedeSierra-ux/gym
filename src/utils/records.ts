@@ -25,11 +25,17 @@ export function recordKindFor(exercise: Exercise | undefined, sets: { kg: number
   return conKilos * 2 > sets.length ? 'kg' : 'reps'
 }
 
+/** Lo que hace falta de una serie o un récord para compararlos. */
+export type Marca = Pick<PR, 'kg' | 'reps' | 'durationSec'>
+
 /**
  * Un récord es mejor que otro con el criterio que corresponde al ejercicio:
  * más kilos (y a igual peso, más reps), más repeticiones, o más tiempo.
+ * Es el mismo criterio para los récords guardados y para el cartel en vivo
+ * del entreno: antes el cartel comparaba kilos siempre y en los ejercicios a
+ * peso corporal no coincidía con el resumen.
  */
-function esMejor(kind: RecordKind, candidato: PR, actual: PR | undefined): boolean {
+export function esMejor(kind: RecordKind, candidato: Marca, actual: Marca | undefined): boolean {
   if (!actual) return true
   switch (kind) {
     case 'kg':

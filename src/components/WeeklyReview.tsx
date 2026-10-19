@@ -4,17 +4,18 @@ import { lunesDe } from '../utils/program'
 import { dayKey, inicioDeFaltas, plannedDowSet } from '../utils/trainingDays'
 import { planDeSemana } from '../utils/weekPlan'
 import { seriesEfectivas } from '../utils/volume'
+import { S } from '../theme'
 
 /**
- * Repaso de la semana pasada. Aparece desde el lunes y se va con la cruz hasta
- * el lunes siguiente. Si la semana pasada no hubo entrenos, no se muestra.
+ * Cómo fue la semana pasada, en una línea: días (o entrenos), series y
+ * récords. Va en el bloque Semana de Inicio, al lado del dato de esta semana;
+ * antes era una tarjeta propia con botón ×. Si la semana pasada no hubo
+ * entrenos, no se muestra nada.
  */
 export function WeeklyReview() {
-  const { workouts, prs, weekPlan, weekOverrides, routines, repasoCerrado, cerrarRepaso, weeklyGoal, inicioUso } = useStore()
+  const { workouts, prs, weekPlan, weekOverrides, routines, weeklyGoal, inicioUso } = useStore()
   const nowTs = useHoy()
   const lunes = lunesDe(nowTs)
-  const clave = dayKey(lunes)
-  if (repasoCerrado === clave) return null
 
   const l = new Date(lunes)
   const lunesPasado = new Date(l.getFullYear(), l.getMonth(), l.getDate() - 7).getTime()
@@ -31,34 +32,18 @@ export function WeeklyReview() {
   const fechas = new Set(semana.map((w) => w.startedAt))
   const records = prs.reduce((n, p) => n + [p, ...(p.history ?? [])].filter((h) => fechas.has(h.date)).length, 0)
 
+  const cifra = { color: S.ink, fontWeight: 700 } as const
   return (
-    <div style={{ padding: '12px 22px 0' }}>
-      <section
-        aria-label="Repaso de la semana pasada"
-        style={{ background: 'var(--surf)', borderRadius: 16, border: '1px solid var(--line2)', padding: '10px 6px 12px 14px' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Semana pasada</span>
-          <button
-            onClick={() => cerrarRepaso(clave)}
-            aria-label="Cerrar el repaso hasta el lunes que viene"
-            style={{ width: 36, height: 36, background: 'none', border: 'none', color: 'var(--dim)', fontSize: 15, cursor: 'pointer' }}
-          >
-            ✕
-          </button>
-        </div>
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 12, color: 'var(--dim)', paddingRight: 8 }}>
-          <span>
-            <b className="num" style={{ color: 'var(--ink)', fontSize: 15 }}>{planificados > 0 ? diasEntrenados : semana.length}</b>
-            {planificados > 0 ? <> de <span className="num">{planificados}</span> días</> : semana.length === 1 ? ' entreno' : ' entrenos'}
-          </span>
-          <span><b className="num" style={{ color: 'var(--ink)', fontSize: 15 }}>{series}</b> series</span>
-          <span>
-            <b className="num" style={{ color: records ? 'var(--acc2)' : 'var(--ink)', fontSize: 15 }}>{records}</b>
-            {records === 1 ? ' récord' : ' récords'}
-          </span>
-        </div>
-      </section>
-    </div>
+    <>
+      <span aria-label={`La semana pasada: ${planificados > 0 ? `${diasEntrenados} de ${planificados} días` : `${semana.length} entrenos`}`} style={{ whiteSpace: 'nowrap' }}>
+        La pasada{' '}
+        <b className="num" style={cifra}>{planificados > 0 ? diasEntrenados : semana.length}</b>
+        {planificados > 0 ? <span className="num">/{planificados}</span> : semana.length === 1 ? ' entreno' : ' entrenos'}
+      </span>
+      <span style={{ whiteSpace: 'nowrap' }}>
+        <b className="num" style={cifra}>{series}</b> series
+        {' · '}<b className="num" style={{ ...cifra, color: records ? S.acc2 : S.ink }}>{records}</b> {records === 1 ? 'récord' : 'récords'}
+      </span>
+    </>
   )
 }

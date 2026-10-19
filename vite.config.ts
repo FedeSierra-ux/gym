@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -24,6 +25,7 @@ export default defineConfig({
         name: 'GymPro',
         short_name: 'GymPro',
         description: 'Tu compañero de entrenamiento definitivo',
+        lang: 'es',
         theme_color: '#0C0E14',
         background_color: '#0C0E14',
         display: 'standalone',
@@ -40,7 +42,27 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Los 600 dibujos de ejercicios (2,4 MB) no van al precache: la
+        // instalación bajaría todo aunque la rutina use 30. Se cachean a
+        // medida que se muestran y quedan un año, que es lo mismo que
+        // tenerlos precacheados para los que sí se usan.
+        globIgnores: ['**/exercise-frames/**'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/gym/exercise-frames/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-frames',
+              expiration: { maxEntries: 700, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],
+  test: {
+    // Los worktrees de Claude Code viven en .claude/worktrees con una copia entera del repo.
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
+  },
 })

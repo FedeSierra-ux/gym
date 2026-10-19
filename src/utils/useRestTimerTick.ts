@@ -32,8 +32,10 @@ export function useRestTimerTick() {
 
       const left = Math.max(0, Math.ceil((workout.restEndsAt - Date.now()) / 1000))
       const prev = workout.restSecondsLeft
-      if (left === prev) return
 
+      // Vencido: se cierra, vibra y suena. Va antes del "nada cambió" porque
+      // al volver de segundo plano el contador puede estar ya en 0 (left ===
+      // prev) con el panel abierto: se quedaba clavado en 0:00 sin avisar.
       if (left <= 0) {
         vibrate([150, 80, 150, 80, 300])
         playBeep(660, 250)
@@ -45,6 +47,7 @@ export function useRestTimerTick() {
         }))
         return
       }
+      if (left === prev) return
 
       // Los avisos se disparan al cruzar el umbral, no al valer exactamente N:
       // si la app estuvo dormida el contador puede saltar varios segundos.

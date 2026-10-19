@@ -1,3 +1,15 @@
+/* Fuentes locales (@fontsource): antes venían de Google Fonts, que bloqueaba
+   el render, mandaba una petición a Google en cada apertura y offline caía a
+   la fuente del sistema. Sólo el subset latin (alcanza para el castellano) y
+   los pesos que usa la app. */
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/jetbrains-mono/latin-700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,12 +49,13 @@ html, body {
 }
 
 /* Safari en iOS hace zoom al enfocar cualquier campo de menos de 16px y después
-   deja la pantalla corrida. Subimos el mínimo a 16px sólo en el momento de
-   escribir; el resto del diseño sigue con sus tamaños. */
-input[class],
-select[class],
-textarea[class] {
-  font-size: 16px;
+   deja la pantalla corrida. Piso de 16px en todos los campos (antes sólo en los
+   que tenían clase: los estilados en línea quedaban afuera), sin achicar los que
+   ya son más grandes y respetando el zoom de texto del sistema (1em). */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 #root {

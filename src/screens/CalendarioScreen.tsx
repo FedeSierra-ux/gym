@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Dialog } from '../components/Dialog'
 import { useHoy } from '../utils/useHoy'
 import { useStore, useAllExercises } from '../store/useStore'
@@ -7,28 +7,38 @@ import { isDurationExercise, durationUnit, formatDuration, totalSeconds, fromSec
 import { fromDateInputValue, toDateInputValue } from '../utils/dates'
 import { formatKg, formatLoad } from '../utils/format'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
-import { getWorkoutStreak } from '../utils/streak'
 import { prediccionDelPlan } from '../utils/planOrder'
 import { lunesDe } from '../utils/program'
 import { claveDeSemana, planDeSemana } from '../utils/weekPlan'
 import { recordsPorReps, REPS_TABLA } from '../utils/records'
+import { mejoraDeRecord } from '../utils/recordDelta'
+import { filtrarSeriesEditadas } from '../utils/entrenoEditado'
+import { nombreCortoRutina } from '../utils/rutinaNombre'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleIcon } from '../components/MuscleIcon'
 import { RoutineBadge, RoutineIcon } from '../components/RoutineIcon'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { rutinasDelMes } from '../utils/leyendaMes'
+import { ExerciseHistorySheet } from '../components/ExerciseHistorySheet'
 import { useLongPress } from '../utils/useLongPress'
 import { inicioDeFaltas, monthStats, plannedDowSet, routineColor } from '../utils/trainingDays'
 import type { CalendarSubTab, MuscleGroup, Routine, Workout } from '../types'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const DOW_NOMBRES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
 type SelectedDay = { day: number; month: number; year: number }
 
+/** Botón de ícono chico (×, ‹, ›, ✏️): 44 px de objetivo aunque el glifo sea chico. */
+const botonIcono: React.CSSProperties = {
+  ...tappable, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'none', border: 'none', cursor: 'pointer', color: S.dim,
+}
 
 function DaySheet({
   selectedDay, allWorkouts, routines, onClose, onStartWorkout,
@@ -36,7 +46,10 @@ function DaySheet({
   selectedDay: SelectedDay; allWorkouts: Workout[]; routines: Routine[]
   onClose: () => void; onStartWorkout: (routineId: string, dateOverride?: number) => void
 }) {
-  const { deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName } = useStore()
+  const deleteWorkout = useStore((s) => s.deleteWorkout)
+  const restoreWorkout = useStore((s) => s.restoreWorkout)
+  const addUndoToast = useStore((s) => s.addUndoToast)
+  const getArchivedRoutineName = useStore((s) => s.getArchivedRoutineName)
   const exercises = useAllExercises()
   const [showRoutinePicker, setShowRoutinePicker] = useState(false)
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
@@ -79,12 +92,12 @@ function DaySheet({
             <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 17, textTransform: 'capitalize' }}>{dateLabel}</h3>
             {isToday && <p style={{ color: S.acc, fontSize: 12, fontWeight: 600 }}>Hoy</p>}
           </div>
-          <button onClick={onClose} aria-label="Cerrar" style={{ color: S.dim, fontSize: 22, lineHeight: 1, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+          <button onClick={onClose} aria-label="Cerrar" style={{ ...botonIcono, fontSize: 22, lineHeight: 1 }}>×</button>
         </div>
         {showRoutinePicker ? (
           <>
             <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-              <button onClick={() => setShowRoutinePicker(false)} style={{ color: S.dim, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>‹ Volver</button>
+              <button onClick={() => setShowRoutinePicker(false)} style={{ color: S.dim, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', minHeight: 44, padding: '0 4px' }}>‹ Volver</button>
               <p style={{ fontSize: 13, fontWeight: 600, color: S.ink }}>Elegí una rutina</p>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
@@ -122,13 +135,13 @@ function DaySheet({
                           <button
                             onClick={() => setEditingWorkout(w)}
                             aria-label="Editar este entreno"
-                            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}
-                          >✏️</button>
+                            style={{ ...botonIcono, fontSize: 15 }}
+                          ><span aria-hidden="true">✏️</span></button>
                           <button
                             onClick={() => borrarConDeshacer(w)}
                             aria-label="Borrar este entreno"
-                            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}
-                          >🗑</button>
+                            style={{ ...botonIcono, fontSize: 15 }}
+                          ><span aria-hidden="true">🗑</span></button>
                         </div>
                         <div className="flex flex-col gap-1">
                           {w.exercises.slice(0, 4).map((we) => {
@@ -175,8 +188,17 @@ function DaySheet({
   )
 }
 
+const estiloCampoEditor: React.CSSProperties = {
+  flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 15, color: S.ink,
+}
+
 function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () => void }) {
-  const { updateWorkout } = useStore()
+  const updateWorkout = useStore((s) => s.updateWorkout)
+  const deleteWorkout = useStore((s) => s.deleteWorkout)
+  const restoreWorkout = useStore((s) => s.restoreWorkout)
+  const addUndoToast = useStore((s) => s.addUndoToast)
+  const routines = useStore((s) => s.routines)
+  const getArchivedRoutineName = useStore((s) => s.getArchivedRoutineName)
   const exercises = useAllExercises()
 
   const [dateStr, setDateStr] = useState(toDateInputValue(workout.startedAt))
@@ -212,6 +234,8 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
     )
   }
 
+  // La serie nueva arranca vacía: con '0' pasaba el filtro y se guardaba
+  // como una serie real de 0 × 0.
   const addSet = (exIdx: number) => {
     setDraftExercises((prev) =>
       prev.map((ex, ei) => {
@@ -220,10 +244,10 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
         return {
           ...ex,
           sets: [...ex.sets, {
-            kg: last?.kg ?? '0',
-            reps: last?.reps ?? '0',
+            kg: last?.kg ?? '',
+            reps: '',
             isWarmup: undefined as boolean | undefined,
-            duration: last?.duration ?? '',
+            duration: '',
             completedAt: undefined as number | undefined,
           }],
         }
@@ -237,19 +261,10 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
     )
   }
 
-  const handleSave = () => {
-    // Si el selector de fecha quedó vacío ("Borrar" en iOS y Android) daba NaN,
-    // y el entreno desaparecía de todas las vistas sin poder editarse más.
-    const dia = fromDateInputValue(dateStr)
-    if (dia === null || !fechaValida) return
-    const fecha = new Date(dia)
-    const original = new Date(workout.startedAt)
-    const newStartedAt = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), original.getHours(), original.getMinutes(), original.getSeconds()).getTime()
-    if (!Number.isFinite(newStartedAt)) return
+  /** Lo que se guardaría: sólo series con reps o tiempo, sólo ejercicios con series. */
+  const armarEjercicios = (newStartedAt: number, finishedAt: number) => {
     const corrimiento = newStartedAt - workout.startedAt
-    const durationMin = Math.max(0, Math.round(parseDecimal(durationStr)) || 0)
-    const finishedAt = newStartedAt + durationMin * 60000
-    const newExercises = draftExercises.map((ex) => ({
+    return filtrarSeriesEditadas(draftExercises.map((ex) => ({
       exerciseId: ex.exerciseId,
       sets: ex.sets
         .filter((s) => s.kg !== '' || s.reps !== '' || s.duration !== '')
@@ -263,17 +278,43 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
             ? toSeconds(s.duration, durationUnit(exercises.find(e => e.id === ex.exerciseId)))
             : undefined,
         })),
-    })).filter((ex) => ex.sets.length > 0)
+    })))
+  }
+  // Sin ninguna serie con datos, guardar sería persistir un entreno vacío que
+  // sigue contando para la racha y las horas: el botón pasa a borrarlo.
+  const quedaAlgo = armarEjercicios(workout.startedAt, workout.finishedAt ?? workout.startedAt).length > 0
+
+  const borrarEntreno = () => {
+    const nombre = (routines.find((r) => r.id === workout.routineId) ?? getArchivedRoutineName(workout.routineId))?.name ?? 'el entreno'
+    deleteWorkout(workout.id)
+    addUndoToast(`Se borró ${nombre} del ${new Date(workout.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}`, () => restoreWorkout(workout))
+    onClose()
+  }
+
+  const handleSave = () => {
+    if (!quedaAlgo) { borrarEntreno(); return }
+    // Si el selector de fecha quedó vacío ("Borrar" en iOS y Android) daba NaN,
+    // y el entreno desaparecía de todas las vistas sin poder editarse más.
+    const dia = fromDateInputValue(dateStr)
+    if (dia === null || !fechaValida) return
+    const fecha = new Date(dia)
+    const original = new Date(workout.startedAt)
+    const newStartedAt = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), original.getHours(), original.getMinutes(), original.getSeconds()).getTime()
+    if (!Number.isFinite(newStartedAt)) return
+    const durationMin = Math.max(0, Math.round(parseDecimal(durationStr)) || 0)
+    const finishedAt = newStartedAt + durationMin * 60000
 
     updateWorkout({
       ...workout,
       startedAt: newStartedAt,
       finishedAt,
       durationMin,
-      exercises: newExercises,
+      exercises: armarEjercicios(newStartedAt, finishedAt),
     })
     onClose()
   }
+
+  const puedeGuardar = !quedaAlgo || fechaValida
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-end" onClick={(e) => { e.stopPropagation(); cerrar() }}>
@@ -285,7 +326,7 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
         <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 16px' }} />
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <h3 style={{ fontWeight: 700, color: S.ink, fontSize: 17 }}><RoutineBadge routineId={workout.routineId} size={16} />Editar entreno</h3>
-          <button onClick={cerrar} aria-label="Cerrar" style={{ color: S.dim, fontSize: 22, lineHeight: 1, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+          <button onClick={cerrar} aria-label="Cerrar" style={{ ...botonIcono, fontSize: 22, lineHeight: 1 }}>×</button>
         </div>
         {confirmarDescarte && (
           <div role="alert" className="flex items-center gap-2 mb-3 flex-shrink-0" style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: '8px 10px' }}>
@@ -298,14 +339,14 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Fecha</label>
-              <input type="date" value={dateStr} max={hoyStr} onChange={(e) => setDateStr(e.target.value)}
+              <label htmlFor="editar-fecha" style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Fecha</label>
+              <input id="editar-fecha" type="date" value={dateStr} max={hoyStr} onChange={(e) => setDateStr(e.target.value)}
                 aria-invalid={!fechaValida}
                 style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: '10px 12px', fontSize: 15, color: S.ink }} />
             </div>
             <div style={{ width: 120 }}>
-              <label style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
-              <input {...integerInputProps} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
+              <label htmlFor="editar-duracion" style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>Duración (min)</label>
+              <input id="editar-duracion" {...integerInputProps} value={durationStr} onChange={(e) => setDurationStr(e.target.value)}
                 style={{ width: '100%', marginTop: 4, background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, padding: '10px 12px', fontSize: 15, color: S.ink }} />
             </div>
           </div>
@@ -314,39 +355,43 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
             const exInfo = exercises.find((e) => e.id === ex.exerciseId)
             const byTime = isDurationExercise(exInfo)
             const unit = durationUnit(exInfo)
+            const nombre = exInfo?.nameEs ?? ex.exerciseId
             return (
               <div key={ex.exerciseId} style={{ background: S.surf2, borderRadius: 16, padding: 12, border: `1px solid ${S.line2}` }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: S.ink, marginBottom: 8 }}>{exInfo?.nameEs ?? ex.exerciseId}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: S.ink, marginBottom: 8 }}>{nombre}</p>
                 <div className="flex flex-col gap-2">
                   {ex.sets.map((s, setIdx) => (
                     <div key={setIdx} className="flex items-center gap-2">
-                      <span style={{ width: 18, fontSize: 11, color: S.mute }}>{setIdx + 1}</span>
+                      <span aria-hidden="true" style={{ width: 18, fontSize: 11, color: S.mute }}>{setIdx + 1}</span>
                       {byTime ? (
                         <>
                           <input {...decimalInputProps} value={s.duration} onChange={(e) => setValue(exIdx, setIdx, 'duration', e.target.value)}
                             placeholder={unit}
-                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 15, color: S.ink }} />
-                          <span style={{ color: S.mute, fontSize: 11 }}>{unit}</span>
+                            aria-label={`${nombre}, serie ${setIdx + 1}: ${unit === 'min' ? 'minutos' : 'segundos'}`}
+                            style={estiloCampoEditor} />
+                          <span aria-hidden="true" style={{ color: S.mute, fontSize: 11 }}>{unit}</span>
                         </>
                       ) : (
                         <>
                           <input {...decimalInputProps} value={s.kg} onChange={(e) => setValue(exIdx, setIdx, 'kg', e.target.value)}
                             placeholder="kg"
-                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 15, color: S.ink }} />
-                          <span style={{ color: S.mute, fontSize: 11 }}>×</span>
+                            aria-label={`${nombre}, serie ${setIdx + 1}: kg`}
+                            style={estiloCampoEditor} />
+                          <span aria-hidden="true" style={{ color: S.mute, fontSize: 11 }}>×</span>
                           <input {...integerInputProps} value={s.reps} onChange={(e) => setValue(exIdx, setIdx, 'reps', e.target.value)}
                             placeholder="reps"
-                            style={{ flex: 1, minWidth: 0, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '6px 10px', fontSize: 15, color: S.ink }} />
+                            aria-label={`${nombre}, serie ${setIdx + 1}: repeticiones`}
+                            style={estiloCampoEditor} />
                         </>
                       )}
                       <button onClick={() => removeSet(exIdx, setIdx)}
-                        aria-label={`Borrar la serie ${setIdx + 1}`}
-                        style={{ width: 40, height: 40, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: 15, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                        aria-label={`Borrar la serie ${setIdx + 1} de ${nombre}`}
+                        style={{ ...botonIcono, flexShrink: 0, fontSize: 15 }}>✕</button>
                     </div>
                   ))}
                 </div>
                 <button onClick={() => addSet(exIdx)}
-                  style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: S.acc, background: 'none', border: 'none', cursor: 'pointer' }}>
+                  style={{ marginTop: 4, minHeight: 40, fontSize: 11, fontWeight: 600, color: S.acc, background: 'none', border: 'none', cursor: 'pointer' }}>
                   + Agregar serie
                 </button>
               </div>
@@ -354,16 +399,22 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
           })}
         </div>
 
-        {!fechaValida && (
+        {quedaAlgo && !fechaValida && (
           <p role="alert" style={{ marginTop: 12, fontSize: 12, color: S.bad, flexShrink: 0 }}>
             Elegí una fecha de hoy o anterior para poder guardar.
           </p>
         )}
-        <button onClick={handleSave} disabled={!fechaValida} style={{
-          marginTop: 16, width: '100%', padding: '14px 0', borderRadius: 12,
-          background: S.acc, border: 'none', color: S.onAcc, opacity: fechaValida ? 1 : 0.4, fontWeight: 700, fontSize: 15, cursor: fechaValida ? 'pointer' : 'default', flexShrink: 0,
+        {!quedaAlgo && (
+          <p style={{ marginTop: 12, fontSize: 12, color: S.dim, flexShrink: 0 }}>
+            Sin ninguna serie con datos no queda entreno que guardar.
+          </p>
+        )}
+        <button onClick={handleSave} disabled={!puedeGuardar} style={{
+          marginTop: 16, width: '100%', padding: '14px 0', borderRadius: 12, border: 'none',
+          background: quedaAlgo ? S.acc : 'rgba(248,113,113,0.15)', color: quedaAlgo ? S.onAcc : S.bad,
+          opacity: puedeGuardar ? 1 : 0.4, fontWeight: 700, fontSize: 15, cursor: puedeGuardar ? 'pointer' : 'default', flexShrink: 0,
         }}>
-          Guardar cambios
+          {quedaAlgo ? 'Guardar cambios' : 'Borrar entreno'}
         </button>
       </Dialog>
     </div>
@@ -373,9 +424,9 @@ function EditWorkoutSheet({ workout, onClose }: { workout: Workout; onClose: () 
 const LONG_PRESS_MS = 550
 
 function WeekPlanDayRow({
-  label, routineId, routines, onSet,
+  label, nombreDia, routineId, routines, onSet,
 }: {
-  label: string; routineId: string | null; routines: Routine[]; onSet: (routineId: string | null) => void
+  label: string; nombreDia: string; routineId: string | null; routines: Routine[]; onSet: (routineId: string | null) => void
 }) {
   const routine = routineId ? routines.find(r => r.id === routineId) : null
   const [locked, setLocked] = useState(false)
@@ -399,10 +450,11 @@ function WeekPlanDayRow({
 
   return (
     <div className="flex items-center gap-2">
-      <span style={{ fontSize: 11, fontWeight: 600, width: 28, flexShrink: 0, color: S.dim }}>{label}</span>
+      <span aria-hidden="true" style={{ fontSize: 11, fontWeight: 600, width: 28, flexShrink: 0, color: S.dim }}>{label}</span>
       <select
         value={routine ? routineId! : ''}
         disabled={locked}
+        aria-label={`Rutina del ${nombreDia}`}
         onChange={(e) => onSet(e.target.value || null)}
         onPointerDown={startPress}
         onPointerUp={cancelPress}
@@ -439,7 +491,7 @@ const botonModo = (activo: boolean): React.CSSProperties => ({
 })
 
 const botonFlecha: React.CSSProperties = {
-  width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`,
+  ...tappable, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`,
   color: S.ink, fontSize: 15, cursor: 'pointer',
 }
 
@@ -448,7 +500,12 @@ const botonFlecha: React.CSSProperties = {
  * puntual: no todas son iguales, y una semana sin plan propio sigue la de por defecto.
  */
 function WeekPlanner() {
-  const { weekPlan, weekOverrides, setWeekPlanDay, setWeekOverrideDay, clearWeekOverride, routines } = useStore()
+  const weekPlan = useStore((s) => s.weekPlan)
+  const weekOverrides = useStore((s) => s.weekOverrides)
+  const setWeekPlanDay = useStore((s) => s.setWeekPlanDay)
+  const setWeekOverrideDay = useStore((s) => s.setWeekOverrideDay)
+  const clearWeekOverride = useStore((s) => s.clearWeekOverride)
+  const routines = useStore((s) => s.routines)
   const [modo, setModo] = useState<'default' | 'semana'>('default')
   const [offset, setOffset] = useState(0) // 0 = esta semana
   const nowTs = useHoy()
@@ -497,6 +554,7 @@ function WeekPlanner() {
           <WeekPlanDayRow
             key={dow}
             label={label}
+            nombreDia={DOW_NOMBRES[dow]}
             routineId={plan[dow] ?? null}
             routines={routines}
             onSet={(routineId) => modo === 'default' ? setWeekPlanDay(dow, routineId) : setWeekOverrideDay(clave, dow, routineId)}
@@ -526,7 +584,7 @@ const opcionMenu: React.CSSProperties = {
 function HistoryRow({ workout: w, routines, onOpen, onLongPress }: {
   workout: Workout; routines: Routine[]; onOpen: () => void; onLongPress: () => void
 }) {
-  const { getArchivedRoutineName } = useStore()
+  const getArchivedRoutineName = useStore((s) => s.getArchivedRoutineName)
   const { consumioElTap, handlers } = useLongPress(onLongPress)
   const routine = routines.find((r) => r.id === w.routineId) ?? getArchivedRoutineName(w.routineId)
   const date = new Date(w.startedAt)
@@ -560,7 +618,17 @@ function HistoryRow({ workout: w, routines, onOpen, onLongPress }: {
 }
 
 function CalendarioTab({ year, month }: { year: number; month: number }) {
-  const { workouts, routines, weekPlan, weekOverrides, deleteWorkout, restoreWorkout, addUndoToast, getArchivedRoutineName, inicioUso } = useStore()
+  // Selectores: con `useStore()` entero la Agenda se volvía a renderizar (y a
+  // recorrer los 100 entrenos) con cada aviso.
+  const workouts = useStore((s) => s.workouts)
+  const routines = useStore((s) => s.routines)
+  const weekPlan = useStore((s) => s.weekPlan)
+  const weekOverrides = useStore((s) => s.weekOverrides)
+  const deleteWorkout = useStore((s) => s.deleteWorkout)
+  const restoreWorkout = useStore((s) => s.restoreWorkout)
+  const addUndoToast = useStore((s) => s.addUndoToast)
+  const getArchivedRoutineName = useStore((s) => s.getArchivedRoutineName)
+  const inicioUso = useStore((s) => s.inicioUso)
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
   const agendaDayTs = useStore((s) => s.agendaDayTs)
   const clearAgendaDay = useStore((s) => s.clearAgendaDay)
@@ -582,28 +650,49 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
 
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const nowTs = useHoy()
-  const finishedWorkouts = workouts.filter(w => w.finishedAt)
-  const routineIdsVivos = routines.map(r => r.id)
-  // Los días anteriores a empezar a usar la app no son faltas.
-  const desde = inicioDeFaltas(inicioUso, finishedWorkouts)
-  const plannedDows = (d: Date) => (desde == null || d.getTime() >= desde) && plannedDowSet(planDeSemana(weekPlan, weekOverrides, d.getTime()), routineIdsVivos).has((d.getDay() + 6) % 7)
-  // Se mide contra los días que la semana tipo pedía entrenar, no contra los 31
-  // del mes: ir tres veces por semana es cumplir el plan.
-  const { trained: gymDaysCount, planned } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
-  const streak = getWorkoutStreak(finishedWorkouts, nowTs)
-  const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
-  // Plan en orden: los días que vienen muestran la rutina que de verdad te toca.
-  const planPorDia = prediccionDelPlan(weekPlan, routines.map(r => r.id), finishedWorkouts, nowTs, 70, weekOverrides)
+  const finishedWorkouts = useMemo(() => workouts.filter(w => w.finishedAt), [workouts])
+  // Las cuentas del mes se hacen una vez por cambio de mes o de historial.
+  const { gymDaysCount, planned, desde, recentWorkouts, planPorDia, leyenda } = useMemo(() => {
+    const routineIdsVivos = routines.map(r => r.id)
+    // Los días anteriores a empezar a usar la app no son faltas.
+    const desde = inicioDeFaltas(inicioUso, finishedWorkouts)
+    const plannedDows = (d: Date) => (desde == null || d.getTime() >= desde) && plannedDowSet(planDeSemana(weekPlan, weekOverrides, d.getTime()), routineIdsVivos).has((d.getDay() + 6) % 7)
+    // Se mide contra los días que la semana tipo pedía entrenar, no contra los 31
+    // del mes: ir tres veces por semana es cumplir el plan.
+    const { trained, planned } = monthStats(finishedWorkouts, year, month, nowTs, plannedDows)
+    const recentWorkouts = [...finishedWorkouts].sort((a, b) => b.startedAt - a.startedAt).slice(0, 8)
+    // Plan en orden: los días que vienen muestran la rutina que de verdad te toca.
+    const planPorDia = prediccionDelPlan(weekPlan, routineIdsVivos, finishedWorkouts, nowTs, 70, weekOverrides)
+    return { gymDaysCount: trained, planned, desde, recentWorkouts, planPorDia, leyenda: rutinasDelMes(finishedWorkouts, routines, year, month) }
+  }, [finishedWorkouts, routines, weekPlan, weekOverrides, inicioUso, year, month, nowTs])
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Calendario del mes, con el resumen en una línea arriba */}
+      {/* Calendario del mes, con el resumen y la leyenda en una línea arriba */}
       <div style={{ background: S.surf, borderRadius: 16, padding: '14px 14px', border: `1px solid ${S.line2}` }}>
-        <p style={{ fontSize: 13, color: S.dim, marginBottom: 12 }}>
-          <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{gymDaysCount}</span>
-          {planned > 0 ? <> de <span className="num">{planned}</span> planificados</> : ` ${gymDaysCount === 1 ? 'día' : 'días'} de gym`}
-          {' · '}racha <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{streak.current}</span>
-        </p>
+        <div className="flex items-center justify-between flex-wrap" style={{ gap: '4px 10px', marginBottom: 12 }}>
+          <p style={{ fontSize: 13, color: S.dim }}>
+            <span className="num" style={{ color: S.ink, fontWeight: 700 }}>{gymDaysCount}</span>
+            {planned > 0 ? <> de <span className="num">{planned}</span> planificados</> : ` ${gymDaysCount === 1 ? 'día' : 'días'} de gym`}
+          </p>
+          {/* Qué rutina es cada color, con el nombre corto: entra al lado de la cifra. */}
+          {(leyenda.rutinas.length > 0 || leyenda.hayBorradas) && (
+            <ul className="flex items-center flex-wrap" style={{ gap: '2px 10px', listStyle: 'none', margin: 0, padding: 0 }} aria-label="Rutinas del mes">
+              {leyenda.rutinas.map((r) => (
+                <li key={r.id} className="flex items-center" style={{ gap: 5, fontSize: 12, color: S.dim }}>
+                  <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, background: routineColor(r.id, routines), flexShrink: 0 }} />
+                  <span title={r.name}>{nombreCortoRutina(r.name)}</span>
+                </li>
+              ))}
+              {leyenda.hayBorradas && (
+                <li className="flex items-center" style={{ gap: 5, fontSize: 12, color: S.dim }}>
+                  <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, background: S.faint, flexShrink: 0 }} />
+                  Eliminada
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
         <MonthCalendar
           year={year}
           month={month}
@@ -655,11 +744,11 @@ function CalendarioTab({ year, month }: { year: number; month: number }) {
               </p>
               <div className="flex flex-col gap-2">
                 <button onClick={() => { const w = menuWorkout; setMenuWorkout(null); setEditingWorkout(w) }} style={opcionMenu}>
-                  ✏️  Editar entreno
+                  <span aria-hidden="true">✏️</span>  Editar entreno
                 </button>
                 <button onClick={() => { const w = menuWorkout; setMenuWorkout(null); borrarConDeshacer(w) }}
                   style={{ ...opcionMenu, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.28)', color: S.bad }}>
-                  🗑  Borrar entreno
+                  <span aria-hidden="true">🗑</span>  Borrar entreno
                 </button>
                 <button onClick={() => setMenuWorkout(null)} style={{ ...opcionMenu, background: 'none', color: S.dim, textAlign: 'center', marginTop: 4 }}>
                   Cancelar
@@ -695,128 +784,160 @@ function formatMarca(m: { kg: number; reps: number; durationSec?: number }): str
   return `${m.reps} reps`
 }
 
+function IconoChevron() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function RecordsTab() {
-  const { prs, workouts } = useStore()
+  const prs = useStore((s) => s.prs)
+  const workouts = useStore((s) => s.workouts)
   const exercises = useAllExercises()
   const [expandedPr, setExpandedPr] = useState<string | null>(null)
+  const [historialDe, setHistorialDe] = useState<string | null>(null)
   // Últimos 30 días en vez del mes calendario: todos los días 1 este contador
   // volvía a cero aunque vinieras rompiendo marcas.
   const nowTs = useHoy()
   const startOfMonth = nowTs - 30 * 86400000
   const monthPrs = prs.filter((p) => p.date >= startOfMonth)
+  const ultimo = prs.reduce<number>((m, p) => Math.max(m, p.date), 0)
 
   // Por grupo muscular, y adentro los del mes primero (los demás, del más
   // reciente al más viejo). Antes eran 30 filas iguales en una sola lista.
-  const porId = new Map(exercises.map((e) => [e.id, e]))
-  const grupos = (Object.keys(muscleGroupConfig) as MuscleGroup[])
+  const porId = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
+  const grupos = useMemo(() => (Object.keys(muscleGroupConfig) as MuscleGroup[])
     .map((g) => ({
       g,
       lista: prs
         .filter((p) => porId.get(p.exerciseId)?.muscleGroup === g)
         .sort((a, b) => Number(b.date >= startOfMonth) - Number(a.date >= startOfMonth) || b.date - a.date),
     }))
-    .filter((x) => x.lista.length > 0)
+    .filter((x) => x.lista.length > 0), [prs, porId, startOfMonth])
 
   return (
     <div className="flex flex-col gap-3">
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(242,169,59,0.08)', border: `1px solid rgba(242,169,59,0.22)`, borderRadius: 16, padding: 16 }}>
-        <span style={{ fontSize: 32, lineHeight: 1 }}>🏆</span>
+        <span aria-hidden="true" style={{ fontSize: 32, lineHeight: 1 }}>🏆</span>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: S.acc2 }}>
-            {monthPrs.length} {monthPrs.length === 1 ? 'récord nuevo' : 'récords nuevos'} en 30 días
+            <span className="num">{monthPrs.length}</span> {monthPrs.length === 1 ? 'récord nuevo' : 'récords nuevos'} en 30 días
           </div>
-          <div style={{ fontSize: 12, color: S.dim, marginTop: 3 }}>{prs.length} récords personales en total</div>
+          <div style={{ fontSize: 12, color: S.dim, marginTop: 3 }}>
+            <span className="num">{prs.length}</span> en total
+            {ultimo > 0 && <> · el último, el {new Date(ultimo).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</>}
+          </div>
         </div>
       </div>
 
       {grupos.map(({ g, lista }) => (
-        <section key={g} aria-label={muscleGroupConfig[g].label} className="flex flex-col gap-2">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: S.ink, margin: '8px 0 0' }}>
+        <section key={g} aria-label={muscleGroupConfig[g].label} className="flex flex-col">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: S.ink, margin: '8px 2px 6px' }}>
+            <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 4, background: muscleGroupConfig[g].color, flexShrink: 0 }} />
             <MuscleIcon group={g} size={20} />
             {muscleGroupConfig[g].label}
-            <span className="num" style={{ fontSize: 11, color: S.mute, fontWeight: 600 }}>{lista.length}</span>
+            <span className="num" style={{ fontSize: 12, color: S.dim, fontWeight: 600 }}>{lista.length}</span>
           </h3>
-          {lista.map((pr) => {
-            const ex = porId.get(pr.exerciseId)!
-            const isNew = pr.date >= startOfMonth
-            const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
-            const isExpanded = expandedPr === pr.exerciseId
-            const hasHistory = !!pr.history && pr.history.length > 0
-            const conKilos = pr.kg > 0 && !pr.durationSec
-            const desplegable = hasHistory || conKilos
-            const porReps = isExpanded && conKilos ? recordsPorReps(pr.exerciseId, workouts) : []
-            return (
-              <div key={pr.exerciseId} style={{ background: S.surf, borderRadius: 16, border: `1px solid ${S.line2}` }}>
-                <button
-                  type="button"
-                  onClick={() => desplegable && setExpandedPr(isExpanded ? null : pr.exerciseId)}
-                  aria-expanded={desplegable ? isExpanded : undefined}
-                  className="flex items-center gap-3 w-full text-left"
-                  style={{ padding: '12px 14px', background: 'none', border: 'none', cursor: desplegable ? 'pointer' : 'default', color: 'inherit' }}
-                >
-                  <div className="flex-1 min-w-0">
-                    {/* Nombre completo, hasta dos líneas: el punto coral marca lo de los últimos 30 días. */}
-                    <span style={{
-                      fontSize: 13, fontWeight: 700, color: S.ink, lineHeight: 1.3,
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    }}>
-                      {isNew && <span aria-label="nuevo" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: S.acc, marginRight: 6, verticalAlign: 'middle', position: 'relative', top: -1 }} />}
-                      {ex.nameEs}
-                    </span>
-                    <p style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>{prDate}</p>
+          {/* Las filas de un mismo grupo comparten una tarjeta: menos bordes. */}
+          <div style={{ background: S.surf, borderRadius: 16, border: `1px solid ${S.line2}` }}>
+            {lista.map((pr, i) => {
+              const ex = porId.get(pr.exerciseId)!
+              const isNew = pr.date >= startOfMonth
+              const prDate = new Date(pr.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+              const mejora = mejoraDeRecord(pr)
+              const isExpanded = expandedPr === pr.exerciseId
+              const hasHistory = !!pr.history && pr.history.length > 0
+              const conKilos = pr.kg > 0 && !pr.durationSec
+              const desplegable = hasHistory || conKilos
+              const porReps = isExpanded && conKilos ? recordsPorReps(pr.exerciseId, workouts) : []
+              return (
+                <div key={pr.exerciseId} style={{ borderTop: i ? `1px solid ${S.line}` : 'none' }}>
+                  <div className="flex items-center" style={{ gap: 4, paddingRight: 4 }}>
+                    <button
+                      type="button"
+                      onClick={() => desplegable && setExpandedPr(isExpanded ? null : pr.exerciseId)}
+                      aria-expanded={desplegable ? isExpanded : undefined}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      style={{ padding: '10px 0 10px 16px', minHeight: 60, background: 'none', border: 'none', cursor: desplegable ? 'pointer' : 'default', color: 'inherit' }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        {/* Nombre completo, hasta dos líneas: el punto coral marca lo de los últimos 30 días. */}
+                        <span style={{
+                          fontSize: 15, fontWeight: 600, color: S.ink, lineHeight: 1.3,
+                          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                        }}>
+                          {isNew && <span aria-label="nuevo" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: S.acc, marginRight: 6, verticalAlign: 'middle', position: 'relative', top: -1 }} />}
+                          {ex.nameEs}
+                        </span>
+                        <p style={{ fontSize: 12, color: S.dim, marginTop: 2 }}>
+                          {prDate}
+                          {/* Cuánto subió respecto de la marca anterior: en ámbar, como todo récord. */}
+                          {mejora && <> · <span className="num" style={{ color: S.acc2, fontWeight: 600 }}>{mejora}</span></>}
+                        </p>
+                      </div>
+                      <div className="num" style={{ fontSize: 17, fontWeight: 600, color: S.ink, flexShrink: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>{formatMarca(pr)}</div>
+                    </button>
+                    {/* El chevron abre la ficha con el gráfico y todas las sesiones. */}
+                    <button
+                      type="button"
+                      onClick={() => setHistorialDe(pr.exerciseId)}
+                      aria-label={`Ver el historial de ${ex.nameEs}`}
+                      style={{ ...botonIcono, color: S.mute, flexShrink: 0 }}
+                    >
+                      <IconoChevron />
+                    </button>
                   </div>
-                  <div className="num" style={{ fontSize: 13, fontWeight: 700, color: S.ink, flexShrink: 0, textAlign: 'right' }}>{formatMarca(pr)}</div>
-                  {desplegable && (
-                    <span aria-hidden="true" style={{ color: S.mute, fontSize: 11, flexShrink: 0, width: 14, textAlign: 'center' }}>
-                      {isExpanded ? '▲' : '▼'}
-                    </span>
+                  {isExpanded && desplegable && (
+                    <div style={{ padding: '4px 16px 12px' }}>
+                      {conKilos && (
+                        <>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: S.mute, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Mejor peso por repeticiones</p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 12, rowGap: 6, marginBottom: hasHistory ? 14 : 0 }}>
+                            {porReps.map((r, i) => (
+                              <div key={i} style={{ display: 'contents' }}>
+                                <span className="num" style={{ fontSize: 12, color: S.dim }}>{REPS_TABLA[i]} reps</span>
+                                <span className="num" style={{ fontSize: 12, fontWeight: 700, color: r ? S.ink : S.mute, textAlign: 'right' }}>{r ? `${formatKg(r.kg)} kg` : '—'}</span>
+                                <span style={{ fontSize: 11, color: S.mute, minWidth: 54, textAlign: 'right' }}>
+                                  {r ? new Date(r.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {hasHistory && (
+                        <>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: S.mute, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
+                          <div className="flex flex-col gap-1.5">
+                            {[...pr.history!].reverse().map((h, hi) => (
+                              <div key={hi} className="flex items-center justify-between">
+                                <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                                <span className="num" style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
-                </button>
-                {isExpanded && desplegable && (
-                  <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${S.line}` }}>
-                    {conKilos && (
-                      <>
-                        <p style={{ fontSize: 11, fontWeight: 600, color: S.mute, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Mejor peso por repeticiones</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', columnGap: 12, rowGap: 6, marginBottom: hasHistory ? 14 : 0 }}>
-                          {porReps.map((r, i) => (
-                            <div key={i} style={{ display: 'contents' }}>
-                              <span className="num" style={{ fontSize: 12, color: S.dim }}>{REPS_TABLA[i]} reps</span>
-                              <span className="num" style={{ fontSize: 12, fontWeight: 700, color: r ? S.ink : S.mute, textAlign: 'right' }}>{r ? `${formatKg(r.kg)} kg` : '—'}</span>
-                              <span style={{ fontSize: 11, color: S.mute, minWidth: 54, textAlign: 'right' }}>
-                                {r ? new Date(r.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : ''}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {hasHistory && (
-                      <>
-                        <p style={{ fontSize: 11, fontWeight: 600, color: S.mute, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Historial</p>
-                        <div className="flex flex-col gap-1.5">
-                          {[...pr.history!].reverse().map((h, hi) => (
-                            <div key={hi} className="flex items-center justify-between">
-                              <span style={{ fontSize: 11, color: S.dim }}>{new Date(h.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                              <span className="num" style={{ fontSize: 11, fontWeight: 600, color: S.dim }}>{formatMarca(h)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                </div>
+              )
+            })}
+          </div>
         </section>
       ))}
       {prs.length === 0 && <p style={{ color: S.mute, fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No hay récords aún. ¡A entrenar!</p>}
+
+      {historialDe && <ExerciseHistorySheet exerciseId={historialDe} onClose={() => setHistorialDe(null)} />}
     </div>
   )
 }
 
 export function CalendarioScreen() {
-  const { calendarSubTab, setCalendarSubTab } = useStore()
+  const calendarSubTab = useStore((s) => s.calendarSubTab)
+  const setCalendarSubTab = useStore((s) => s.setCalendarSubTab)
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date(useStore.getState().agendaDayTs ?? Date.now())
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -834,22 +955,22 @@ export function CalendarioScreen() {
         {enCalendario ? (
           <div className="flex items-center justify-between">
             <button onClick={() => setViewDate(new Date(year, month - 1, 1))} aria-label="Mes anterior"
-              style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>‹</button>
+              style={{ ...botonFlecha, color: S.dim, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>‹</button>
             <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink, textAlign: 'center' }}>
               {MONTH_NAMES[month]} <span style={{ color: S.dim, fontWeight: 600 }}>{year}</span>
             </div>
             <button onClick={() => { if (!isCurrentMonth) setViewDate(new Date(year, month + 1, 1)) }} disabled={isCurrentMonth} aria-label="Mes siguiente"
-              style={{ width: 36, height: 36, borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: isCurrentMonth ? S.faint : S.dim, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', flexShrink: 0 }}>›</button>
+              style={{ ...botonFlecha, color: isCurrentMonth ? S.faint : S.dim, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isCurrentMonth ? 'default' : 'pointer', flexShrink: 0 }}>›</button>
           </div>
         ) : (
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink, textAlign: 'center' }}>Récords</div>
         )}
 
         <div style={{ display: 'flex', background: S.surf, borderRadius: 16, padding: 3, border: `1px solid ${S.line2}`, marginTop: 16 }}>
-          {([['calendario', '📅 Calendario'], ['records', '🏆 Récords']] as [CalendarSubTab, string][]).map(([id, label]) => (
-            <button key={id} onClick={() => setCalendarSubTab(id)}
-              style={{ flex: 1, padding: '9px 0', borderRadius: 12, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: calendarSubTab === id ? S.surf2 : 'transparent', color: calendarSubTab === id ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
-              {label}
+          {([['calendario', '📅', 'Calendario'], ['records', '🏆', 'Récords']] as [CalendarSubTab, string, string][]).map(([id, emoji, label]) => (
+            <button key={id} onClick={() => setCalendarSubTab(id)} aria-pressed={calendarSubTab === id}
+              style={{ flex: 1, padding: '9px 0', minHeight: 44, borderRadius: 12, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: calendarSubTab === id ? S.surf2 : 'transparent', color: calendarSubTab === id ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
+              <span aria-hidden="true">{emoji}</span> {label}
             </button>
           ))}
         </div>

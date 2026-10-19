@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Dialog } from '../components/Dialog'
 import { Sparkline } from '../components/Sparkline'
 import { useAllExercises, useStore } from '../store/useStore'
-import { R, S, T } from '../theme'
+import { R, S, T, deltaColor, ROW, SP } from '../theme'
 import { informeCiclo, type FilaEjercicioCiclo } from '../utils/cycleReport'
 import {
   candidatosACambiar, losQueMasSubieron, planificadasPorSemana, rangoCiclo, textoMarca, textoPct,
@@ -13,7 +13,10 @@ import { generarImagenCiclo, type TonoCambio } from '../utils/shareInformes'
 import { dayKey } from '../utils/trainingDays'
 import { useHoy } from '../utils/useHoy'
 
-const colorCambio = (p: number | null) => (p == null || p === 0 ? S.mute : p > 0 ? S.good : S.bad)
+// Subida en verde, baja en gris: una baja no es un error.
+const colorCambio = (p: number | null) => (p == null ? S.mute : deltaColor(p))
+/** Alto máximo de la barra de una semana. */
+const ALTO_BARRA = 56
 const tono = (p: number): TonoCambio => (p > 0 ? 'sube' : p < 0 ? 'baja' : 'igual')
 
 /** Primera y última semana con datos dentro de [desde, hasta] (1-6), para "S1→S3". */
@@ -130,7 +133,7 @@ export function InformeCicloSheet({ inicio, fin, onClose }: { inicio: number; fi
     }
   }
 
-  const caja = { background: S.surf, borderRadius: R.lg, border: `1px solid ${S.line2}`, padding: '14px 14px' } as const
+  const caja = { background: S.surf, borderRadius: R.lg, border: `1px solid ${S.line2}`, padding: `${SP[3]}px ${SP[4]}px` } as const
 
   return (
     <Dialog label={`Informe del ciclo ${rango}`} onClose={onClose} className="absolute inset-0 z-50 flex flex-col sheet-enter" style={{ background: S.bg }}>
@@ -138,92 +141,123 @@ export function InformeCicloSheet({ inicio, fin, onClose }: { inicio: number; fi
         <button
           onClick={onClose}
           aria-label="Cerrar el informe"
-          style={{ width: 44, height: 44, borderRadius: R.md, flexShrink: 0, background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim, fontSize: 22, cursor: 'pointer', lineHeight: 1 }}
+          style={{ width: ROW.compact, height: ROW.compact, borderRadius: R.md, flexShrink: 0, background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink, fontSize: T.h2, cursor: 'pointer', lineHeight: 1 }}
         >
           ‹
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="eyebrow">{informe.semanaActual ? 'Informe parcial' : 'Informe del ciclo'}</div>
-          <div style={{ fontSize: T.title, fontWeight: 700, color: S.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="num" style={{ fontSize: 20, fontWeight: 700, color: S.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {rango}
           </div>
         </div>
-        <button className="btn-secondary" onClick={compartir} disabled={compartiendo} style={{ padding: '0 12px', fontSize: T.body, flexShrink: 0 }}>
+        <button className="btn-secondary" onClick={compartir} disabled={compartiendo} style={{ padding: `0 ${SP[3]}px`, fontSize: T.body, flexShrink: 0 }}>
           {compartiendo ? 'Armando…' : 'Compartir'}
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 scroll-area" style={{ padding: '16px 16px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {/* Resumen */}
+      <div className="flex-1 min-h-0 scroll-area" style={{ padding: `${SP[4]}px ${SP[4]}px ${SP[8]}px`, display: 'flex', flexDirection: 'column', gap: SP[3] }}>
+        {/* Resumen: dónde va el ciclo, la asistencia y tres cifras */}
         <section aria-label="Resumen del ciclo" style={caja}>
-          {informe.semanaActual && (
-            <div style={{ fontSize: T.caption, color: S.dim, marginBottom: 4 }}>
-              Vas por la semana <b className="num" style={{ color: S.ink }}>{informe.semanaActual}</b> de <span className="num">{SEMANAS_PROGRAMA}</span>: el informe se completa al terminar.
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: SP[3] }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ fontSize: T.h2, fontWeight: 700, color: S.ink, letterSpacing: '-0.01em' }}>
+                {informe.semanaActual
+                  ? <>Semana <span className="num">{informe.semanaActual}</span> de <span className="num">{SEMANAS_PROGRAMA}</span></>
+                  : <>Ciclo completo</>}
+              </h2>
+              <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>
+                {informe.semanaActual ? 'El informe se completa al terminar el ciclo.' : `Las ${SEMANAS_PROGRAMA} semanas del plan.`}
+              </div>
             </div>
-          )}
-          <div style={{ fontSize: T.body, color: S.dim, lineHeight: 1.6 }}>
-            <b className="num" style={{ color: S.ink, fontSize: T.bodyLg }}>{informe.sesiones}</b>
-            {informe.planificadas > 0 && informe.sesiones <= informe.planificadas
-              ? <> de <b className="num" style={{ color: S.ink }}>{informe.planificadas}</b> entrenos (<span className="num">{pct}</span>&nbsp;%)</>
-              : informe.planificadas > 0 ? <> entrenos (<span className="num">{pct}</span>&nbsp;% del plan)</> : informe.sesiones === 1 ? ' entreno' : ' entrenos'}
-            {' · '}<b className="num" style={{ color: S.ink }}>{informe.series}</b> series
-            {' · '}<b className="num" style={{ color: informe.records ? S.acc2 : S.ink }}>{informe.records ? '🏆 ' : ''}{informe.records}</b> {informe.records === 1 ? 'récord' : 'récords'}
+            {informe.planificadas > 0 && (
+              <div style={{ textAlign: 'right', flexShrink: 0 }} aria-label={`Asistencia ${pct} por ciento`}>
+                <div className="num" style={{ fontSize: T.h2, fontWeight: 700, color: S.good, lineHeight: 1.1 }}>{pct}&nbsp;%</div>
+                <div style={{ fontSize: T.caption, color: S.dim }}>asistencia</div>
+              </div>
+            )}
           </div>
+          <div role="list" aria-label="Cifras del ciclo" style={{ display: 'flex', marginTop: SP[3], paddingTop: SP[3], borderTop: `1px solid ${S.line}` }}>
+            <div role="listitem" aria-label={textoEntrenos} style={{ flex: 1, minWidth: 0 }}>
+              <div className="num" style={{ fontSize: T.h2, fontWeight: 700, color: S.ink, lineHeight: 1.1 }}>
+                {informe.sesiones}
+                {informe.planificadas > 0 && informe.sesiones <= informe.planificadas && <span style={{ fontSize: T.bodyLg, color: S.dim }}> de {informe.planificadas}</span>}
+              </div>
+              <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>{informe.sesiones === 1 && informe.planificadas === 0 ? 'entreno' : 'entrenos'}</div>
+            </div>
+            <div role="listitem" aria-label={`${informe.series} series`} style={{ flex: 1, minWidth: 0 }}>
+              <div className="num" style={{ fontSize: T.h2, fontWeight: 700, color: S.ink, lineHeight: 1.1 }}>{informe.series}</div>
+              <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>series</div>
+            </div>
+            <div role="listitem" aria-label={`${informe.records} ${informe.records === 1 ? 'récord' : 'récords'}`} style={{ flex: 1, minWidth: 0 }}>
+              <div className="num" style={{ fontSize: T.h2, fontWeight: 700, color: informe.records ? S.acc2 : S.ink, lineHeight: 1.1 }}>{informe.records}</div>
+              <div style={{ fontSize: T.caption, color: S.dim, marginTop: 2 }}>{informe.records ? <><span aria-hidden="true">🏆</span> </> : ''}{informe.records === 1 ? 'récord' : 'récords'}</div>
+            </div>
+          </div>
+        </section>
 
-          {/* Semanas */}
-          <div role="list" aria-label="Semanas del ciclo" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginTop: 14, rowGap: 6 }}>
-            <span aria-hidden="true" style={{ gridColumn: '1 / 4', fontSize: T.micro, color: S.mute, fontWeight: 600 }}>Semanas 1-3</span>
-            <span aria-hidden="true" style={{ gridColumn: '4 / 7', fontSize: T.micro, color: S.mute, fontWeight: 600, paddingLeft: 8, borderLeft: `2px solid ${S.line2}` }}>
-              Cambio de bloque
+        {/* Por semana: barras de alto proporcional a los entrenos hechos sobre los planificados */}
+        <section aria-label="Por semana" style={caja}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: SP[2] }}>
+            <h2 style={{ fontSize: T.title, fontWeight: 700, color: S.ink }}>Por semana</h2>
+            <span style={{ fontSize: T.caption, color: S.dim, whiteSpace: 'nowrap' }}>
+              {informe.planificadas ? 'hechos / planificados · series' : 'entrenos · series'}
             </span>
+          </div>
+          <div role="list" aria-label="Semanas del ciclo" style={{ display: 'flex', alignItems: 'stretch', marginTop: SP[3] }}>
             {informe.semanas.map((s) => {
               const futura = s.lunes > nowTs
               const enCurso = !futura && informe.semanaActual === s.n
               // La semana en curso cuenta para la asistencia sólo lo hecho; acá se muestra el plan entero.
               const planificadas = enCurso ? plan(s.lunes) : s.planificadas
               const cumplida = planificadas > 0 && s.sesiones >= planificadas
-              const maxSeries = Math.max(1, ...informe.semanas.map((x) => x.series))
+              // Sin plan, la barra es sobre la semana con más entrenos.
+              const maxSesiones = Math.max(1, ...informe.semanas.map((x) => x.sesiones))
+              const proporcion = planificadas > 0 ? Math.min(1, s.sesiones / planificadas) : s.sesiones / maxSesiones
               return (
-                <div
-                  key={s.n}
-                  role="listitem"
-                  aria-label={futura ? `Semana ${s.n}: todavía no empezó` : `Semana ${s.n}${enCurso ? ', en curso' : ''}: ${s.sesiones}${planificadas ? ` de ${planificadas}` : ''} entrenos, ${s.series} series`}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 0',
-                    borderLeft: s.n === SEMANA_CAMBIO ? `2px solid ${S.line2}` : undefined,
-                    opacity: futura ? 0.45 : 1,
-                  }}
-                >
-                  <span style={{ fontSize: T.micro, color: enCurso ? S.ink : S.mute, fontWeight: enCurso ? 700 : 600 }}>S{s.n}</span>
-                  <span aria-hidden="true" style={{ height: 36, display: 'flex', alignItems: 'flex-end' }}>
-                    <span style={{
-                      width: 14, borderRadius: 4,
-                      height: Math.max(4, (s.series / maxSeries) * 36),
-                      background: s.series === 0 ? S.surf2 : cumplida ? S.good : S.faint,
-                    }} />
-                  </span>
-                  <span className="num" style={{ fontSize: T.body, fontWeight: 700, color: cumplida ? S.good : S.ink }}>
-                    {futura ? '—' : planificadas ? `${s.sesiones}/${planificadas}` : s.sesiones}
-                  </span>
-                  <span className="num" style={{ fontSize: T.micro, color: S.dim }}>{futura ? '' : s.series}</span>
+                <div key={s.n} style={{ display: 'contents' }}>
+                  {s.n === SEMANA_CAMBIO && <span aria-hidden="true" style={{ width: 1, background: S.line2, margin: `0 ${SP[1]}px` }} />}
+                  <div
+                    role="listitem"
+                    aria-label={futura ? `Semana ${s.n}: todavía no empezó` : `Semana ${s.n}${enCurso ? ', en curso' : ''}: ${s.sesiones}${planificadas ? ` de ${planificadas}` : ''} entrenos, ${s.series} series${cumplida ? ', cumplida' : ''}`}
+                    style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: futura ? 0.45 : 1 }}
+                  >
+                    <span style={{ fontSize: T.caption, fontWeight: 700, color: futura ? S.dim : S.ink }}>S{s.n}</span>
+                    <span aria-hidden="true" style={{ height: ALTO_BARRA, display: 'flex', alignItems: 'flex-end' }}>
+                      <span style={{
+                        display: 'block', width: 22, borderRadius: 6,
+                        height: Math.max(4, Math.round(proporcion * ALTO_BARRA)),
+                        background: futura || s.sesiones === 0 ? S.surf2 : cumplida ? S.good : S.faint,
+                      }} />
+                    </span>
+                    <span className="num" style={{ fontSize: T.bodyLg, fontWeight: 700, color: cumplida ? S.good : S.ink }}>
+                      {futura ? '–' : planificadas ? `${s.sesiones}/${planificadas}` : s.sesiones}
+                    </span>
+                    <span className="num" style={{ fontSize: T.caption, color: S.dim, minHeight: 16 }}>{futura ? '' : s.series}</span>
+                  </div>
                 </div>
               )
             })}
           </div>
-          <div style={{ fontSize: T.micro, color: S.mute, marginTop: 4 }}>
-            Por semana: entrenos{informe.planificadas ? ' hechos / planificados' : ''} y series. En verde, las semanas cumplidas.
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: SP[2], fontSize: T.caption, color: S.dim, marginTop: SP[3] }}>
+            <span>Semanas 1-{SEMANA_CAMBIO - 1}</span>
+            <span>Cambio de bloque · semanas {SEMANA_CAMBIO}-{SEMANAS_PROGRAMA}</span>
           </div>
         </section>
 
         {/* Ejercicios */}
         <section aria-label="Ejercicios" style={{ ...caja, paddingBottom: 6 }}>
-          <h2 style={{ fontSize: T.body, fontWeight: 700, color: S.ink }}>Ejercicios</h2>
+          <h2 style={{ fontSize: T.title, fontWeight: 700, color: S.ink }}>Ejercicios</h2>
           {informe.ejercicios.length === 0 ? (
-            <p style={{ fontSize: T.caption, color: S.dim, padding: '8px 0 10px', lineHeight: 1.5 }}>
-              {informe.semanaActual && informe.semanaActual < SEMANA_CAMBIO
-                ? `La comparación aparece cuando hagas los ejercicios en las semanas ${SEMANA_CAMBIO} a ${SEMANAS_PROGRAMA}.`
-                : 'Ningún ejercicio se hizo en los dos bloques del ciclo.'}
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: SP[2], padding: `${SP[5]}px ${SP[3]}px ${SP[3]}px` }}>
+              <span aria-hidden="true" style={{ width: ROW.compact, height: ROW.compact, borderRadius: R.md, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: T.h2 }}>🏋️</span>
+              <div style={{ fontSize: T.bodyLg, fontWeight: 600, color: S.ink }}>Todavía no hay comparación</div>
+              <p style={{ fontSize: T.caption, color: S.dim, lineHeight: 1.5 }}>
+                {informe.semanaActual && informe.semanaActual < SEMANA_CAMBIO
+                  ? `Aparece cuando hagas los ejercicios en las semanas ${SEMANA_CAMBIO} a ${SEMANAS_PROGRAMA}: la mejor serie del principio contra la del final.`
+                  : 'Ningún ejercicio se hizo en los dos bloques del ciclo, así que no hay principio y final para comparar.'}
+              </p>
+            </div>
           ) : (
             <>
               <p style={{ fontSize: T.micro, color: S.dim, marginTop: 2, lineHeight: 1.5 }}>
@@ -233,7 +267,7 @@ export function InformeCicloSheet({ inicio, fin, onClose }: { inicio: number; fi
                 {informe.medianaCambio != null && <span>Mediana <Cambio pct={informe.medianaCambio} fuerte /></span>}
                 <span><b className="num" style={{ color: S.good }}>{informe.subieron}</b> subieron</span>
                 <span><b className="num" style={{ color: S.mute }}>{informe.iguales}</b> {informe.iguales === 1 ? 'igual' : 'iguales'}</span>
-                <span><b className="num" style={{ color: S.bad }}>{informe.bajaron}</b> {informe.bajaron === 1 ? 'bajó' : 'bajaron'}</span>
+                <span><b className="num" style={{ color: S.dim }}>{informe.bajaron}</b> {informe.bajaron === 1 ? 'bajó' : 'bajaron'}</span>
               </div>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {informe.ejercicios.map((f) => <FilaCiclo key={f.exerciseId} fila={f} nombre={nombreDe(f.exerciseId)} />)}

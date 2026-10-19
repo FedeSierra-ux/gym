@@ -38,7 +38,7 @@ export function OnboardingScreen() {
                 ['🏆', 'Récords personales'],
               ].map(([icon, text]) => (
                 <div key={text} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-                  <span className="text-xl">{icon}</span>
+                  <span className="text-xl" aria-hidden="true">{icon}</span>
                   <span className="text-ink text-sm font-medium">{text}</span>
                 </div>
               ))}
@@ -55,7 +55,7 @@ export function OnboardingScreen() {
       ) : (
         <div className="onboarding-in flex flex-col items-center gap-8 w-full max-w-sm">
           <div>
-            <p className="text-3xl mb-4">💪</p>
+            <p className="text-3xl mb-4" aria-hidden="true">💪</p>
             <h2 className="text-2xl font-bold text-ink mb-2">¿Cómo te llamás?</h2>
             <p className="text-dim text-sm">Así te vamos a saludar en la app</p>
           </div>
@@ -67,6 +67,7 @@ export function OnboardingScreen() {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleStart()}
               placeholder="Tu nombre..."
+              aria-label="Tu nombre"
               autoFocus
               maxLength={24}
               className="w-full bg-surface border-2 border-border rounded-2xl px-4 py-4 text-ink text-lg text-center placeholder-mute focus:border-primary transition-colors"

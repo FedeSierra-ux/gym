@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useHoy } from '../utils/useHoy'
 import type { Routine, Workout } from '../types'
 import { dayKey, setsByDay, routineByDay, routineColor } from '../utils/trainingDays'
@@ -22,6 +23,9 @@ interface DayCell {
  * los planificados con un aro de ese color. Los
  * días de la semana van arriba en horizontal y cada fila es una semana, así se
  * lee de un vistazo qué días se fue y si se están alternando bien las rutinas.
+ *
+ * La leyenda de colores va en el encabezado de la tarjeta (CalendarioScreen),
+ * no acá: así el mes y la semana tipo entran en una pantalla.
  */
 export function MonthCalendar({
   year, month, workouts, routines, onSelectDay, weekPlan, weekOverrides, planPorDia, desde,
@@ -29,7 +33,7 @@ export function MonthCalendar({
   year: number
   month: number
   workouts: Workout[]
-  /** Para el color y la leyenda: el orden de la lista fija el color de cada rutina. */
+  /** Para el color: el orden de la lista fija el color de cada rutina. */
   routines: Routine[]
   /** Si se pasa, cada día es clickeable y devuelve su timestamp al mediodía. */
   onSelectDay?: (ts: number) => void
@@ -48,38 +52,38 @@ export function MonthCalendar({
 }) {
   // Una sola lectura del reloj por montaje: el render tiene que ser puro.
   const nowTs = useHoy()
-  const byDay = setsByDay(workouts)
-  const rutinaDelDia = routineByDay(workouts)
+  // Recorrer los 100 entrenos para armar los mapas por día se hace una vez
+  // por cambio del historial, no en cada render de la Agenda.
+  const byDay = useMemo(() => setsByDay(workouts), [workouts])
+  const rutinaDelDia = useMemo(() => routineByDay(workouts), [workouts])
   const routineIds = routines.map((r) => r.id)
   const todayKey = dayKey(nowTs)
-  const now = new Date(nowTs)
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  // 0 = lunes.
-  const startDow = (new Date(year, month, 1).getDay() + 6) % 7
 
-  const cells: (DayCell | null)[] = Array.from({ length: startDow }, () => null)
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day)
-    const key = dayKey(date.getTime())
-    cells.push({
-      day, key, ts: date.getTime(),
-      sets: byDay.get(key) ?? 0,
-      routineId: rutinaDelDia.get(key),
-      isFuture: date.getTime() > endOfToday,
-      isToday: key === todayKey,
-    })
-  }
-  while (cells.length % 7 !== 0) cells.push(null)
+  const weeks = useMemo(() => {
+    const now = new Date(nowTs)
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    // 0 = lunes.
+    const startDow = (new Date(year, month, 1).getDay() + 6) % 7
 
-  const weeks: (DayCell | null)[][] = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+    const cells: (DayCell | null)[] = Array.from({ length: startDow }, () => null)
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const key = dayKey(date.getTime())
+      cells.push({
+        day, key, ts: date.getTime(),
+        sets: byDay.get(key) ?? 0,
+        routineId: rutinaDelDia.get(key),
+        isFuture: date.getTime() > endOfToday,
+        isToday: key === todayKey,
+      })
+    }
+    while (cells.length % 7 !== 0) cells.push(null)
 
-  // Sólo las rutinas que aparecen este mes entran en la leyenda.
-  const rutinasDelMes = routines.filter((r) =>
-    cells.some((c) => c && !c.isFuture && c.routineId === r.id)
-  )
-  const hayBorradas = cells.some((c) => c?.routineId && !routineIds.includes(c.routineId))
+    const semanas: (DayCell | null)[][] = []
+    for (let i = 0; i < cells.length; i += 7) semanas.push(cells.slice(i, i + 7))
+    return semanas
+  }, [byDay, rutinaDelDia, year, month, nowTs, todayKey])
 
   return (
     <div>
@@ -153,24 +157,6 @@ export function MonthCalendar({
           </div>
         ))}
       </div>
-
-      {/* Leyenda: qué rutina es cada color */}
-      {(rutinasDelMes.length > 0 || hayBorradas) && (
-        <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5" style={{ marginTop: 12 }}>
-          {rutinasDelMes.map((r) => (
-            <span key={r.id} className="flex items-center gap-1.5" style={{ fontSize: 11, color: S.dim }}>
-              <span style={{ width: 9, height: 9, borderRadius: 3, background: routineColor(r.id, routines), flexShrink: 0 }} />
-              {r.name}
-            </span>
-          ))}
-          {hayBorradas && (
-            <span className="flex items-center gap-1.5" style={{ fontSize: 11, color: S.dim }}>
-              <span style={{ width: 9, height: 9, borderRadius: 3, background: S.faint, flexShrink: 0 }} />
-              Rutina eliminada
-            </span>
-          )}
-        </div>
-      )}
     </div>
   )
 }

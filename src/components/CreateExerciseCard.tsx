@@ -7,6 +7,7 @@ import { MuscleBodyMap } from './MuscleBodyMap'
 import { vibrate } from '../utils/haptics'
 import type { Exercise, MuscleGroup } from '../types'
 import { MuscleIcon } from './MuscleIcon'
+import { S } from '../theme'
 
 interface Props {
   /** Lo que escribió el usuario. */
@@ -66,11 +67,12 @@ export function CreateExerciseCard({ name, groupHint, onCreated, label = 'Crear 
           >
             <MuscleIcon group={draft.group} size={18} /> {config.label}
           </span>
-          <span className="text-micro" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          {/* En `dim`: los blancos al 25-35 % quedaban en 2,6:1 a 3,2:1. */}
+          <span className="text-micro" style={{ color: S.dim }}>
             {draft.equipment}
           </span>
           {draft.frameSlug && (
-            <span className="text-micro" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            <span className="text-micro" style={{ color: S.dim }}>
               · dibujo: {draft.matchedName}
             </span>
           )}

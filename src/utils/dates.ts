@@ -11,3 +11,12 @@ export function fromDateInputValue(value: string): number | null {
   if (!y || !m || !d) return null
   return new Date(y, m - 1, d, 12, 0, 0, 0).getTime()
 }
+
+/**
+ * true si `ts` cae después de ahora. El `max` de un <input type="date"> no
+ * alcanza: en escritorio se escribe cualquier fecha y el entreno quedaba
+ * imputado a un día que todavía no llegó.
+ */
+export function esFuturo(ts: number, ahora: number = Date.now()): boolean {
+  return ts > ahora
+}

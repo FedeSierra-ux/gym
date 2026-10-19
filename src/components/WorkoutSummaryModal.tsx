@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Dialog } from './Dialog'
 import { useStore, useAllExercises } from '../store/useStore'
+import { toDateInputValue } from '../utils/dates'
 import { isDurationExercise, formatDuration, totalSeconds } from '../utils/duration'
 import { getWorkoutTip } from '../utils/aiCoach'
 import type { NavTab, Workout } from '../types'
 import { formatKg, formatLoad } from '../utils/format'
-import { S } from '../theme'
+import { S, deltaColor } from '../theme'
 import { RoutineIcon } from './RoutineIcon'
 import { suggestNextWeight } from '../utils/progression'
 import { rutinaEnUso } from '../utils/routineVariant'
@@ -43,7 +45,10 @@ interface Props {
 }
 
 export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
-  const { routines, userName, workouts, anthropicApiKey } = useStore()
+  const routines = useStore((s) => s.routines)
+  const userName = useStore((s) => s.userName)
+  const workouts = useStore((s) => s.workouts)
+  const anthropicApiKey = useStore((s) => s.anthropicApiKey)
   const exercises = useAllExercises()
   const routine = routines.find(r => r.id === workout.routineId)
 
@@ -163,7 +168,8 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
           return { nombre: ex!.nameEs, detalle: `${formatKg(best.kg)} × ${best.reps}` }
         }),
       })
-      await compartirImagen(blob, `gympro-${new Date(workout.startedAt).toISOString().slice(0, 10)}.png`)
+      // Fecha local, no UTC: después de las 21 el archivo salía con la fecha de mañana.
+      await compartirImagen(blob, `gympro-${toDateInputValue(workout.startedAt)}.png`)
     } catch {
       useStore.getState().addToast('No se pudo armar la imagen', 'info')
     } finally {
@@ -174,7 +180,10 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-end"
       style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div
+      {/* Cerrar (Escape) es "Listo": el entreno ya está guardado. */}
+      <Dialog
+        label="Entreno completado"
+        onClose={() => onDismiss('home')}
         className="w-full rounded-t-3xl flex flex-col sheet-enter overflow-y-auto"
         style={{ background: S.surf, borderTop: `1px solid ${S.line2}`, maxHeight: '88vh' }}
       >
@@ -183,11 +192,11 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
         {/* Header */}
         <div className="text-center px-6 pt-5 pb-4" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-            {routine ? <RoutineIcon routine={routine} size={30} boxed /> : <span style={{ fontSize: 52, lineHeight: 1 }}>🏋️</span>}
+            {routine ? <RoutineIcon routine={routine} size={30} boxed /> : <span aria-hidden="true" style={{ fontSize: 52, lineHeight: 1 }}>🏋️</span>}
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: S.ink, letterSpacing: -0.5 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: S.ink, letterSpacing: -0.5 }}>
             ¡Entreno completado!
-          </div>
+          </h1>
           <div style={{ fontSize: 13, color: S.dim, marginTop: 5 }}>
             {routine?.name ?? 'Sesión'}
             {userName ? ` · Buen trabajo, ${userName}` : ''}
@@ -197,19 +206,22 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
         {/* Contra la vez anterior de esta rutina */}
         <div style={{ margin: '0 20px 16px', flexShrink: 0, background: S.surf2, borderRadius: 16, border: `1px solid ${S.line2}`, padding: '4px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '8px 0 6px', borderBottom: `1px solid ${S.line}` }}>
-            <span style={{ fontSize: 11, color: S.mute, fontWeight: 600 }}>
+            {/* Sobre surf2 `mute` queda en 4,3:1: va `dim`. */}
+            <span style={{ fontSize: 11, color: S.dim, fontWeight: 600 }}>
               {fechaAnterior ? `Contra el ${fechaAnterior}${sinHacer.length ? ', mismos ejercicios' : ''}` : 'Primera vez con esta rutina'}
             </span>
-            <span style={{ fontSize: 11, color: S.mute, fontWeight: 600, textAlign: 'right' }}>Hoy</span>
-            <span style={{ fontSize: 11, color: S.mute, fontWeight: 600, textAlign: 'right', minWidth: 64 }}>{anterior ? 'Diferencia' : ''}</span>
+            <span style={{ fontSize: 11, color: S.dim, fontWeight: 600, textAlign: 'right' }}>Hoy</span>
+            <span style={{ fontSize: 11, color: S.dim, fontWeight: 600, textAlign: 'right', minWidth: 64 }}>{anterior ? 'Diferencia' : ''}</span>
           </div>
           {filas.map(f => (
             <div key={f.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', columnGap: 14, alignItems: 'baseline', padding: '9px 0', borderBottom: `1px solid ${S.line}` }}>
               <span style={{ fontSize: 13, color: S.dim }}>{f.label}</span>
               <span className="num" style={{ fontSize: 15, fontWeight: 700, color: S.ink, textAlign: 'right' }}>{f.valor}</span>
+              {/* Semántica de deltas: subir es verde, bajar va en gris. Menos
+                  series o menos minutos no son un error. */}
               <span className="num" style={{
                 fontSize: 13, fontWeight: 700, textAlign: 'right', minWidth: 64,
-                color: !f.d || f.d.signo === 0 ? S.dim : f.d.signo > 0 ? S.good : S.bad,
+                color: deltaColor(f.d?.signo ?? 0),
               }}>
                 {f.d?.texto ?? ''}
               </span>
@@ -254,7 +266,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
             borderRadius: 16, padding: '13px 16px',
             display: 'flex', alignItems: 'center', gap: 12,
           }}>
-            <span style={{ fontSize: 32 }}>🏆</span>
+            <span aria-hidden="true" style={{ fontSize: 32 }}>🏆</span>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: S.acc2 }}>
                 {prCount === 1 ? '¡Nuevo récord personal!' : `¡${prCount} nuevos récords!`}
@@ -272,7 +284,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
             borderRadius: 16, padding: '13px 16px',
             display: 'flex', alignItems: 'flex-start', gap: 12,
           }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>🤖</span>
+            <span aria-hidden="true" style={{ fontSize: 22, flexShrink: 0 }}>🤖</span>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: S.acc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Coach IA</div>
               <div style={{ fontSize: 13, color: S.ink, marginTop: 3, lineHeight: 1.4 }}>
@@ -359,7 +371,7 @@ export function WorkoutSummaryModal({ workout, prCount, onDismiss }: Props) {
             Ver mi progreso →
           </button>
         </div>
-      </div>
+      </Dialog>
     </div>
   )
 }

@@ -1,20 +1,18 @@
 export interface ExerciseDetail {
   nameArg?: string
-  wgerId?: number
   instructions: string[]
   tips: string[]
   primaryMuscles: string[]
   secondaryMuscles: string[]
 }
 
-// Las instrucciones y los tips siguen la evidencia resumida en
-// docs/evidencia-ejercicios.md, que cita los estudios detrás de cada
-// recomendación. El último tip de cada ejercicio es la dosis sugerida.
+// Las instrucciones y los tips resumen la evidencia (metaanálisis y guías de
+// hipertrofia) que se relevó al escribirlos. El último tip de cada ejercicio
+// es la dosis sugerida.
 export const exerciseDetails: Record<string, ExerciseDetail> = {
   // ─── PECHO ─────────────────────────────────────────────────────────────────
   'pecho-01': {
     nameArg: 'Press de Banco',
-    wgerId: 192,
     instructions: [
       'Acostado, apoyá firme los pies y juntá los omóplatos contra el banco: esa base es la que te deja empujar fuerte.',
       'Agarre a ~1,5 veces el ancho de hombros. Más abierto que eso no recluta más pecho y sí carga más el hombro.',
@@ -32,7 +30,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'pecho-02': {
     nameArg: 'Press Inclinado con Mancuernas',
-    wgerId: 314,
     instructions: [
       'Banco a 30°. Pasados los 45° el trabajo se va al deltoides anterior y el pectoral pierde protagonismo.',
       'Arrancá con las mancuernas a la altura del pecho, codos a ~45° del torso.',
@@ -81,7 +78,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'pecho-05': {
     nameArg: 'Aperturas con Mancuernas',
-    wgerId: 119,
     instructions: [
       'Acostado en banco plano, mancuernas arriba del pecho con los codos apenas flexionados.',
       'Abrí los brazos en arco hasta que las manos queden a la altura del torso o un poco más abajo.',
@@ -147,7 +143,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   // ─── ESPALDA ───────────────────────────────────────────────────────────────
   'espalda-01': {
     nameArg: 'Jalón al Pecho',
-    wgerId: 122,
     instructions: [
       'Agarre prono (palmas al frente) a un ancho cómodo, apenas más que los hombros.',
       'Arrancá dejando que los hombros suban con el peso: el dorsal tiene que estirarse arriba.',
@@ -197,7 +192,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'espalda-06': {
     nameArg: 'Remo en Cable',
-    wgerId: 213,
     instructions: [
       'Sentado con las rodillas apenas flexionadas y el torso vertical.',
       'Estirá los brazos y dejá que los omóplatos se separen al frente.',
@@ -279,7 +273,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'hombros-02': {
     nameArg: 'Elevaciones Laterales',
-    wgerId: 65,
     instructions: [
       'De pie, mancuernas a los costados y una inclinación mínima del torso hacia adelante.',
       'Subí los brazos hacia el costado hasta la altura de los hombros, codos apenas flexionados.',
@@ -313,7 +306,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'hombros-06': {
     nameArg: 'Pájaros (Deltoides Posterior)',
-    wgerId: 78,
     instructions: [
       'Torso inclinado hacia adelante casi paralelo al piso, mancuernas colgando.',
       'Abrí los brazos hacia los costados llevando los codos hacia atrás y afuera.',
@@ -395,7 +387,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'biceps-05': {
     nameArg: 'Curl Predicador',
-    wgerId: 73,
     instructions: [
       'Sentado en el banco predicador con una mancuerna, el brazo apoyado en la almohadilla.',
       'Bajá hasta extender casi del todo, controlando el último tramo.',
@@ -462,7 +453,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'triceps-03': {
     nameArg: 'Press Francés (Skull Crusher)',
-    wgerId: 67,
     instructions: [
       'Acostado con barra EZ, brazos verticales y codos apuntando al techo.',
       'Bajá la barra hacia la frente o apenas por detrás de la cabeza.',
@@ -496,7 +486,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   // ─── PIERNAS ───────────────────────────────────────────────────────────────
   'piernas-01': {
     nameArg: 'Sentadilla',
-    wgerId: 222,
     instructions: [
       'Barra apoyada en el trapecio, pies al ancho de hombros con las puntas apenas afuera.',
       'Bajá controlando, llevando cadera y rodillas al mismo tiempo.',
@@ -529,7 +518,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-03': {
     nameArg: 'Prensa de Piernas',
-    wgerId: 227,
     instructions: [
       'Pies al ancho de hombros en el centro de la plataforma.',
       'Bajá hasta donde la pelvis no se despegue del respaldo.',
@@ -546,7 +534,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-04': {
     nameArg: 'Extensión de Cuádriceps',
-    wgerId: 248,
     instructions: [
       'Ajustá el respaldo para que la rodilla quede alineada con el eje de la máquina.',
       'Extendé hasta arriba y apretá un segundo.',
@@ -563,7 +550,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-05': {
     nameArg: 'Curl de Isquiotibiales Acostado',
-    wgerId: 24,
     instructions: [
       'Boca abajo con el rodillo apoyado justo arriba del talón.',
       'Cadera pegada al banco durante toda la serie.',
@@ -580,7 +566,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-06': {
     nameArg: 'Peso Muerto Rumano',
-    wgerId: 220,
     instructions: [
       'De pie con la barra pegada a los muslos, rodillas con una flexión leve y fija (~15°).',
       'Llevá la cadera hacia atrás bajando la barra pegada a las piernas.',
@@ -597,7 +582,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-07': {
     nameArg: 'Zancadas',
-    wgerId: 45,
     instructions: [
       'Paso largo hacia adelante manteniendo el torso erguido.',
       'Bajá hasta que la rodilla de atrás casi toque el piso.',
@@ -614,7 +598,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'piernas-08': {
     nameArg: 'Sentadilla Búlgara',
-    wgerId: 211,
     instructions: [
       'Pie de atrás sobre el banco, el de adelante lo bastante lejos como para bajar vertical.',
       'Mancuernas a los costados, torso apenas inclinado hacia adelante.',
@@ -696,7 +679,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   // ─── GLÚTEOS ───────────────────────────────────────────────────────────────
   'gluteos-01': {
     nameArg: 'Hip Thrust',
-    wgerId: 228,
     instructions: [
       'Omóplatos en el borde del banco, barra sobre la cadera con almohadilla.',
       'Pies al ancho de hombros y lo bastante adelante como para que la espinilla quede vertical arriba.',
@@ -729,7 +711,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'gluteos-03': {
     nameArg: 'Patada de Glúteos en Cable',
-    wgerId: 209,
     instructions: [
       'Tobillera en la polea baja, tomate del soporte con el torso apenas inclinado.',
       'Llevá la pierna hacia atrás con la rodilla casi extendida.',
@@ -795,7 +776,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   // ─── CORE ──────────────────────────────────────────────────────────────────
   'core-01': {
     nameArg: 'Rueda Abdominal',
-    wgerId: 38,
     instructions: [
       'De rodillas con la rueda debajo de los hombros.',
       'Rodá hacia adelante manteniendo la pelvis en retroversión y las costillas abajo.',
@@ -812,7 +792,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-02': {
     nameArg: 'Abdominales en Polea',
-    wgerId: 100,
     instructions: [
       'De rodillas frente a la polea alta con la cuerda a los costados de la cabeza.',
       'Flexioná la columna llevando los codos hacia los muslos.',
@@ -829,7 +808,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-03': {
     nameArg: 'Plancha',
-    wgerId: 47,
     instructions: [
       'Antebrazos bajo los hombros, cuerpo en línea recta de la cabeza a los talones.',
       'Pelvis en retroversión y glúteos apretados.',
@@ -942,7 +920,6 @@ export const exerciseDetails: Record<string, ExerciseDetail> = {
   },
   'core-10': {
     nameArg: 'Dead Bug',
-    wgerId: 113,
     instructions: [
       'Boca arriba con brazos al techo y caderas y rodillas a 90°.',
       'Pegá la zona lumbar al piso y mantenela ahí toda la serie.',

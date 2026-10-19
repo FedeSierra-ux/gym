@@ -13,9 +13,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="GymPro" />
     <title>GymPro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+    <meta name="description" content="App de entrenamiento para el gimnasio: rutinas, series y récords guardados en tu teléfono, sin cuenta ni conexión." />
+    <!-- Las fuentes se sirven desde la app (ver src/index.css), así que todo
+         sale del propio origen. La única salida es la API de Anthropic para
+         la IA de Ajustes. style-src 'unsafe-inline' porque React escribe
+         estilos en línea; img-src data:/blob: para la foto de perfil y las
+         imágenes que se comparten; connect-src blob: porque el APK lee con
+         fetch(blob:) lo que la app exporta con <a download>. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob: https://api.anthropic.com; worker-src 'self'; manifest-src 'self'"
+    />
   </head>
   <body>
     <div id="root"></div>

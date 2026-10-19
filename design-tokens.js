@@ -89,6 +89,32 @@ export const text = {
 export const TAP_MIN = 44
 
 /**
+ * Escala de espaciado de 4 px: la clave es el múltiplo (sp-4 = 16 px), como la
+ * escala de Tailwind. Antes convivían 6, 10, 14, 18 y 22 entre pantallas.
+ */
+export const space = {
+  1: 4,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  8: 32,
+}
+
+/**
+ * Alturas de fila estándar. `compact` (44) para filas tocables de una línea
+ * (listas, tabla de músculos); `regular` (56) para filas con título y
+ * subtítulo; `loose` (60) para las que además llevan una cifra grande o un
+ * control. Antes convivían 70, 90 y 100 en las listas.
+ */
+export const row = {
+  compact: 44,
+  regular: 56,
+  loose: 60,
+}
+
+/**
  * Cronómetro del tabata, a pantalla completa: un vidrio sobre el entreno, que
  * se ve detrás desenfocado. Va en un solo lugar para que cambiar el color sea
  * cambiar estos valores y nada más.
