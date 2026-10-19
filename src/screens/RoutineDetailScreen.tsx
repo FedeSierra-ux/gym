@@ -10,7 +10,8 @@ import { isDurationExercise, durationUnit, formatDuration, fromSeconds, toSecond
 import type { Routine, RoutineExercise } from '../types'
 import { ejercicioEnUso, rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
 import { posicionEnSuperserie, separarDelSiguiente, unirConSiguiente } from '../utils/superset'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
+import { confirmarNombreRutina } from '../utils/rutinaNombre'
 import { RoutineBadge } from '../components/RoutineIcon'
 import { DraftNumberInput } from '../components/DraftNumberInput'
 
@@ -59,21 +60,19 @@ function TrashIcon() {
 }
 
 export function RoutineDetailScreen() {
-  const {
-    activeRoutineId,
-    routines,
-    workouts,
-    setActiveRoutineId,
-    removeExerciseFromRoutine,
-    updateRoutine,
-    deleteRoutine,
-    reorderRoutineExercises,
-    showExercisePicker,
-    setShowExercisePicker,
-    addExerciseToRoutine,
-    createCustomExercise,
-    addToast,
-  } = useStore()
+  const activeRoutineId = useStore((s) => s.activeRoutineId)
+  const routines = useStore((s) => s.routines)
+  const workouts = useStore((s) => s.workouts)
+  const setActiveRoutineId = useStore((s) => s.setActiveRoutineId)
+  const removeExerciseFromRoutine = useStore((s) => s.removeExerciseFromRoutine)
+  const updateRoutine = useStore((s) => s.updateRoutine)
+  const deleteRoutine = useStore((s) => s.deleteRoutine)
+  const reorderRoutineExercises = useStore((s) => s.reorderRoutineExercises)
+  const showExercisePicker = useStore((s) => s.showExercisePicker)
+  const setShowExercisePicker = useStore((s) => s.setShowExercisePicker)
+  const addExerciseToRoutine = useStore((s) => s.addExerciseToRoutine)
+  const createCustomExercise = useStore((s) => s.createCustomExercise)
+  const addToast = useStore((s) => s.addToast)
   const exercises = useAllExercises()
   const startWorkout = useWorkoutStore((s) => s.startWorkout)
 
@@ -84,6 +83,18 @@ export function RoutineDetailScreen() {
   const [opcionesDe, setOpcionesDe] = useState<string | null>(null)
 
   const routine = routines.find((r) => r.id === activeRoutineId)
+
+  // El nombre se edita en un borrador y se guarda al salir del campo (o con
+  // Enter): cada tecla persistía, y borrar todo dejaba la rutina sin nombre
+  // en Rutinas, Inicio, el entreno y el resumen.
+  // null = sin edición en curso: el campo muestra el nombre guardado.
+  const [nombreBorrador, setNombreBorrador] = useState<string | null>(null)
+  const confirmarNombre = () => {
+    if (!routine) return
+    const nombre = confirmarNombreRutina(nombreBorrador ?? routine.name, routine.name)
+    setNombreBorrador(null)
+    if (nombre !== routine.name) updateRoutine({ ...routine, name: nombre })
+  }
 
   const updateExerciseConfig = useCallback((exerciseId: string, patch: Partial<Routine['exercises'][0]>) => {
     if (!routine) return
@@ -142,6 +153,19 @@ export function RoutineDetailScreen() {
 
   const sortedExercises = [...routine.exercises].sort((a, b) => a.order - b.order)
 
+  /** Alta rápida: crea (o reutiliza) el ejercicio por nombre y lo agrega, avisando si ya estaba. */
+  const agregarPorNombre = () => {
+    const ex = createCustomExercise(quickName)
+    if (!ex) return
+    if (routine.exercises.some((re) => re.exerciseId === ex.id)) {
+      addToast(`${ex.nameEs} ya está en la rutina`, 'info')
+    } else {
+      addExerciseToRoutine(routine.id, ex.id)
+      addToast(`${ex.nameEs} agregado`, 'success')
+    }
+    setQuickName('')
+  }
+
   return (
     <div className="flex-1 min-h-0 flex flex-col screen-enter" style={{ background: 'var(--bg)' }}>
       {/* Header */}
@@ -160,11 +184,12 @@ export function RoutineDetailScreen() {
           <button
             onClick={() => setActiveRoutineId(null)}
             aria-label="Volver"
-            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
+            className="rounded-xl flex items-center justify-center transition-colors flex-shrink-0"
             style={{
+              ...tappable,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.5)',
+              color: S.dim,
             }}
           >
             <BackIcon />
@@ -178,8 +203,11 @@ export function RoutineDetailScreen() {
                   border: '1px solid rgba(232,99,74,0.3)',
                   fontSize: 17,
                 }}
-                value={routine.name}
-                onChange={(e) => updateRoutine({ ...routine, name: e.target.value })}
+                aria-label="Nombre de la rutina"
+                value={nombreBorrador ?? routine.name}
+                onChange={(e) => setNombreBorrador(e.target.value)}
+                onBlur={confirmarNombre}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarNombre(); e.currentTarget.blur() } }}
               />
             ) : (
               <h1 className="text-xl font-bold text-ink truncate">
@@ -191,8 +219,9 @@ export function RoutineDetailScreen() {
             <button
               onClick={() => setShowDeleteConfirm(true)}
               aria-label="Eliminar rutina"
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+              className="rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
               style={{
+                ...tappable,
                 background: 'rgba(239,68,68,0.1)',
                 border: '1px solid rgba(239,68,68,0.25)',
                 color: 'rgba(239,68,68,0.7)',
@@ -204,22 +233,23 @@ export function RoutineDetailScreen() {
         </div>
 
         <div className="flex items-center gap-2 relative">
+          {/* Texto en `dim` (4,5:1): el blanco al 40 % daba 3,8:1. */}
           <span
             className="text-micro font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+            style={{ background: 'rgba(255,255,255,0.06)', color: S.dim }}
           >
             {routine.exercises.length} ejercicios
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+          <span aria-hidden="true" style={{ color: S.faint }}>·</span>
           <span
             className="text-micro font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}
+            style={{ background: 'rgba(255,255,255,0.06)', color: S.dim }}
           >
             ~{Math.round(totalDuration)} min
           </span>
           {lastUsedDate && (
             <>
-              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+              <span aria-hidden="true" style={{ color: S.faint }}>·</span>
               <span
                 className="text-micro font-semibold px-2.5 py-1 rounded-full"
                 style={{ background: S.surf2, color: S.dim }}
@@ -259,7 +289,7 @@ export function RoutineDetailScreen() {
           } : {
             background: 'rgba(255,255,255,0.05)',
             border: '1px solid rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.6)',
+            color: S.ink,
           }}
         >
           {editMode ? <CheckIcon /> : <EditIcon />}
@@ -293,7 +323,27 @@ export function RoutineDetailScreen() {
         <div className="flex flex-col gap-2.5">
           {sortedExercises.map((re, idx) => {
             const ex = exercises.find((e) => e.id === re.exerciseId)
-            if (!ex) return null
+            // Un ejercicio cuyo id ya no está en el catálogo (un backup de otro
+            // teléfono): antes no se dibujaba y no había forma de sacarlo.
+            if (!ex) {
+              return (
+                <div key={re.exerciseId} className="rounded-2xl p-3 flex items-center gap-3" style={{ background: S.surf, border: `1px dashed ${S.line2}` }}>
+                  <div aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 12, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.mute, fontSize: 17, fontWeight: 700, flexShrink: 0 }}>?</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-ink text-sm">Ejercicio desconocido</p>
+                    <p className="text-micro" style={{ color: S.dim }}>No está en el catálogo de este teléfono · {re.sets} series</p>
+                  </div>
+                  <button
+                    onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
+                    aria-label="Quitar el ejercicio desconocido"
+                    className="rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{ ...tappable, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: S.bad, fontSize: '18px' }}
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            }
             const config = muscleGroupConfig[ex.muscleGroup]
             const byTime = isDurationExercise(ex)
             const unit = durationUnit(ex)
@@ -339,10 +389,11 @@ export function RoutineDetailScreen() {
                     <button
                       onClick={() => moveExercise(idx, 'up')}
                       disabled={idx === 0}
-                      aria-label="Mover arriba"
-                      className="transition-colors leading-none text-sm w-8 h-7 flex items-center justify-center rounded"
+                      aria-label={`Mover arriba ${ex.nameEs}`}
+                      className="transition-colors leading-none text-sm flex items-center justify-center rounded"
                       style={{
-                        color: idx === 0 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+                        ...tappable, minHeight: 36,
+                        color: idx === 0 ? S.faint : S.dim,
                         background: 'rgba(255,255,255,0.04)',
                       }}
                     >
@@ -351,10 +402,11 @@ export function RoutineDetailScreen() {
                     <button
                       onClick={() => moveExercise(idx, 'down')}
                       disabled={idx === sortedExercises.length - 1}
-                      aria-label="Mover abajo"
-                      className="transition-colors leading-none text-sm w-8 h-7 flex items-center justify-center rounded"
+                      aria-label={`Mover abajo ${ex.nameEs}`}
+                      className="transition-colors leading-none text-sm flex items-center justify-center rounded"
                       style={{
-                        color: idx === sortedExercises.length - 1 ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+                        ...tappable, minHeight: 36,
+                        color: idx === sortedExercises.length - 1 ? S.faint : S.dim,
                         background: 'rgba(255,255,255,0.04)',
                       }}
                     >
@@ -384,7 +436,7 @@ export function RoutineDetailScreen() {
                           onCommit={(v) => updateSerie(re, { sets: v })}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:border-primary text-ink bg-surface border-border"
                         />
-                        <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>×</span>
+                        <span className="text-micro" aria-hidden="true" style={{ color: S.dim }}>×</span>
                         <DraftNumberInput
                           value={Number(fromSeconds(uso.targetSeconds ?? 0, unit) || 0)}
                           min={0}
@@ -394,7 +446,7 @@ export function RoutineDetailScreen() {
                           onCommit={(v) => updateSerie(re, { targetSeconds: toSeconds(v, unit) })}
                           className="w-12 text-center text-xs font-semibold rounded-lg py-1 border focus:border-primary text-ink bg-surface border-border"
                         />
-                        <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>{unit}</span>
+                        <span className="text-micro" style={{ color: S.dim }}>{unit}</span>
                       </div>
                     ) : editMode ? (
                       <div className="flex items-center gap-1.5">
@@ -406,7 +458,7 @@ export function RoutineDetailScreen() {
                           onCommit={(v) => updateSerie(re, { sets: v })}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:border-primary text-ink bg-surface border-border"
                         />
-                        <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>s ·</span>
+                        <span className="text-micro" aria-hidden="true" style={{ color: S.dim }}>s ·</span>
                         <DraftNumberInput
                           value={uso.repsMin}
                           min={1}
@@ -416,7 +468,7 @@ export function RoutineDetailScreen() {
                           onCommit={(v) => updateSerie(re, { repsMin: v, ...(v > uso.repsMax ? { repsMax: v } : {}) })}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:border-primary text-ink bg-surface border-border"
                         />
-                        <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>–</span>
+                        <span className="text-micro" aria-hidden="true" style={{ color: S.dim }}>–</span>
                         <DraftNumberInput
                           value={uso.repsMax}
                           min={1}
@@ -425,10 +477,10 @@ export function RoutineDetailScreen() {
                           onCommit={(v) => updateSerie(re, { repsMax: v, ...(v < uso.repsMin ? { repsMin: v } : {}) })}
                           className="w-9 text-center text-xs font-semibold rounded-lg py-1 border focus:border-primary text-ink bg-surface border-border"
                         />
-                        <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>r</span>
+                        <span className="text-micro" aria-hidden="true" style={{ color: S.dim }}>r</span>
                       </div>
                     ) : (
-                      <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      <span className="text-micro" style={{ color: S.dim }}>
                         {byTime
                           ? `${uso.sets > 1 ? `${uso.sets} × ` : ''}${formatDuration(uso.targetSeconds ?? 0)}`
                           : `${uso.sets} series · ${uso.repsMin === uso.repsMax ? uso.repsMin : `${uso.repsMin}–${uso.repsMax}`} reps`}
@@ -436,7 +488,7 @@ export function RoutineDetailScreen() {
                     )}
                   </div>
                   {re.note && (
-                    <p className="text-micro mt-1 leading-snug" style={{ color: 'rgba(242,169,59,0.75)' }}>
+                    <p className="text-micro mt-1 leading-snug" style={{ color: S.acc2 }}>
                       {re.note}
                     </p>
                   )}
@@ -446,8 +498,8 @@ export function RoutineDetailScreen() {
                   <button
                     onClick={() => setOpcionesDe(re.exerciseId)}
                     aria-label={`Bloque y superserie de ${ex.nameEs}`}
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontSize: 15 }}
+                    className="rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ ...tappable, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: S.ink, fontSize: 15 }}
                   >
                     ⋯
                   </button>
@@ -455,12 +507,13 @@ export function RoutineDetailScreen() {
                 {editMode ? (
                   <button
                     onClick={() => removeExerciseFromRoutine(routine.id, re.exerciseId)}
-                    aria-label="Quitar ejercicio"
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                    aria-label={`Quitar ${ex.nameEs}`}
+                    className="rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
                     style={{
+                      ...tappable,
                       background: 'rgba(239,68,68,0.1)',
                       border: '1px solid rgba(239,68,68,0.2)',
-                      color: 'rgba(239,68,68,0.7)',
+                      color: S.bad,
                       fontSize: '18px',
                     }}
                   >
@@ -468,8 +521,8 @@ export function RoutineDetailScreen() {
                   </button>
                 ) : (
                   <span
-                    className="text-xs font-bold flex-shrink-0"
-                    style={{ color: 'rgba(255,255,255,0.15)' }}
+                    className="text-xs font-bold flex-shrink-0 num"
+                    style={{ color: S.mute }}
                   >
                     {idx + 1}
                   </span>
@@ -486,9 +539,10 @@ export function RoutineDetailScreen() {
           onClick={() => setShowExercisePicker(true)}
           className="w-full mt-3 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all"
           style={{
-            border: '1.5px dashed rgba(232,99,74,0.2)',
-            background: 'rgba(232,99,74,0.02)',
-            color: 'rgba(232,99,74,0.5)',
+            // Coral pleno: al 50 % quedaba en 2,25:1.
+            border: '1.5px dashed rgba(232,99,74,0.35)',
+            background: 'rgba(232,99,74,0.04)',
+            color: S.acc,
           }}
         >
           <span className="text-lg leading-none">+</span>
@@ -501,21 +555,19 @@ export function RoutineDetailScreen() {
             type="text"
             value={quickName}
             onChange={(e) => setQuickName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return
-              const ex = createCustomExercise(quickName)
-              if (!ex) return
-              addExerciseToRoutine(routine.id, ex.id)
-              addToast(`${ex.nameEs} agregado`, 'success')
-              setQuickName('')
-            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') agregarPorNombre() }}
             placeholder="…o escribí el nombre y listo"
+            aria-label="Nombre de un ejercicio para agregar"
             className="w-full rounded-xl px-3 py-3 text-ink text-sm"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
           />
           <CreateExerciseCard
             name={quickName}
-            onCreated={(ex) => { addExerciseToRoutine(routine.id, ex.id); setQuickName('') }}
+            onCreated={(ex) => {
+              if (routine.exercises.some((re) => re.exerciseId === ex.id)) addToast(`${ex.nameEs} ya está en la rutina`, 'info')
+              else addExerciseToRoutine(routine.id, ex.id)
+              setQuickName('')
+            }}
             label="Agregar"
           />
         </div>
@@ -579,17 +631,20 @@ export function RoutineDetailScreen() {
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6">
-          <div
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-6" onClick={() => setShowDeleteConfirm(false)}>
+          <Dialog
+            label="Eliminar rutina"
+            onClose={() => setShowDeleteConfirm(false)}
             className="w-full max-w-sm rounded-2xl p-6"
             style={{
               background: 'linear-gradient(160deg, var(--surf2) 0%, var(--surf) 100%)',
               border: '1px solid rgba(255,255,255,0.08)',
               boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-ink font-bold text-lg mb-2">¿Eliminar rutina?</h3>
-            <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <p className="text-sm mb-5" style={{ color: S.dim }}>
               Se eliminará "{routine.name}" y no se puede deshacer.
             </p>
             <div className="flex gap-3">
@@ -598,7 +653,7 @@ export function RoutineDetailScreen() {
                 className="flex-1 py-3 rounded-xl text-sm font-semibold transition-colors"
                 style={{
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.5)',
+                  color: S.dim,
                   background: 'rgba(255,255,255,0.04)',
                 }}
               >
@@ -619,7 +674,7 @@ export function RoutineDetailScreen() {
                 Eliminar
               </button>
             </div>
-          </div>
+          </Dialog>
         </div>
       )}
     </div>

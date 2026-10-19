@@ -1,6 +1,11 @@
+import { Suspense, lazy } from 'react'
 import { useStore } from '../store/useStore'
-import { InformeCicloSheet } from '../screens/InformeCicloSheet'
-import { TuAnioScreen } from '../screens/TuAnioScreen'
+import { Cargando } from './Cargando'
+
+// Los informes se bajan recién al abrirlos: son pantallas largas que la
+// mayoría de los días no se ven.
+const InformeCicloSheet = lazy(() => import('../screens/InformeCicloSheet').then((m) => ({ default: m.InformeCicloSheet })))
+const TuAnioScreen = lazy(() => import('../screens/TuAnioScreen').then((m) => ({ default: m.TuAnioScreen })))
 
 /**
  * Los informes a pantalla completa, encima de las pestañas. Se abren desde
@@ -10,8 +15,11 @@ export function InformeHost() {
   const informe = useStore((s) => s.informe)
   const cerrar = useStore((s) => s.cerrarInforme)
   if (!informe) return null
-  if (informe.tipo === 'ciclo') {
-    return <InformeCicloSheet key={informe.inicio} inicio={informe.inicio} fin={informe.fin} onClose={cerrar} />
-  }
-  return <TuAnioScreen key={informe.year} year={informe.year} onClose={cerrar} />
+  return (
+    <Suspense fallback={<Cargando />}>
+      {informe.tipo === 'ciclo'
+        ? <InformeCicloSheet key={informe.inicio} inicio={informe.inicio} fin={informe.fin} onClose={cerrar} />
+        : <TuAnioScreen key={informe.year} year={informe.year} onClose={cerrar} />}
+    </Suspense>
+  )
 }

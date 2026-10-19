@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import { exerciseDetails } from '../data/exerciseDetails'
 import { MuscleBodyMap } from './MuscleBodyMap'
 import { ExerciseFrames } from './ExerciseFrames'
 import { frameSlugFor } from '../utils/exerciseMatch'
@@ -26,6 +25,9 @@ const LS = {
 }
 
 async function resolveWgerId(exercise: Exercise): Promise<number | null> {
+  // El catálogo de fichas (40 kB) sólo hace falta acá, y sólo si el ejercicio
+  // no tiene dibujo local: se baja recién en ese caso.
+  const { exerciseDetails } = await import('../data/exerciseDetails')
   const direct = exercise.wgerId ?? exerciseDetails[exercise.id]?.wgerId
   if (direct) return direct
 

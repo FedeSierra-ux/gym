@@ -7,7 +7,7 @@ import { ExerciseFrames } from '../components/ExerciseFrames'
 import { MuscleBodyMap } from '../components/MuscleBodyMap'
 import { draftFromName } from '../utils/exerciseMatch'
 import type { MuscleGroup, Exercise } from '../types'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
 
 const muscleGroups: MuscleGroup[] = [
   'pecho', 'espalda', 'hombros', 'biceps',
@@ -19,7 +19,15 @@ interface Props {
 }
 
 export function CustomExercisesScreen({ onClose }: Props) {
-  const { customExercises: todosLosPropios, routines, workouts, createCustomExercise, updateCustomExercise, deleteCustomExercise, restoreCustomExercise, addUndoToast } = useStore()
+  const todosLosPropios = useStore((s) => s.customExercises)
+  const routines = useStore((s) => s.routines)
+  const workouts = useStore((s) => s.workouts)
+  const createCustomExercise = useStore((s) => s.createCustomExercise)
+  const updateCustomExercise = useStore((s) => s.updateCustomExercise)
+  const deleteCustomExercise = useStore((s) => s.deleteCustomExercise)
+  const restoreCustomExercise = useStore((s) => s.restoreCustomExercise)
+  const addUndoToast = useStore((s) => s.addUndoToast)
+  const addToast = useStore((s) => s.addToast)
   // Los borrados quedan archivados para el historial, pero acá no se muestran.
   const customExercises = todosLosPropios.filter((e) => !e.archived)
 
@@ -58,7 +66,13 @@ export function CustomExercisesScreen({ onClose }: Props) {
     if (editingId) {
       updateCustomExercise(editingId, { nameEs: trimmed, group: muscleGroup, equipment: equipment.trim() })
     } else {
-      createCustomExercise(trimmed, { group: muscleGroup, equipment: equipment.trim() || undefined })
+      // Con el nombre de uno del catálogo, el store devuelve ese y no crea
+      // nada: antes el formulario se cerraba sin decir por qué.
+      const ex = createCustomExercise(trimmed, { group: muscleGroup, equipment: equipment.trim() || undefined })
+      if (ex && !ex.isCustom) {
+        addToast(`${ex.nameEs} ya existe en el catálogo`, 'info')
+        return
+      }
     }
     resetForm()
   }
@@ -76,11 +90,12 @@ export function CustomExercisesScreen({ onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Volver"
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            className="rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
+              ...tappable,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.5)',
+              color: S.dim,
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -89,7 +104,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-ink">Mis ejercicios</h1>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <p className="text-xs" style={{ color: S.dim }}>
               {customExercises.length} propios · tocá uno para editarlo
             </p>
           </div>
@@ -108,9 +123,9 @@ export function CustomExercisesScreen({ onClose }: Props) {
             className="rounded-2xl p-6 text-center"
             style={{ border: '1.5px dashed rgba(232,99,74,0.2)', background: 'rgba(232,99,74,0.03)' }}
           >
-            <div className="text-3xl mb-2">🏋️</div>
+            <div className="text-3xl mb-2" aria-hidden="true">🏋️</div>
             <p className="text-ink font-semibold text-sm mb-1">Sin ejercicios personalizados</p>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Creá ejercicios propios y agregálos a tus rutinas</p>
+            <p className="text-xs" style={{ color: S.dim }}>Creá ejercicios propios y agregálos a tus rutinas</p>
           </div>
         )}
 
@@ -143,7 +158,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                     {config.label}
                   </span>
                   {ex.equipment && (
-                    <span className="text-micro" style={{ color: 'rgba(255,255,255,0.3)' }}>{ex.equipment}</span>
+                    <span className="text-micro" style={{ color: S.dim }}>{ex.equipment}</span>
                   )}
                 </div>
               </div>
@@ -151,11 +166,12 @@ export function CustomExercisesScreen({ onClose }: Props) {
               <button
                 onClick={() => setConfirmDelete(ex)}
                 aria-label={`Eliminar ${ex.nameEs}`}
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                className="rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
                 style={{
+                  ...tappable,
                   background: 'rgba(239,68,68,0.1)',
                   border: '1px solid rgba(239,68,68,0.2)',
-                  color: 'rgba(239,68,68,0.7)',
+                  color: S.bad,
                   fontSize: '16px',
                 }}
               >
@@ -175,14 +191,15 @@ export function CustomExercisesScreen({ onClose }: Props) {
             }}
           >
             <h3 className="text-ink font-bold text-sm">{editingId ? 'Editar ejercicio' : 'Nuevo ejercicio'}</h3>
-            <p className="text-micro" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-micro" style={{ color: S.dim }}>
               {editingId
                 ? 'El historial y los récords se mantienen: sólo cambia cómo se muestra.'
                 : 'Con el nombre alcanza: la app deduce grupo, equipamiento y dibujo. Podés corregir lo que quieras.'}
             </p>
             <div className="flex flex-col gap-1.5">
-              <label className="text-micro font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Nombre</label>
+              <label htmlFor="propio-nombre" className="text-micro font-semibold uppercase tracking-wider" style={{ color: S.dim }}>Nombre</label>
               <input
+                id="propio-nombre"
                 autoFocus
                 type="text"
                 placeholder="Ej: Press de suelo"
@@ -196,8 +213,9 @@ export function CustomExercisesScreen({ onClose }: Props) {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-micro font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Grupo muscular</label>
+              <label htmlFor="propio-grupo" className="text-micro font-semibold uppercase tracking-wider" style={{ color: S.dim }}>Grupo muscular</label>
               <select
+                id="propio-grupo"
                 value={muscleGroup}
                 onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
                 className="w-full rounded-xl px-3 py-2.5 text-ink text-sm appearance-none"
@@ -214,8 +232,9 @@ export function CustomExercisesScreen({ onClose }: Props) {
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-micro font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>Equipamiento (opcional)</label>
+              <label htmlFor="propio-equipo" className="text-micro font-semibold uppercase tracking-wider" style={{ color: S.dim }}>Equipamiento (opcional)</label>
               <input
+                id="propio-equipo"
                 type="text"
                 placeholder="Ej: Barra, Mancuernas, Polea..."
                 value={equipment}
@@ -235,7 +254,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                     ? <ExerciseFrames slug={draft.frameSlug} size={44} alt={nameEs} animate />
                     : <MuscleBodyMap muscleGroup={muscleGroup} size={32} />}
                 </div>
-                <p className="text-micro flex-1 min-w-0" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                <p className="text-micro flex-1 min-w-0" style={{ color: S.dim }}>
                   {draft.frameSlug
                     ? <>Dibujo: <span className="text-ink">{draft.matchedName}</span> · {draft.equipment}</>
                     : 'Sin dibujo parecido: se usa el ícono del grupo muscular.'}
@@ -249,7 +268,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                 style={{
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.5)',
+                  color: S.dim,
                   background: 'rgba(255,255,255,0.04)',
                 }}
               >
@@ -278,12 +297,12 @@ export function CustomExercisesScreen({ onClose }: Props) {
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="font-bold text-ink text-lg mb-2">¿Eliminar este ejercicio?</h3>
-              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <p className="text-sm mb-1" style={{ color: S.dim }}>
                 <strong className="text-ink">{confirmDelete.nameEs}</strong> deja de aparecer para elegir.
                 {sesiones > 0 && ` Las ${sesiones === 1 ? 'una sesión' : `${sesiones} sesiones`} que ya hiciste quedan en el historial.`}
               </p>
               {usedInRoutines.length > 0 && (
-                <p className="text-xs mb-4" style={{ color: 'rgba(239,68,68,0.8)' }}>
+                <p className="text-xs mb-4" style={{ color: S.bad }}>
                   También se quitará de {usedInRoutines.length === 1 ? 'la rutina' : 'las rutinas'}: {usedInRoutines.map(r => r.name).join(', ')}.
                 </p>
               )}
@@ -291,7 +310,7 @@ export function CustomExercisesScreen({ onClose }: Props) {
                 <button
                   onClick={() => setConfirmDelete(null)}
                   className="flex-1 py-3 rounded-xl text-sm font-semibold"
-                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', background: 'none' }}
+                  style={{ border: '1px solid rgba(255,255,255,0.08)', color: S.dim, background: 'none' }}
                 >
                   Cancelar
                 </button>

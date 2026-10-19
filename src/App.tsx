@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { useStore } from './store/useStore'
 import { useWorkoutStore } from './stores/workoutStore'
 import { BottomNav } from './components/BottomNav'
@@ -7,13 +7,18 @@ import { UpdatePrompt } from './components/UpdatePrompt'
 import { HomeScreen } from './screens/HomeScreen'
 import { RutinasScreen } from './screens/RutinasScreen'
 import { RoutineDetailScreen } from './screens/RoutineDetailScreen'
-import { CalendarioScreen } from './screens/CalendarioScreen'
-import { ProgresoScreen } from './screens/ProgresoScreen'
-import { ProfileScreen } from './screens/ProfileScreen'
-import { ActiveWorkoutScreen } from './screens/ActiveWorkoutScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { WorkoutSummaryModal } from './components/WorkoutSummaryModal'
 import { InformeHost } from './components/InformeHost'
+import { Cargando } from './components/Cargando'
+
+// Las pantallas pesadas se bajan recién cuando se entra en ellas: el entreno
+// (con el tabata), la Agenda, Progreso y Perfil sumaban más de 200 kB al
+// chunk inicial aunque la app arranque siempre en Inicio.
+const CalendarioScreen = lazy(() => import('./screens/CalendarioScreen').then((m) => ({ default: m.CalendarioScreen })))
+const ProgresoScreen = lazy(() => import('./screens/ProgresoScreen').then((m) => ({ default: m.ProgresoScreen })))
+const ProfileScreen = lazy(() => import('./screens/ProfileScreen').then((m) => ({ default: m.ProfileScreen })))
+const ActiveWorkoutScreen = lazy(() => import('./screens/ActiveWorkoutScreen').then((m) => ({ default: m.ActiveWorkoutScreen })))
 
 function App() {
   // Un entreno que quedó abierto más de 4 horas se cierra solo: al abrir la
@@ -46,15 +51,24 @@ function App() {
 }
 
 function Pantalla() {
-  const { activeTab, activeRoutineId, onboarded } = useStore()
-  const { activeWorkout, summaryWorkout, summaryPrCount, dismissSummary } = useWorkoutStore()
+  // Selectores, no el store entero: el tick del descanso escribe activeWorkout
+  // cada segundo y con `useWorkoutStore()` volvía a renderizar toda la rama.
+  const activeTab = useStore((s) => s.activeTab)
+  const activeRoutineId = useStore((s) => s.activeRoutineId)
+  const onboarded = useStore((s) => s.onboarded)
+  const hayEntreno = useWorkoutStore((s) => s.activeWorkout !== null)
+  const summaryWorkout = useWorkoutStore((s) => s.summaryWorkout)
+  const summaryPrCount = useWorkoutStore((s) => s.summaryPrCount)
+  const dismissSummary = useWorkoutStore((s) => s.dismissSummary)
 
   if (!onboarded) return <OnboardingScreen />
 
-  if (activeWorkout) {
+  if (hayEntreno) {
     return (
       <div className="flex flex-col h-full relative">
-        <ActiveWorkoutScreen />
+        <Suspense fallback={<Cargando />}>
+          <ActiveWorkoutScreen />
+        </Suspense>
         <ToastContainer />
       </div>
     )
@@ -79,13 +93,15 @@ function Pantalla() {
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex-1 flex flex-col overflow-hidden">
-        {activeTab === 'home' && <HomeScreen />}
-        {activeTab === 'rutinas' && (
-          showRoutineDetail ? <RoutineDetailScreen /> : <RutinasScreen />
-        )}
-        {activeTab === 'calendario' && <CalendarioScreen />}
-        {activeTab === 'progreso' && <ProgresoScreen />}
-        {activeTab === 'perfil' && <ProfileScreen />}
+        <Suspense fallback={<Cargando />}>
+          {activeTab === 'home' && <HomeScreen />}
+          {activeTab === 'rutinas' && (
+            showRoutineDetail ? <RoutineDetailScreen /> : <RutinasScreen />
+          )}
+          {activeTab === 'calendario' && <CalendarioScreen />}
+          {activeTab === 'progreso' && <ProgresoScreen />}
+          {activeTab === 'perfil' && <ProfileScreen />}
+        </Suspense>
       </div>
       <BottomNav />
       {/* Informes a pantalla completa (ciclo, tu año): tapan las pestañas. */}

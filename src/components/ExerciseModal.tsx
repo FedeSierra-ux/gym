@@ -2,8 +2,9 @@ import type { Exercise } from '../types'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { MuscleBodyMap } from './MuscleBodyMap'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
+import { Dialog } from './Dialog'
 import { exerciseDetails } from '../data/exerciseDetails'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
 import { MuscleIcon } from './MuscleIcon'
 
 interface ExerciseModalProps {
@@ -11,7 +12,11 @@ interface ExerciseModalProps {
   onClose: () => void
 }
 
-
+/**
+ * La ficha de un ejercicio. Se carga con React.lazy desde las pantallas que
+ * la abren: trae el catálogo de instrucciones (exerciseDetails), que no hace
+ * falta hasta que se toca una miniatura.
+ */
 export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
   const config = muscleGroupConfig[exercise.muscleGroup]
   const detail = exerciseDetails[exercise.id]
@@ -25,7 +30,9 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
       className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div
+      <Dialog
+        label={exercise.nameEs}
+        onClose={onClose}
         className="w-full rounded-t-3xl max-h-[90vh] flex flex-col"
         style={{ background: S.surf, borderTop: `1px solid ${S.line2}` }}
       >
@@ -38,7 +45,8 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
         <div className="flex justify-end px-4 flex-shrink-0">
           <button
             onClick={onClose}
-            style={{ color: S.dim, background: 'none', border: 'none', cursor: 'pointer', fontSize: 26, lineHeight: 1, padding: 4 }}
+            aria-label="Cerrar"
+            style={{ ...tappable, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, background: 'none', border: 'none', cursor: 'pointer', fontSize: 26, lineHeight: 1, padding: 4 }}
           >
             ×
           </button>
@@ -139,12 +147,12 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
               style={{ background: S.surf2, border: `1px solid ${S.line2}` }}
             >
               <p style={{ fontSize: 11, fontWeight: 700, color: S.mute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                💡 Tips
+                <span aria-hidden="true">💡</span> Tips
               </p>
               <ul className="flex flex-col gap-2">
                 {tips.map((tip, i) => (
                   <li key={i} className="flex gap-2 items-start">
-                    <span style={{ color: S.mute, fontSize: 13, flexShrink: 0 }}>•</span>
+                    <span aria-hidden="true" style={{ color: S.mute, fontSize: 13, flexShrink: 0 }}>•</span>
                     <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{tip}</p>
                   </li>
                 ))}
@@ -152,7 +160,7 @@ export function ExerciseModal({ exercise, onClose }: ExerciseModalProps) {
             </div>
           )}
         </div>
-      </div>
+      </Dialog>
     </div>
   )
 }
