@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Dialog } from '../components/Dialog'
 import { useHoy } from '../utils/useHoy'
 import { useStore, useAllExercises } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
@@ -96,7 +97,9 @@ export function HistorialBuscadorSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
-      <div
+      <Dialog
+        label="Buscar en el historial"
+        onClose={onClose}
         className="w-full rounded-t-3xl px-4 pt-4 flex flex-col sheet-enter"
         style={{ background: S.surf, borderTop: `1px solid ${S.line2}`, height: '86vh', paddingBottom: 'max(20px, env(safe-area-inset-bottom, 0px))' }}
         onClick={(e) => e.stopPropagation()}
@@ -124,7 +127,7 @@ export function HistorialBuscadorSheet({ onClose }: { onClose: () => void }) {
           aria-label="Buscar un ejercicio en el historial"
           style={{
             flexShrink: 0, width: '100%', background: S.surf2, border: `1px solid ${S.line2}`,
-            borderRadius: 12, padding: '12px 14px', fontSize: 15, color: S.ink, outline: 'none', marginBottom: 12,
+            borderRadius: 12, padding: '12px 14px', fontSize: 15, color: S.ink, marginBottom: 12,
           }}
         />
 
@@ -165,7 +168,7 @@ export function HistorialBuscadorSheet({ onClose }: { onClose: () => void }) {
             )
           })}
         </div>
-      </div>
+      </Dialog>
 
       {abierto && <ExerciseHistorySheet exerciseId={abierto} onClose={() => setAbierto(null)} />}
     </div>

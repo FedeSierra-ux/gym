@@ -4,7 +4,7 @@ import { S } from '../theme'
 import type { AppToast } from '../types'
 
 function ToastItem({ toast }: { toast: AppToast }) {
-  const { removeToast } = useStore()
+  const removeToast = useStore((s) => s.removeToast)
 
   useEffect(() => {
     // Los avisos con "Deshacer" duran más: hay que llegar a leerlos y decidir.
@@ -56,13 +56,19 @@ function ToastItem({ toast }: { toast: AppToast }) {
  * hoja modal), `arriba` los manda al tope: al terminar un entreno se disparaban
  * tres avisos justo encima de "Ver mi progreso", el único botón para salir, y
  * lo dejaban tapado varios segundos.
+ *
+ * El contenedor está siempre montado, aunque no haya avisos: una región viva
+ * (`aria-live`) sólo anuncia lo que cambia adentro de un nodo que ya existía,
+ * así que montarla junto con el primer aviso dejaba mudos a los lectores de
+ * pantalla (récords incluidos).
  */
 export function ToastContainer({ arriba = false }: { arriba?: boolean } = {}) {
-  const { toasts } = useStore()
-  if (toasts.length === 0) return null
+  const toasts = useStore((s) => s.toasts)
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={`absolute left-0 right-0 flex flex-col items-center gap-2 px-4 z-[100] pointer-events-none ${arriba ? 'top-0 pt-[max(56px,calc(env(safe-area-inset-top,0px)+16px))]' : 'bottom-20'}`}
     >
       {toasts.slice(-3).map((t) => (

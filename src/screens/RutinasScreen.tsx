@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Dialog } from '../components/Dialog'
 import { useHoy } from '../utils/useHoy'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
@@ -10,7 +11,7 @@ import { RoutineBadge, RoutineIcon } from '../components/RoutineIcon'
 import { routineColor } from '../utils/trainingDays'
 import { haceCuanto } from '../utils/relativeDate'
 import { rutinaEnUso, tieneVariante, VARIANTE_LABEL } from '../utils/routineVariant'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
 
 /**
  * Detecta el "mantener apretado" sobre una tarjeta. Se usa pointer events para
@@ -30,7 +31,7 @@ function RoutineCard({ routine, children, onOpen, onLongPress }: {
       tabIndex={0}
       onClick={() => { if (!consumioElTap()) onOpen() }}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
-      aria-label={`${routine.name}. Mantené apretado para más opciones`}
+      aria-label={routine.name}
       {...handlers}
       style={{
         WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
@@ -60,7 +61,14 @@ function getApproxDuration(sets: number[]) {
 }
 
 export function RutinasScreen() {
-  const { routines, exercises, workouts, customExercises, setActiveRoutineId, addRoutine, deleteRoutine, addToast } = useStore()
+  const routines = useStore((s) => s.routines)
+  const exercises = useStore((s) => s.exercises)
+  const workouts = useStore((s) => s.workouts)
+  const customExercises = useStore((s) => s.customExercises)
+  const setActiveRoutineId = useStore((s) => s.setActiveRoutineId)
+  const addRoutine = useStore((s) => s.addRoutine)
+  const deleteRoutine = useStore((s) => s.deleteRoutine)
+  const addToast = useStore((s) => s.addToast)
   const [showCustomExercises, setShowCustomExercises] = useState(false)
   const [menuRoutine, setMenuRoutine] = useState<Routine | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Routine | null>(null)
@@ -97,7 +105,7 @@ export function RutinasScreen() {
       <div style={{ paddingTop: 'max(60px, calc(env(safe-area-inset-top, 0px) + 22px))', paddingLeft: 22, paddingRight: 22 }}>
         <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: -0.5, color: S.ink }}>Mis Rutinas</div>
         <div style={{ fontSize: 13, color: S.dim, marginTop: 4 }}>
-          {routines.length} rutinas guardadas · mantené apretada una para más opciones
+          {routines.length} rutinas guardadas
         </div>
       </div>
 
@@ -133,7 +141,15 @@ export function RutinasScreen() {
                     {routine.variante === 'alt' && tieneVariante(routine) && <> · {VARIANTE_LABEL.alt}</>}
                   </div>
                 </div>
-                <div style={{ color: S.mute, fontSize: 22, alignSelf: 'center', lineHeight: 1 }}>›</div>
+                {/* El menú también a la vista: el "mantener apretado" no se
+                    descubre y no existe para el teclado ni el lector de pantalla. */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuRoutine(routine) }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  aria-label={`Opciones de ${routine.name}`}
+                  style={{ ...tappable, alignSelf: 'center', marginRight: -10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: S.dim, fontSize: 20, lineHeight: 1, cursor: 'pointer' }}
+                >⋯</button>
               </div>
 
               {muscleGroups.length > 0 && (
@@ -213,7 +229,9 @@ export function RutinasScreen() {
       {menuRoutine && (
         <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.8)' }}
           onClick={() => setMenuRoutine(null)}>
-          <div
+          <Dialog
+            label={`Opciones de ${menuRoutine.name}`}
+            onClose={() => setMenuRoutine(null)}
             className="w-full rounded-t-3xl px-4 pt-4 pb-8 sheet-enter"
             style={{ background: S.surf, borderTop: '1px solid rgba(236,238,244,0.12)' }}
             onClick={(e) => e.stopPropagation()}
@@ -234,7 +252,7 @@ export function RutinasScreen() {
                   color: S.ink, fontSize: 15, fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                ✏️  Editar rutina
+                <span aria-hidden="true">✏️</span>  Editar rutina
               </button>
               <button
                 onClick={() => { const r = menuRoutine; setMenuRoutine(null); setConfirmDelete(r) }}
@@ -244,7 +262,7 @@ export function RutinasScreen() {
                   color: S.bad, fontSize: 15, fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                🗑  Eliminar rutina
+                <span aria-hidden="true">🗑</span>  Eliminar rutina
               </button>
               <button
                 onClick={() => setMenuRoutine(null)}
@@ -257,14 +275,15 @@ export function RutinasScreen() {
                 Cancelar
               </button>
             </div>
-          </div>
+          </Dialog>
         </div>
       )}
 
       {/* Confirmación de borrado */}
       {confirmDelete && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }}>
-          <div style={{ background: S.surf, border: '1px solid rgba(236,238,244,0.12)', borderRadius: 24, padding: 24, width: '100%', maxWidth: 340 }}>
+        <div className="fixed inset-0 flex items-center justify-center z-50 px-6" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setConfirmDelete(null)}>
+          <Dialog label="Eliminar la rutina" onClose={() => setConfirmDelete(null)} onClick={(e) => e.stopPropagation()}
+            style={{ background: S.surf, border: '1px solid rgba(236,238,244,0.12)', borderRadius: 24, padding: 24, width: '100%', maxWidth: 340 }}>
             <h3 style={{ color: S.ink, fontWeight: 700, fontSize: 17, marginBottom: 8 }}>¿Eliminar la rutina?</h3>
             <p style={{ color: S.dim, fontSize: 13, marginBottom: 20 }}>
               Se borra <strong style={{ color: S.ink }}>{confirmDelete.name}</strong>. Los entrenos que ya hiciste
@@ -285,7 +304,7 @@ export function RutinasScreen() {
                 Eliminar
               </button>
             </div>
-          </div>
+          </Dialog>
         </div>
       )}
     </div>

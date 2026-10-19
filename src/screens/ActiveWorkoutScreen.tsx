@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useRef } from 'react'
+import { Fragment, Suspense, lazy, memo, useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Dialog } from '../components/Dialog'
 import { useStore, useAllExercises } from '../store/useStore'
 import { seriesCargadas, useWorkoutStore } from '../stores/workoutStore'
@@ -6,17 +6,17 @@ import { muscleGroupConfig } from '../data/muscleGroups'
 import { RestTimerOverlay } from './RestTimerOverlay'
 import { useRestTimerTick } from '../utils/useRestTimerTick'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
-import { ExerciseModal } from '../components/ExerciseModal'
 import { vibrate, primeAudio } from '../utils/haptics'
 import { useWakeLock } from '../utils/useWakeLock'
+import { useHoy } from '../utils/useHoy'
 import { isDurationExercise, durationUnit, toSeconds, formatDuration } from '../utils/duration'
-import { suggestNextWeight } from '../utils/progression'
+import { suggestNextWeight, type ProgressionSuggestion } from '../utils/progression'
 import { decimalInputProps, integerInputProps, parseDecimal } from '../utils/numberInput'
 import { toDateInputValue, fromDateInputValue } from '../utils/dates'
 import { useLongPress } from '../utils/useLongPress'
 import { ExercisePickerSheet } from '../components/ExercisePickerSheet'
-import type { Exercise, ActiveWorkoutExercise, ActiveWorkoutSet, PR, WorkoutSet } from '../types'
-import { S } from '../theme'
+import type { Exercise, ActiveWorkoutExercise, ActiveWorkoutSet, PR, Routine, RoutineExercise, WorkoutSet } from '../types'
+import { S, tappable } from '../theme'
 import { formatKg } from '../utils/format'
 import { rutinaEnUso } from '../utils/routineVariant'
 import { RoutineBadge } from '../components/RoutineIcon'
@@ -26,7 +26,9 @@ import {
   proximaSerie, rondaHecha, rondasDelGrupo, rondasHechas, seriesDelTabata, type Bloque, type Grupo,
 } from '../utils/bloques'
 
-
+// La ficha del ejercicio trae el catálogo de instrucciones (exerciseDetails,
+// 40 kB): se baja recién la primera vez que se toca una miniatura.
+const ExerciseModal = lazy(() => import('../components/ExerciseModal').then((m) => ({ default: m.ExerciseModal })))
 
 const BAR_KG = 20
 const PLATES = [20, 15, 10, 5, 2.5, 1.25]
@@ -44,10 +46,10 @@ function getPlates(totalKg: number): string {
 }
 
 function TipsRow({ exerciseId }: { exerciseId: string }) {
-  const { exerciseTips, setExerciseTip } = useStore()
+  const tip = useStore((s) => s.exerciseTips[exerciseId])
+  const setExerciseTip = useStore((s) => s.setExerciseTip)
   const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState(exerciseTips[exerciseId] ?? '')
-  const tip = exerciseTips[exerciseId]
+  const [draft, setDraft] = useState(tip ?? '')
   const handleSave = () => { setExerciseTip(exerciseId, draft.trim()); setOpen(false) }
   return (
     <div style={{ borderTop: `1px solid ${S.line}` }}>
@@ -55,20 +57,21 @@ function TipsRow({ exerciseId }: { exerciseId: string }) {
         <button onClick={() => { setDraft(tip ?? ''); setOpen(true) }}
           className="w-full flex items-center gap-2 px-3 text-left"
           style={{ minHeight: 44, background: 'none', border: 'none', cursor: 'pointer' }}>
-          <span style={{ fontSize: 13 }}>📝</span>
+          <span aria-hidden="true" style={{ fontSize: 13 }}>📝</span>
           <span style={{ flex: 1, fontSize: 11, color: tip ? S.dim : S.mute }}>{tip || 'Agregar tip / recordatorio de técnica...'}</span>
-          <span style={{ fontSize: 11, color: S.mute }}>{tip ? '✏️' : '+'}</span>
+          <span aria-hidden="true" style={{ fontSize: 11, color: S.mute }}>{tip ? '✏️' : '+'}</span>
         </button>
       ) : (
         <div style={{ padding: '8px 12px 12px' }} className="flex flex-col gap-2">
           <textarea autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
+            aria-label="Tip o recordatorio de técnica"
             placeholder="Ej: Escápulas retraídas, bajar lento 3s..."
             rows={3}
-            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 15, color: S.ink, outline: 'none', resize: 'none' }}
+            style={{ width: '100%', background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 8, padding: '8px 12px', fontSize: 15, color: S.ink, resize: 'none' }}
           />
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setOpen(false)} style={{ fontSize: 11, color: S.dim, padding: '4px 12px', borderRadius: 8, border: `1px solid ${S.line2}`, background: 'none', cursor: 'pointer' }}>Cancelar</button>
-            <button onClick={handleSave} style={{ fontSize: 11, fontWeight: 700, color: S.onAcc, background: S.acc, padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>Guardar</button>
+            <button onClick={() => setOpen(false)} style={{ fontSize: 11, color: S.dim, padding: '4px 12px', borderRadius: 8, border: `1px solid ${S.line2}`, background: 'none', cursor: 'pointer', ...tappable }}>Cancelar</button>
+            <button onClick={handleSave} style={{ fontSize: 11, fontWeight: 700, color: S.onAcc, background: S.acc, padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', ...tappable }}>Guardar</button>
           </div>
         </div>
       )}
@@ -86,6 +89,25 @@ function formatElapsed(ms: number) {
   const m = Math.floor((totalSeconds % 3600) / 60)
   const s = totalSeconds % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+/**
+ * El reloj total del entreno. Vive en su propio componente: antes el
+ * `setElapsed` por segundo volvía a renderizar la pantalla entera, con todas
+ * las tarjetas y sus series.
+ */
+function Cronometro({ realStartedAt }: { realStartedAt: number }) {
+  const [elapsed, setElapsed] = useState(() => Date.now() - realStartedAt)
+  useEffect(() => {
+    const id = setInterval(() => setElapsed(Date.now() - realStartedAt), 1000)
+    return () => clearInterval(id)
+  }, [realStartedAt])
+  return (
+    <div className="flex items-center gap-1.5" style={{ marginTop: 7 }} aria-label="Duración del entreno" role="timer">
+      <span className="live-dot" style={{ width: 6, height: 6, borderRadius: 3, background: S.acc, display: 'inline-block' }} />
+      <span className="num" style={{ fontSize: 12, color: S.dim }}>{formatElapsed(elapsed)}</span>
+    </div>
+  )
 }
 
 function IconoReloj() {
@@ -120,8 +142,8 @@ function EncabezadoBloque({ nombre, cantidad, primero }: { nombre: string; canti
  */
 function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChange: (ts: number) => void }) {
   const value = toDateInputValue(startedAt)
-  // Una sola lectura del reloj por montaje: el render tiene que ser puro.
-  const [hoy] = useState(() => toDateInputValue(Date.now()))
+  // "Hoy" sigue al reloj: un entreno que cruza la medianoche decía Hoy para ayer.
+  const hoy = toDateInputValue(useHoy())
   const esHoy = value === hoy
   const label = esHoy
     ? 'Hoy'
@@ -146,7 +168,14 @@ function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChang
         max={hoy}
         onChange={(e) => {
           const ts = fromDateInputValue(e.target.value)
-          if (ts !== null) onChange(ts)
+          if (ts === null) return
+          // El `max` del campo no alcanza: en escritorio se puede escribir
+          // cualquier fecha y el entreno quedaba imputado al futuro.
+          if (ts > Date.now()) {
+            useStore.getState().addToast('El entreno no puede ser de un día que todavía no llegó', 'info')
+            return
+          }
+          onChange(ts)
         }}
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
@@ -156,7 +185,6 @@ function WorkoutDatePicker({ startedAt, onChange }: { startedAt: number; onChang
     </label>
   )
 }
-
 
 /**
  * Ancho de las columnas de una serie: número, kg, reps y el tilde.
@@ -234,6 +262,8 @@ function ConUnidad({ unidad, children }: { unidad?: string; children: React.Reac
   )
 }
 
+// Sin `outline: none`: el foco visible lo pone el :focus-visible global, y
+// apagarlo acá dejaba los campos de kg y reps invisibles para el teclado.
 function estiloCampo(completada: boolean, conUnidad = false): React.CSSProperties {
   return {
     width: '100%', minWidth: 0, textAlign: 'center',
@@ -246,7 +276,6 @@ function estiloCampo(completada: boolean, conUnidad = false): React.CSSPropertie
     color: completada ? S.dim : S.ink,
     fontFamily: 'JetBrains Mono, ui-monospace, monospace',
     fontVariantNumeric: 'tabular-nums',
-    outline: 'none',
   }
 }
 
@@ -270,13 +299,6 @@ function estiloTilde(completada: boolean, esProxima: boolean, sePuede: boolean):
   return { ...base, background: 'transparent', border: `1.5px solid ${S.line2}`, color: S.mute }
 }
 
-/**
- * Una serie del entreno.
- *
- * Un solo tilde: un toque confirma, y mantenerlo apretado confirma y arranca el
- * cronómetro de descanso. Antes había dos botones casi idénticos de 36 px al
- * lado, y había que decidir entre ellos en el medio de la serie.
- */
 /** El cierre del descanso, encima del entreno: anillo lleno en verde y "¡A la serie!". */
 function FinDescanso() {
   const size = 200
@@ -294,10 +316,7 @@ function FinDescanso() {
   )
 }
 
-function SetRow({
-  exIdx, setIdx, set, prev, byTime, unit, isBarbellLike, puedeBorrar, esProxima, recordGuardado, esRecord, pulso,
-  onUpdate, onToggleWarmup, onRemove, onComplete, unidades = false,
-}: {
+interface SetRowProps {
   exIdx: number
   setIdx: number
   set: ActiveWorkoutSet
@@ -324,7 +343,25 @@ function SetRow({
    * hay encabezado de tabla: cada ejercicio muestra una sola fila.
    */
   unidades?: boolean
-}) {
+}
+
+/**
+ * Una serie del entreno.
+ *
+ * Un solo tilde: un toque confirma, y mantenerlo apretado confirma y arranca el
+ * cronómetro de descanso. Antes había dos botones casi idénticos de 36 px al
+ * lado, y había que decidir entre ellos en el medio de la serie. Para el
+ * teclado y los lectores de pantalla, la misma acción está en las opciones de
+ * la serie ("Confirmar y descansar").
+ *
+ * Va con `memo`: las series son lo que más hay en pantalla, y sus props
+ * (la serie del store, la anterior, el récord) sólo cambian cuando se toca
+ * esa serie, no con cada segundo del descanso.
+ */
+const SetRow = memo(function SetRow({
+  exIdx, setIdx, set, prev, byTime, unit, isBarbellLike, puedeBorrar, esProxima, recordGuardado, esRecord, pulso,
+  onUpdate, onToggleWarmup, onRemove, onComplete, unidades = false,
+}: SetRowProps) {
   const [destello, setDestello] = useState<'serie' | 'record' | null>(null)
   const [verDiscos, setVerDiscos] = useState(false)
   const [acciones, setAcciones] = useState(false)
@@ -397,7 +434,7 @@ function SetRow({
             {setIdx + 1}
           </span>
           {calentamiento && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: S.mute, lineHeight: 1 }}>W</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: S.dim, lineHeight: 1 }}>W</span>
           )}
         </button>
 
@@ -475,14 +512,14 @@ function SetRow({
       {esRecord && recordGuardado && (
         <div style={{ padding: '0 14px 6px', background: 'rgba(242,169,59,0.10)' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: S.acc2 }}>
-            🏆 Récord <span style={{ fontWeight: 500, opacity: 0.85 }}>· antes <span className="num">{textoRecord(recordGuardado, byTime, unit)}</span></span>
+            <span aria-hidden="true">🏆</span> Récord <span style={{ fontWeight: 500, opacity: 0.85 }}>· antes <span className="num">{textoRecord(recordGuardado, byTime, unit)}</span></span>
           </span>
         </div>
       )}
 
       {/* Pista de discos, debajo de la fila */}
       {(verDiscos && isBarbellLike && kg >= BAR_KG) && (
-        <div style={{ padding: '4px 14px 6px', fontSize: 11, color: S.dim }}>🏋️ {getPlates(kg)}</div>
+        <div style={{ padding: '4px 14px 6px', fontSize: 11, color: S.dim }}><span aria-hidden="true">🏋️</span> {getPlates(kg)}</div>
       )}
 
       {acciones && (
@@ -494,25 +531,41 @@ function SetRow({
           >
             <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 14px' }} />
             <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 14 }}>Serie {setIdx + 1}</p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" role="menu" aria-label={`Opciones de la serie ${setIdx + 1}`}>
+              {/* El equivalente de teclado del "mantener apretado" del tilde. */}
+              {!completada && sePuede && (
+                <button
+                  role="menuitem"
+                  onClick={() => { setAcciones(false); confirmar(true) }}
+                  style={{ ...opcionMenu, color: S.ink }}
+                >
+                  <span aria-hidden="true">✓</span> Confirmar y descansar
+                  <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
+                    Marca la serie y arranca el cronómetro de descanso
+                  </span>
+                </button>
+              )}
               <button
+                role="menuitemcheckbox"
+                aria-checked={calentamiento}
                 onClick={() => { onToggleWarmup(exIdx, setIdx); setAcciones(false) }}
                 style={{ ...opcionMenu, color: S.ink }}
               >
-                {calentamiento ? '☑ Serie de calentamiento' : '☐ Marcar como calentamiento'}
+                <span aria-hidden="true">{calentamiento ? '☑' : '☐'}</span> {calentamiento ? 'Serie de calentamiento' : 'Marcar como calentamiento'}
                 <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
                   No cuenta para el volumen ni para los récords
                 </span>
               </button>
               {puedeBorrar && (
                 <button
+                  role="menuitem"
                   onClick={() => { onRemove(exIdx, setIdx); setAcciones(false) }}
                   style={{ ...opcionMenu, color: S.bad }}
                 >
-                  🗑 Borrar esta serie
+                  <span aria-hidden="true">🗑</span> Borrar esta serie
                 </button>
               )}
-              <button onClick={() => setAcciones(false)} style={{ ...opcionMenu, textAlign: 'center', color: S.dim, background: 'none' }}>
+              <button role="menuitem" onClick={() => setAcciones(false)} style={{ ...opcionMenu, textAlign: 'center', color: S.dim, background: 'none' }}>
                 Cancelar
               </button>
             </div>
@@ -521,19 +574,360 @@ function SetRow({
       )}
     </div>
   )
+})
+
+/** Lo que necesita la tarjeta de un ejercicio: récord, la vez anterior, sugerencia. */
+interface Datos {
+  ex: Exercise
+  config: (typeof muscleGroupConfig)[keyof typeof muscleGroupConfig]
+  pr?: PR
+  isBarbellLike: boolean
+  prevPorSerie: (WorkoutSet | undefined)[]
+  recordIdx: number
+  completedCount: number
+  byTime: boolean
+  unit: 'min' | 'seg'
+  routineEx?: RoutineExercise
+  suggestion: ProgressionSuggestion | null
+  terminado: boolean
 }
 
-export function ActiveWorkoutScreen() {
-  const { routines, workouts, prs } = useStore()
-  const exercises = useAllExercises()
-  const {
-    activeWorkout, updateSetValue, toggleSetWarmup, completeSet, addSetToExercise, removeSetFromExercise,
-    finishWorkout, cancelWorkout, setWorkoutDate,
-    addExerciseToWorkout, replaceExerciseInWorkout, removeExerciseFromWorkout, empezarTabata,
-  } = useWorkoutStore()
+type Confirmar = (e: number, st: number, o?: { startRest?: boolean }) => void
 
-  const [elapsed, setElapsed] = useState(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+/** Lo que depende del historial y de la rutina, calculado una vez por entreno. */
+interface Contexto {
+  exercises: Exercise[]
+  prs: PR[]
+  /** Última vez que se hizo cada ejercicio del entreno, en cualquier rutina. */
+  ultimasSeriesPorEj: Map<string, WorkoutSet[]>
+  sugerencias: Map<string, ProgressionSuggestion | null>
+  routine?: Routine
+}
+
+/** Los datos de la tarjeta de un ejercicio, o null si su id ya no está en el catálogo. */
+function calcDatos(activeEx: ActiveWorkoutExercise, ctx: Contexto): Datos | null {
+  const ex = ctx.exercises.find((e) => e.id === activeEx.exerciseId)
+  if (!ex) return null
+  const config = muscleGroupConfig[ex.muscleGroup]
+  const pr = ctx.prs.find((p) => p.exerciseId === ex.id)
+  const isBarbellLike = ex.equipmentType === 'barra'
+  const prevPorSerie = emparejarAnteriores(activeEx.sets, ctx.ultimasSeriesPorEj.get(ex.id) ?? [])
+  const byTime = isDurationExercise(ex)
+  const unit = durationUnit(ex)
+  // La mejor serie hecha que supera el récord: sólo esa se marca.
+  let recordIdx = -1
+  let mejorValor = -1
+  activeEx.sets.forEach((st, i) => {
+    if (!st.completed || st.isWarmup) return
+    const k = parseDecimal(st.kg) || 0
+    const r = parseInt(st.reps) || 0
+    const sg = byTime ? toSeconds(st.duration ?? '', unit) : 0
+    if (!superaRecord(pr, k, r, sg, byTime)) return
+    const v = pesoDeSerie(k, r, sg, byTime)
+    if (v > mejorValor) { mejorValor = v; recordIdx = i }
+  })
+  const completedCount = activeEx.sets.filter((s) => s.completed).length
+  const routineEx = ctx.routine?.exercises.find((re) => re.exerciseId === ex.id)
+  const suggestion = ctx.sugerencias.get(ex.id) ?? null
+  const terminado = activeEx.sets.length > 0 && completedCount === activeEx.sets.length
+  return { ex, config, pr, isBarbellLike, prevPorSerie, recordIdx, completedCount, byTime, unit, routineEx, suggestion, terminado }
+}
+
+/** Ejercicio terminado, cerrado en una línea con su resumen. Tocarlo lo abre. */
+function filaTerminado(d: Datos, activeEx: ActiveWorkoutExercise, abrir: () => void) {
+  const efectivas = activeEx.sets.filter((st) => !st.isWarmup)
+  const mejor = efectivas.reduce<ActiveWorkoutSet | null>((m, st) =>
+    !m || (parseDecimal(st.kg) || 0) > (parseDecimal(m.kg) || 0) ? st : m, null)
+  const resumen = d.byTime
+    ? `${efectivas.length} ${efectivas.length === 1 ? 'serie' : 'series'}`
+    : mejor && (parseDecimal(mejor.kg) || 0) > 0
+      ? `${efectivas.length} × mejor ${formatKg(parseDecimal(mejor.kg))}×${mejor.reps}`
+      : `${efectivas.length} ${efectivas.length === 1 ? 'serie' : 'series'}`
+  return (
+    <button
+      key={activeEx.exerciseId}
+      onClick={abrir}
+      aria-label={`${d.ex.nameEs}, terminado: ${resumen}. Tocá para abrir`}
+      style={{
+        margin: '8px 16px 0', width: 'calc(100% - 32px)', display: 'flex', alignItems: 'center', gap: 10,
+        background: 'none', border: `1px solid ${S.line}`, borderRadius: 12, padding: '10px 14px',
+        cursor: 'pointer', textAlign: 'left', minHeight: 48,
+      }}
+    >
+      <span style={{ width: 22, height: 22, borderRadius: 11, background: S.good, color: S.bg, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</span>
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: S.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.ex.nameEs}</span>
+      <span className="num" style={{ fontSize: 12, color: S.dim, flexShrink: 0 }}>{resumen}</span>
+    </button>
+  )
+}
+
+/**
+ * Nombre, nota de la rutina (en ámbar, como en el detalle) y grupo muscular
+ * con el récord. En circuitos y superseries (`compacto`) el nombre puede ir en
+ * dos renglones y, si hay nota, va sólo la nota, como en la maqueta.
+ */
+function nombreDe(d: Datos, compacto = false) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={compacto
+        ? { fontSize: 15, fontWeight: 700, color: S.ink, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'break-word' }
+        : { fontSize: 15, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.ex.nameEs}</div>
+      {d.routineEx?.note && (
+        <div style={{ fontSize: 12, color: S.acc2, marginTop: 2, lineHeight: 1.35 }}>{d.routineEx.note}</div>
+      )}
+      {!(compacto && d.routineEx?.note) && <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
+        <span style={{ color: d.config.color }}>{d.config.label}</span>
+        {d.pr && <span style={{ color: S.acc2 }}> · <span aria-hidden="true">🏆</span> {d.byTime ? formatDuration(d.pr.durationSec ?? 0) : d.pr.kg > 0 ? `${formatKg(d.pr.kg)}×${d.pr.reps}` : `${d.pr.reps} reps`}</span>}
+      </div>}
+    </div>
+  )
+}
+
+function miniatura(d: Datos, onVer: (ex: Exercise) => void) {
+  return (
+    <button
+      onClick={() => onVer(d.ex)}
+      aria-label={`Ver ${d.ex.nameEs}`}
+      style={{ flexShrink: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+    >
+      <ExerciseThumbnail exercise={d.ex} size={40} />
+    </button>
+  )
+}
+
+/** Menú del ejercicio: cambiarlo o sacarlo sin salir del entreno */
+function botonMenu(nombre: string, exIdx: number, onMenu: (exIdx: number) => void) {
+  return (
+    <button
+      onClick={() => onMenu(exIdx)}
+      aria-label={`Opciones de ${nombre}`}
+      style={{ ...tappable, flexShrink: 0, marginRight: -8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: S.dim, fontSize: 17, cursor: 'pointer', lineHeight: 1 }}
+    >⋯</button>
+  )
+}
+
+/** Sugerencia de doble progresión */
+function SugerenciaDe({ d, activeEx, exIdx, updateSetValue }: {
+  d: Datos; activeEx: ActiveWorkoutExercise; exIdx: number
+  updateSetValue: (e: number, s: number, f: 'kg' | 'reps' | 'duration', v: string) => void
+}) {
+  const suggestion = d.suggestion
+  if (!suggestion) return null
+  return (
+    <div style={{
+      margin: '0 14px 10px', padding: '8px 10px', borderRadius: 12,
+      display: 'flex', alignItems: 'center', gap: 8,
+      background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.035)',
+      border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.30)' : S.line2}`,
+    }}>
+      <span aria-hidden="true" style={{ fontSize: 13, flexShrink: 0 }}>
+        {suggestion.reason === 'subir' ? '▲' : suggestion.reason === 'bajar' ? '▼' : suggestion.reason === 'primera-vez' ? '🎯' : '='}
+      </span>
+      <span style={{ flex: 1, fontSize: 11, color: suggestion.reason === 'subir' ? S.good : S.dim, lineHeight: 1.4 }}>
+        {suggestion.note}
+      </span>
+      {/* Las series arrancan con el máximo de la última vez; el
+          peso sugerido se aplica sólo si el usuario lo pide. */}
+      {suggestion.kg > 0 && activeEx.sets.some((st) => !st.completed && !st.isWarmup && parseDecimal(st.kg) !== suggestion.kg) && (
+        <button
+          onClick={() => activeEx.sets.forEach((st, si) => {
+            if (!st.completed && !st.isWarmup) updateSetValue(exIdx, si, 'kg', String(suggestion.kg))
+          })}
+          aria-label={`Usar ${formatKg(suggestion.kg)} kg en las series que faltan`}
+          style={{
+            flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 8,
+            background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.16)' : S.surf2,
+            border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.40)' : S.line2}`,
+            color: suggestion.reason === 'subir' ? S.good : S.ink,
+            fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          Usar {formatKg(suggestion.kg)} kg
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Las acciones del store y los callbacks estables que comparten todas las tarjetas. */
+interface Acciones {
+  updateSetValue: (e: number, s: number, f: 'kg' | 'reps' | 'duration', v: string) => void
+  toggleSetWarmup: (e: number, s: number) => void
+  removeSetFromExercise: (e: number, s: number) => void
+  addSetToExercise: (e: number) => void
+  confirmarSerie: Confirmar
+  onVer: (ex: Exercise) => void
+  onMenu: (exIdx: number) => void
+}
+
+function filaDe(
+  d: Datos, activeEx: ActiveWorkoutExercise, exIdx: number, setIdx: number,
+  serieProximaEnEsta: number, pulso: boolean, a: Acciones, unidades = false,
+) {
+  const set = activeEx.sets[setIdx]
+  return (
+    <SetRow
+      key={setIdx}
+      exIdx={exIdx} setIdx={setIdx} set={set} prev={d.prevPorSerie[setIdx]}
+      byTime={d.byTime} unit={d.unit}
+      isBarbellLike={d.isBarbellLike}
+      puedeBorrar={!set.completed && activeEx.sets.length > 1}
+      onUpdate={a.updateSetValue}
+      onToggleWarmup={a.toggleSetWarmup}
+      onRemove={a.removeSetFromExercise}
+      esProxima={setIdx === serieProximaEnEsta}
+      pulso={pulso && setIdx === serieProximaEnEsta}
+      recordGuardado={d.pr}
+      esRecord={setIdx === d.recordIdx}
+      onComplete={a.confirmarSerie}
+      unidades={unidades}
+    />
+  )
+}
+
+function botonSerie(label: string, onClick: () => void) {
+  return (
+    <button onClick={onClick}
+      style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, color: S.dim, fontSize: 13, fontWeight: 600, minHeight: 44, padding: '0 18px', cursor: 'pointer' }}>
+      {label}
+    </button>
+  )
+}
+
+/**
+ * Un ejercicio del entreno cuyo id ya no está en el catálogo (un backup de
+ * otro teléfono sin ese ejercicio propio). Antes no se dibujaba nada, pero
+ * sus series seguían contando y el menú para saltearlo vivía adentro de la
+ * tarjeta que no existía.
+ */
+function TarjetaDesconocida({ activeEx, exIdx, onMenu, compacta = false }: {
+  activeEx: ActiveWorkoutExercise; exIdx: number; onMenu: (exIdx: number) => void; compacta?: boolean
+}) {
+  const pendientes = activeEx.sets.filter((st) => !st.completed).length
+  const cuerpo = (
+    <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 12, background: S.surf2, border: `1px dashed ${S.line2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.mute, fontSize: 17, fontWeight: 700, flexShrink: 0 }}>?</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: S.ink }}>Ejercicio desconocido</div>
+        <div style={{ fontSize: 11, color: S.dim, marginTop: 2, lineHeight: 1.4 }}>
+          No está en el catálogo de este teléfono{pendientes > 0 ? ` · ${pendientes} ${pendientes === 1 ? 'serie pendiente' : 'series pendientes'}` : ''}. Desde ⋯ podés cambiarlo o saltearlo.
+        </div>
+      </div>
+      {botonMenu('ejercicio desconocido', exIdx, onMenu)}
+    </div>
+  )
+  if (compacta) return <div style={{ borderTop: `1px solid ${S.line}` }}>{cuerpo}</div>
+  return (
+    <div style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px dashed ${S.line2}` }}>
+      {cuerpo}
+    </div>
+  )
+}
+
+/**
+ * La tarjeta de un ejercicio suelto: la de siempre. Con `memo`: durante el
+ * descanso el store cambia cada segundo, y las tarjetas que no cambiaron no
+ * tienen por qué volver a pintarse.
+ */
+const TarjetaEjercicio = memo(function TarjetaEjercicio({
+  activeEx, exIdx, ctx, serieProximaEnEsta, pulso, abierto, onAbrir, onCerrar, acciones: a,
+}: {
+  activeEx: ActiveWorkoutExercise
+  exIdx: number
+  ctx: Contexto
+  /** Índice de la próxima serie si está en esta tarjeta; -1 si no. */
+  serieProximaEnEsta: number
+  pulso: boolean
+  /** Terminado y vuelto a abrir por el usuario. */
+  abierto: boolean
+  onAbrir: (id: string) => void
+  onCerrar: (id: string) => void
+  acciones: Acciones
+}) {
+  // Se recalcula sólo cuando cambia esta tarjeta o el historial, no con cada
+  // segundo del descanso ni al editar otro ejercicio.
+  const d = useMemo(() => calcDatos(activeEx, ctx), [activeEx, ctx])
+  if (!d) return <TarjetaDesconocida activeEx={activeEx} exIdx={exIdx} onMenu={a.onMenu} />
+  const { byTime, unit, completedCount, terminado } = d
+
+  if (terminado && !abierto) {
+    return filaTerminado(d, activeEx, () => onAbrir(activeEx.exerciseId))
+  }
+
+  return (
+    <div style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px solid ${S.line2}` }}>
+
+      {/* Encabezado del ejercicio */}
+      <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 12, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
+          {exIdx + 1}
+        </div>
+        {miniatura(d, a.onVer)}
+        {nombreDe(d)}
+        {terminado ? (
+          <button
+            onClick={() => onCerrar(activeEx.exerciseId)}
+            aria-label="Cerrar el ejercicio terminado"
+            className="num"
+            style={{ fontSize: 13, fontWeight: 700, color: S.good, background: 'none', border: 'none', cursor: 'pointer', minHeight: 44, padding: '0 4px' }}
+          >
+            {completedCount}/{activeEx.sets.length} ▴
+          </button>
+        ) : (
+          <div className="num" style={{ fontSize: 13, fontWeight: 600, color: S.dim }}>
+            {completedCount}/{activeEx.sets.length}
+          </div>
+        )}
+        {botonMenu(d.ex.nameEs, exIdx, a.onMenu)}
+      </div>
+
+      <SugerenciaDe d={d} activeEx={activeEx} exIdx={exIdx} updateSetValue={a.updateSetValue} />
+
+      {/* Encabezado de la tabla */}
+      <div style={{ display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID, padding: '0 14px 6px', gap: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Set</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Anterior</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>
+          {byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG'}
+        </div>
+        {!byTime && <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Reps</div>}
+        <div />
+      </div>
+
+      {/* Series */}
+      {activeEx.sets.map((_, setIdx) => filaDe(d, activeEx, exIdx, setIdx, serieProximaEnEsta, pulso, a))}
+
+      <TipsRow exerciseId={d.ex.id} />
+
+      {/* Add set button */}
+      <div style={{ padding: '10px 16px 14px' }}>
+        {botonSerie('+ Serie', () => a.addSetToExercise(exIdx))}
+      </div>
+    </div>
+  )
+})
+
+export function ActiveWorkoutScreen() {
+  // Selectores, no el store entero: cualquier `set()` (un aviso, el tick del
+  // descanso) volvía a renderizar la pantalla aunque no le cambiara nada.
+  const routines = useStore((s) => s.routines)
+  const workouts = useStore((s) => s.workouts)
+  const prs = useStore((s) => s.prs)
+  const exercises = useAllExercises()
+  const activeWorkout = useWorkoutStore((s) => s.activeWorkout)
+  const updateSetValue = useWorkoutStore((s) => s.updateSetValue)
+  const toggleSetWarmup = useWorkoutStore((s) => s.toggleSetWarmup)
+  const completeSet = useWorkoutStore((s) => s.completeSet)
+  const addSetToExercise = useWorkoutStore((s) => s.addSetToExercise)
+  const removeSetFromExercise = useWorkoutStore((s) => s.removeSetFromExercise)
+  const finishWorkout = useWorkoutStore((s) => s.finishWorkout)
+  const cancelWorkout = useWorkoutStore((s) => s.cancelWorkout)
+  const setWorkoutDate = useWorkoutStore((s) => s.setWorkoutDate)
+  const addExerciseToWorkout = useWorkoutStore((s) => s.addExerciseToWorkout)
+  const replaceExerciseInWorkout = useWorkoutStore((s) => s.replaceExerciseInWorkout)
+  const removeExerciseFromWorkout = useWorkoutStore((s) => s.removeExerciseFromWorkout)
+  const empezarTabata = useWorkoutStore((s) => s.empezarTabata)
+
   const [modalExercise, setModalExercise] = useState<Exercise | null>(null)
   const [confirmAction, setConfirmAction] = useState<'finish' | 'cancel' | null>(null)
   // Índice del ejercicio cuyo menú está abierto, y qué se eligió hacer con él.
@@ -580,278 +974,73 @@ export function ActiveWorkoutScreen() {
   // Pantalla encendida mientras el entreno está abierto.
   useWakeLock(!!activeWorkout)
 
-  const realStartedAt = activeWorkout?.realStartedAt
-  useEffect(() => {
-    if (!realStartedAt) return
-    intervalRef.current = setInterval(() => setElapsed(Date.now() - realStartedAt), 1000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [realStartedAt])
+  const guardada = routines.find((r) => r.id === activeWorkout?.routineId)
+  const routine = useMemo(() => (guardada ? rutinaEnUso(guardada) : undefined), [guardada])
+  const ejercicios = activeWorkout?.exercises
+  const startedAt = activeWorkout?.startedAt
+  // Bloques, circuitos y superseries de la rutina (ver utils/bloques.ts). Una
+  // rutina sin nada de eso da un solo bloque sin nombre con todo suelto, y se
+  // ve igual que siempre.
+  const bloques = useMemo(() => agruparEntreno(ejercicios ?? [], guardada?.exercises ?? []), [ejercicios, guardada])
+
+  // Lo que depende sólo del historial se calcula una vez por entreno, no en
+  // cada render: con 100 entrenos y 12 ejercicios se reordenaba y filtraba
+  // todo dos veces por segundo durante el descanso.
+  const anteriores = useMemo(() => (startedAt == null ? [] : [...workouts]
+    .filter((w) => w.finishedAt && w.startedAt < startedAt)
+    .sort((a, b) => b.startedAt - a.startedAt)), [workouts, startedAt])
+  const idsClave = ejercicios?.map((e) => e.exerciseId).join('|') ?? ''
+  /** Última vez que se hizo cada ejercicio del entreno, en cualquier rutina. */
+  const ultimasSeriesPorEj = useMemo(() => {
+    const m = new Map<string, WorkoutSet[]>()
+    for (const id of idsClave ? idsClave.split('|') : []) {
+      for (const w of anteriores) {
+        const e = w.exercises.find((x) => x.exerciseId === id)
+        if (e && e.sets.length > 0) { m.set(id, e.sets); break }
+      }
+    }
+    return m
+  }, [anteriores, idsClave])
+  /** Sugerencia de doble progresión por ejercicio: sólo tiene sentido con kg y reps. */
+  const sugerencias = useMemo(() => {
+    const m = new Map<string, ProgressionSuggestion | null>()
+    for (const id of idsClave ? idsClave.split('|') : []) {
+      const ex = exercises.find((e) => e.id === id)
+      const routineEx = routine?.exercises.find((re) => re.exerciseId === id)
+      m.set(id, ex && routineEx && !isDurationExercise(ex) ? suggestNextWeight(ex, routineEx, workouts, id) : null)
+    }
+    return m
+  }, [workouts, routine, exercises, idsClave])
+
+  // Lo que necesitan las tarjetas y que sólo cambia con el historial: un
+  // objeto estable, así `memo` puede saltear las tarjetas que no cambiaron.
+  const ctx = useMemo<Contexto>(() => ({ exercises, prs, ultimasSeriesPorEj, sugerencias, routine }), [exercises, prs, ultimasSeriesPorEj, sugerencias, routine])
+  const datosDe = (activeEx: ActiveWorkoutExercise) => calcDatos(activeEx, ctx)
+
+  const confirmarSerie = useCallback<Confirmar>((e, st, o) => {
+    setUltimoEjId(useWorkoutStore.getState().activeWorkout?.exercises[e]?.exerciseId ?? null)
+    completeSet(e, st, o)
+  }, [completeSet])
+  const abrir = useCallback((id: string) => setAbiertos((prev) => new Set(prev).add(id)), [])
+  const cerrar = useCallback((id: string) => setAbiertos((prev) => { const n = new Set(prev); n.delete(id); return n }), [])
+  const acciones = useMemo<Acciones>(() => ({
+    updateSetValue, toggleSetWarmup, removeSetFromExercise, addSetToExercise, confirmarSerie,
+    onVer: setModalExercise, onMenu: setMenuEjercicio,
+  }), [updateSetValue, toggleSetWarmup, removeSetFromExercise, addSetToExercise, confirmarSerie])
 
   if (!activeWorkout) return null
 
-  const guardada = routines.find((r) => r.id === activeWorkout.routineId)
-  const routine = guardada ? rutinaEnUso(guardada) : undefined
   const totalSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.length, 0)
   const completedSets = activeWorkout.exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
   const descansando = activeWorkout.restTimerVisible
   const panelDescanso = descansando && minimizadoPara !== activeWorkout.restEndsAt
-  // Bloques, circuitos y superseries de la rutina (ver utils/bloques.ts). Una
-  // rutina sin nada de eso da un solo bloque sin nombre con todo suelto, y se
-  // ve igual que siempre.
-  const bloques = agruparEntreno(activeWorkout.exercises, guardada?.exercises ?? [])
   const ultimoEj = ultimoEjId ? activeWorkout.exercises.findIndex((e) => e.exerciseId === ultimoEjId) : -1
   // La próxima serie: lineal en lo suelto, por rondas en circuitos y superseries.
   const proxima = proximaSerie(activeWorkout.exercises, bloques, ultimoEj)
   const ejActual = proxima?.exIdx ?? -1
   const serieProxima = proxima?.setIdx ?? -1
-  const confirmarSerie = (e: number, st: number, o?: { startRest?: boolean }) => {
-    setUltimoEjId(activeWorkout.exercises[e]?.exerciseId ?? null)
-    completeSet(e, st, o)
-  }
-  // Última vez que se hizo cada ejercicio, en cualquier rutina.
-  const anteriores = [...workouts]
-    .filter((w) => w.finishedAt && w.startedAt < activeWorkout.startedAt)
-    .sort((a, b) => b.startedAt - a.startedAt)
-  const ultimasSeries = (exerciseId: string): WorkoutSet[] => {
-    for (const w of anteriores) {
-      const e = w.exercises.find((x) => x.exerciseId === exerciseId)
-      if (e && e.sets.length > 0) return e.sets
-    }
-    return []
-  }
-
-  /** Lo que necesita la tarjeta de un ejercicio: récord, la vez anterior, sugerencia. */
-  const datosDe = (activeEx: ActiveWorkoutExercise) => {
-    const ex = exercises.find((e) => e.id === activeEx.exerciseId)
-    if (!ex) return null
-    const config = muscleGroupConfig[ex.muscleGroup]
-    const pr = prs.find((p) => p.exerciseId === ex.id)
-    const isBarbellLike = ex.equipmentType === 'barra'
-    const prevPorSerie = emparejarAnteriores(activeEx.sets, ultimasSeries(ex.id))
-    // La mejor serie hecha que supera el récord: sólo esa se marca.
-    let recordIdx = -1
-    let mejorValor = -1
-    activeEx.sets.forEach((st, i) => {
-      if (!st.completed || st.isWarmup) return
-      const k = parseDecimal(st.kg) || 0
-      const r = parseInt(st.reps) || 0
-      const sg = isDurationExercise(ex) ? toSeconds(st.duration ?? '', durationUnit(ex)) : 0
-      if (!superaRecord(pr, k, r, sg, isDurationExercise(ex))) return
-      const v = pesoDeSerie(k, r, sg, isDurationExercise(ex))
-      if (v > mejorValor) { mejorValor = v; recordIdx = i }
-    })
-    const completedCount = activeEx.sets.filter((s) => s.completed).length
-    const byTime = isDurationExercise(ex)
-    const unit = durationUnit(ex)
-    const routineEx = routine?.exercises.find((re) => re.exerciseId === ex.id)
-    // Sugerencia de doble progresión: sólo tiene sentido con kg y reps.
-    const suggestion = routineEx && !byTime
-      ? suggestNextWeight(ex, routineEx, workouts, ex.id)
-      : null
-    const terminado = activeEx.sets.length > 0 && completedCount === activeEx.sets.length
-    return { ex, config, pr, isBarbellLike, prevPorSerie, recordIdx, completedCount, byTime, unit, routineEx, suggestion, terminado }
-  }
-  type Datos = NonNullable<ReturnType<typeof datosDe>>
-
-  /** Ejercicio terminado, cerrado en una línea con su resumen. Tocarlo lo abre. */
-  const filaTerminado = (d: Datos, activeEx: ActiveWorkoutExercise, abrir: () => void) => {
-    const efectivas = activeEx.sets.filter((st) => !st.isWarmup)
-    const mejor = efectivas.reduce<ActiveWorkoutSet | null>((m, st) =>
-      !m || (parseDecimal(st.kg) || 0) > (parseDecimal(m.kg) || 0) ? st : m, null)
-    const resumen = d.byTime
-      ? `${efectivas.length} ${efectivas.length === 1 ? 'serie' : 'series'}`
-      : mejor && (parseDecimal(mejor.kg) || 0) > 0
-        ? `${efectivas.length} × mejor ${formatKg(parseDecimal(mejor.kg))}×${mejor.reps}`
-        : `${efectivas.length} ${efectivas.length === 1 ? 'serie' : 'series'}`
-    return (
-      <button
-        key={activeEx.exerciseId}
-        onClick={abrir}
-        aria-label={`${d.ex.nameEs}, terminado: ${resumen}. Tocá para abrir`}
-        style={{
-          margin: '8px 16px 0', width: 'calc(100% - 32px)', display: 'flex', alignItems: 'center', gap: 10,
-          background: 'none', border: `1px solid ${S.line}`, borderRadius: 12, padding: '10px 14px',
-          cursor: 'pointer', textAlign: 'left', minHeight: 48,
-        }}
-      >
-        <span style={{ width: 22, height: 22, borderRadius: 11, background: S.good, color: S.bg, fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: S.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.ex.nameEs}</span>
-        <span className="num" style={{ fontSize: 12, color: S.dim, flexShrink: 0 }}>{resumen}</span>
-      </button>
-    )
-  }
-
-  /**
-   * Nombre, nota de la rutina (en ámbar, como en el detalle) y grupo muscular
-   * con el récord. En circuitos y superseries (`compacto`) el nombre puede ir en
-   * dos renglones y, si hay nota, va sólo la nota, como en la maqueta.
-   */
-  const nombreDe = (d: Datos, compacto = false) => (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={compacto
-        ? { fontSize: 15, fontWeight: 700, color: S.ink, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'break-word' }
-        : { fontSize: 15, fontWeight: 700, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.ex.nameEs}</div>
-      {d.routineEx?.note && (
-        <div style={{ fontSize: 12, color: S.acc2, marginTop: 2, lineHeight: 1.35 }}>{d.routineEx.note}</div>
-      )}
-      {!(compacto && d.routineEx?.note) && <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>
-        <span style={{ color: d.config.color }}>{d.config.label}</span>
-        {d.pr && <span style={{ color: S.acc2 }}> · 🏆 {d.byTime ? formatDuration(d.pr.durationSec ?? 0) : d.pr.kg > 0 ? `${formatKg(d.pr.kg)}×${d.pr.reps}` : `${d.pr.reps} reps`}</span>}
-      </div>}
-    </div>
-  )
-
-  const miniatura = (d: Datos) => (
-    <button
-      onClick={() => setModalExercise(d.ex)}
-      aria-label={`Ver ${d.ex.nameEs}`}
-      style={{ flexShrink: 0, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-    >
-      <ExerciseThumbnail exercise={d.ex} size={40} />
-    </button>
-  )
-
-  /** Menú del ejercicio: cambiarlo o sacarlo sin salir del entreno */
-  const botonMenu = (d: Datos, exIdx: number) => (
-    <button
-      onClick={() => setMenuEjercicio(exIdx)}
-      aria-label={`Opciones de ${d.ex.nameEs}`}
-      style={{ width: 44, height: 44, flexShrink: 0, marginRight: -8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: S.dim, fontSize: 17, cursor: 'pointer', lineHeight: 1 }}
-    >⋯</button>
-  )
-
-  /** Sugerencia de doble progresión */
-  const sugerenciaDe = (d: Datos, activeEx: ActiveWorkoutExercise, exIdx: number) => {
-    const suggestion = d.suggestion
-    if (!suggestion) return null
-    return (
-      <div style={{
-        margin: '0 14px 10px', padding: '8px 10px', borderRadius: 12,
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.10)' : 'rgba(255,255,255,0.035)',
-        border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.30)' : S.line2}`,
-      }}>
-        <span style={{ fontSize: 13, flexShrink: 0 }}>
-          {suggestion.reason === 'subir' ? '▲' : suggestion.reason === 'bajar' ? '▼' : suggestion.reason === 'primera-vez' ? '🎯' : '='}
-        </span>
-        <span style={{ flex: 1, fontSize: 11, color: suggestion.reason === 'subir' ? S.good : S.dim, lineHeight: 1.4 }}>
-          {suggestion.note}
-        </span>
-        {/* Las series arrancan con el máximo de la última vez; el
-            peso sugerido se aplica sólo si el usuario lo pide. */}
-        {suggestion.kg > 0 && activeEx.sets.some((st) => !st.completed && !st.isWarmup && parseDecimal(st.kg) !== suggestion.kg) && (
-          <button
-            onClick={() => activeEx.sets.forEach((st, si) => {
-              if (!st.completed && !st.isWarmup) updateSetValue(exIdx, si, 'kg', String(suggestion.kg))
-            })}
-            aria-label={`Usar ${formatKg(suggestion.kg)} kg en las series que faltan`}
-            style={{
-              flexShrink: 0, minHeight: 32, padding: '0 10px', borderRadius: 8,
-              background: suggestion.reason === 'subir' ? 'rgba(52,211,153,0.16)' : S.surf2,
-              border: `1px solid ${suggestion.reason === 'subir' ? 'rgba(52,211,153,0.40)' : S.line2}`,
-              color: suggestion.reason === 'subir' ? S.good : S.ink,
-              fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-          >
-            Usar {formatKg(suggestion.kg)} kg
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  const filaDe = (d: Datos, activeEx: ActiveWorkoutExercise, exIdx: number, setIdx: number, unidades = false) => {
-    const set = activeEx.sets[setIdx]
-    return (
-      <SetRow
-        key={setIdx}
-        exIdx={exIdx} setIdx={setIdx} set={set} prev={d.prevPorSerie[setIdx]}
-        byTime={d.byTime} unit={d.unit}
-        isBarbellLike={d.isBarbellLike}
-        puedeBorrar={!set.completed && activeEx.sets.length > 1}
-        onUpdate={updateSetValue}
-        onToggleWarmup={toggleSetWarmup}
-        onRemove={removeSetFromExercise}
-        esProxima={exIdx === ejActual && setIdx === serieProxima}
-        pulso={finDescanso != null && exIdx === ejActual && setIdx === serieProxima}
-        recordGuardado={d.pr}
-        esRecord={setIdx === d.recordIdx}
-        onComplete={confirmarSerie}
-        unidades={unidades}
-      />
-    )
-  }
-
-  const botonSerie = (label: string, onClick: () => void) => (
-    <button onClick={onClick}
-      style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 12, color: S.dim, fontSize: 13, fontWeight: 600, minHeight: 44, padding: '0 18px', cursor: 'pointer' }}>
-      {label}
-    </button>
-  )
-
-  /** La tarjeta de un ejercicio suelto: la de siempre. */
-  const tarjetaEjercicio = (activeEx: ActiveWorkoutExercise, exIdx: number) => {
-    const d = datosDe(activeEx)
-    if (!d) return null
-    const { byTime, unit, completedCount, terminado } = d
-
-    if (terminado && !abiertos.has(activeEx.exerciseId)) {
-      return filaTerminado(d, activeEx, () => setAbiertos((prev) => new Set(prev).add(activeEx.exerciseId)))
-    }
-
-    return (
-      <div key={activeEx.exerciseId} style={{ margin: '12px 16px 0', background: S.surf, borderRadius: 16, overflow: 'hidden', border: `1px solid ${S.line2}` }}>
-
-        {/* Encabezado del ejercicio */}
-        <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 12, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: S.acc, border: `1px solid ${S.line2}`, flexShrink: 0 }}>
-            {exIdx + 1}
-          </div>
-          {miniatura(d)}
-          {nombreDe(d)}
-          {terminado ? (
-            <button
-              onClick={() => setAbiertos((prev) => { const n = new Set(prev); n.delete(activeEx.exerciseId); return n })}
-              aria-label="Cerrar el ejercicio terminado"
-              className="num"
-              style={{ fontSize: 13, fontWeight: 700, color: S.good, background: 'none', border: 'none', cursor: 'pointer', minHeight: 44, padding: '0 4px' }}
-            >
-              {completedCount}/{activeEx.sets.length} ▴
-            </button>
-          ) : (
-            <div className="num" style={{ fontSize: 13, fontWeight: 600, color: S.dim }}>
-              {completedCount}/{activeEx.sets.length}
-            </div>
-          )}
-          {botonMenu(d, exIdx)}
-        </div>
-
-        {sugerenciaDe(d, activeEx, exIdx)}
-
-        {/* Encabezado de la tabla */}
-        <div style={{ display: 'grid', gridTemplateColumns: byTime ? SET_GRID_TIEMPO : SET_GRID, padding: '0 14px 6px', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Set</div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Anterior</div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>
-            {byTime ? (unit === 'min' ? 'Minutos' : 'Segundos') : 'KG'}
-          </div>
-          {!byTime && <div style={{ fontSize: 11, fontWeight: 600, color: S.mute, textAlign: 'center' }}>Reps</div>}
-          <div />
-        </div>
-
-        {/* Series */}
-        {activeEx.sets.map((_, setIdx) => filaDe(d, activeEx, exIdx, setIdx))}
-
-        <TipsRow exerciseId={d.ex.id} />
-
-        {/* Add set button */}
-        <div style={{ padding: '10px 16px 14px' }}>
-          {botonSerie('+ Serie', () => addSetToExercise(exIdx))}
-        </div>
-      </div>
-    )
-  }
+  const proximaEn = (exIdx: number) => (exIdx === ejActual ? serieProxima : -1)
 
   /**
    * Circuito o superserie: una sola tarjeta con la ronda, los ejercicios con
@@ -869,7 +1058,7 @@ export function ActiveWorkoutScreen() {
     if (hecho && !abierto) {
       return g.indices.map((i, k) => {
         const d = datos[k]
-        return d ? filaTerminado(d, ejs[i], () => setAbiertos((prev) => new Set(prev).add(clave))) : null
+        return d ? filaTerminado(d, ejs[i], () => abrir(clave)) : null
       })
     }
     const ronda = prox ? prox.setIdx : total - 1
@@ -918,7 +1107,7 @@ export function ActiveWorkoutScreen() {
             </div>
           ) : (
             <button
-              onClick={() => setAbiertos((prev) => { const n = new Set(prev); n.delete(clave); return n })}
+              onClick={() => cerrar(clave)}
               aria-label={`Cerrar ${tipoNombre.toLowerCase()} terminado`}
               style={{ marginTop: 4, minHeight: 44, padding: 0, background: 'none', border: 'none', color: S.good, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
@@ -929,8 +1118,8 @@ export function ActiveWorkoutScreen() {
 
         {g.indices.map((exIdx, k) => {
           const d = datos[k]
-          if (!d) return null
           const activeEx = ejs[exIdx]
+          if (!d) return <TarjetaDesconocida key={activeEx.exerciseId} activeEx={activeEx} exIdx={exIdx} onMenu={setMenuEjercicio} compacta />
           const expandido = hecho || expandidos.has(activeEx.exerciseId)
           const actual = ejActual === exIdx
           const siguienteHot = k < g.indices.length - 1 && ejActual === g.indices[k + 1]
@@ -947,7 +1136,7 @@ export function ActiveWorkoutScreen() {
                   }}>
                     {letra(k)}
                   </div>
-                  {miniatura(d)}
+                  {miniatura(d, setModalExercise)}
                 </div>
                 {nombreDe(d, true)}
                 <button
@@ -960,13 +1149,13 @@ export function ActiveWorkoutScreen() {
                 >
                   {d.completedCount}/{activeEx.sets.length}{!hecho && expandido ? ' ▴' : ''}
                 </button>
-                {botonMenu(d, exIdx)}
+                {botonMenu(d.ex.nameEs, exIdx, setMenuEjercicio)}
               </div>
 
-              {expandido && sugerenciaDe(d, activeEx, exIdx)}
+              {expandido && <SugerenciaDe d={d} activeEx={activeEx} exIdx={exIdx} updateSetValue={updateSetValue} />}
               {expandido
-                ? activeEx.sets.map((_, setIdx) => filaDe(d, activeEx, exIdx, setIdx, true))
-                : activeEx.sets[ronda] && filaDe(d, activeEx, exIdx, ronda, true)}
+                ? activeEx.sets.map((_, setIdx) => filaDe(d, activeEx, exIdx, setIdx, proximaEn(exIdx), finDescanso != null, acciones, true))
+                : activeEx.sets[ronda] && filaDe(d, activeEx, exIdx, ronda, proximaEn(exIdx), finDescanso != null, acciones, true)}
               {expandido && !hecho && (
                 <>
                   <TipsRow exerciseId={d.ex.id} />
@@ -1006,7 +1195,7 @@ export function ActiveWorkoutScreen() {
     if (todas && !abiertos.has(clave)) {
       return g.indices.map((i, k) => {
         const d = datos[k]
-        return d ? filaTerminado(d, ejs[i], () => setAbiertos((prev) => new Set(prev).add(clave))) : null
+        return d ? filaTerminado(d, ejs[i], () => abrir(clave)) : null
       })
     }
     const cfg = leerTabata(bloque.nombre)
@@ -1020,7 +1209,15 @@ export function ActiveWorkoutScreen() {
         <ul style={{ listStyle: 'none', margin: 0, padding: '6px 0' }}>
           {g.indices.map((exIdx, k) => {
             const d = datos[k]
-            if (!d) return null
+            if (!d) {
+              return (
+                <li key={ejs[exIdx].exerciseId} className="flex items-center" style={{ gap: 10, padding: '7px 14px', fontSize: 13, color: S.dim }}>
+                  <span className="num" aria-hidden="true" style={{ width: 22, textAlign: 'center', fontSize: 12, fontWeight: 700, color: S.mute, flexShrink: 0 }}>?</span>
+                  <span style={{ minWidth: 0, flex: 1 }}>Ejercicio desconocido</span>
+                  {botonMenu('ejercicio desconocido', exIdx, setMenuEjercicio)}
+                </li>
+              )
+            }
             return (
               <li key={ejs[exIdx].exerciseId} className="flex items-center" style={{ gap: 10, padding: '7px 14px', fontSize: 13, color: S.ink }}>
                 <span className="num" aria-hidden="true" style={{ width: 22, textAlign: 'center', fontSize: 12, fontWeight: 700, color: d.terminado ? S.good : S.acc, flexShrink: 0 }}>
@@ -1062,7 +1259,7 @@ export function ActiveWorkoutScreen() {
         ) : todas && (
           <div style={{ padding: '6px 14px 0' }}>
             <button
-              onClick={() => setAbiertos((prev) => { const n = new Set(prev); n.delete(clave); return n })}
+              onClick={() => cerrar(clave)}
               style={{ minHeight: 44, padding: 0, background: 'none', border: 'none', color: S.good, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
               Hecho ▴
@@ -1073,10 +1270,22 @@ export function ActiveWorkoutScreen() {
     )
   }
 
+  /** Un ejercicio suelto: la tarjeta memorizada (o la de respaldo si no está en el catálogo). */
+  const tarjetaEjercicio = (activeEx: ActiveWorkoutExercise, exIdx: number) => {
+    return (
+      <TarjetaEjercicio
+        activeEx={activeEx} exIdx={exIdx} ctx={ctx}
+        serieProximaEnEsta={proximaEn(exIdx)}
+        pulso={finDescanso != null && exIdx === ejActual}
+        abierto={abiertos.has(activeEx.exerciseId)}
+        onAbrir={abrir} onCerrar={cerrar}
+        acciones={acciones}
+      />
+    )
+  }
+
   return (
     <div className="flex-1 min-h-0 flex flex-col screen-enter relative" style={{ background: S.bg }}>
-
-      {/* Live PR banner */}
 
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '54px 22px 14px', borderBottom: `1px solid ${S.line2}` }}>
@@ -1095,10 +1304,7 @@ export function ActiveWorkoutScreen() {
               <span style={{ color: S.dim, fontSize: 13, fontWeight: 500, letterSpacing: 0 }}> series</span>
             </div>
             {/* El reloj total, en segundo plano */}
-            <div className="flex items-center gap-1.5" style={{ marginTop: 7 }} aria-label="Duración del entreno" role="timer">
-              <span className="live-dot" style={{ width: 6, height: 6, borderRadius: 3, background: S.acc, display: 'inline-block' }} />
-              <span className="num" style={{ fontSize: 12, color: S.dim }}>{formatElapsed(elapsed)}</span>
-            </div>
+            <Cronometro realStartedAt={activeWorkout.realStartedAt} />
           </div>
           {/* Cuando corre el descanso, ocupa el lugar grande; tocarlo abre el panel. */}
           {!descansando && finDescanso && !finDescanso.conPanel && (
@@ -1184,7 +1390,7 @@ export function ActiveWorkoutScreen() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ width: 40, height: 4, background: S.surf2, borderRadius: 2, margin: '0 auto 14px' }} />
-              <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 2 }}>{ex?.nameEs}</p>
+              <p style={{ fontSize: 15, fontWeight: 700, color: S.ink, marginBottom: 2 }}>{ex?.nameEs ?? 'Ejercicio desconocido'}</p>
               <p style={{ fontSize: 12, color: S.dim, marginBottom: 14 }}>
                 {hechas > 0 ? `${hechas} ${hechas === 1 ? 'serie hecha' : 'series hechas'} en esta sesión` : 'Todavía sin series'}
               </p>
@@ -1193,7 +1399,7 @@ export function ActiveWorkoutScreen() {
                   onClick={() => { setPickerPara({ modo: 'cambiar', exIdx: menuEjercicio }); setMenuEjercicio(null) }}
                   style={opcionMenu}
                 >
-                  ↔️ Cambiar por otro ejercicio
+                  <span aria-hidden="true">↔️</span> Cambiar por otro ejercicio
                   <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
                     Sólo por hoy: la rutina queda igual
                   </span>
@@ -1202,13 +1408,13 @@ export function ActiveWorkoutScreen() {
                   onClick={() => { setPickerPara({ modo: 'agregar', exIdx: menuEjercicio }); setMenuEjercicio(null) }}
                   style={opcionMenu}
                 >
-                  ➕ Agregar uno después de este
+                  <span aria-hidden="true">➕</span> Agregar uno después de este
                 </button>
                 <button
                   onClick={() => { removeExerciseFromWorkout(menuEjercicio); setMenuEjercicio(null) }}
                   style={{ ...opcionMenu, color: S.bad }}
                 >
-                  ⤼ Saltear este ejercicio
+                  <span aria-hidden="true">⤼</span> Saltear este ejercicio
                   <span style={{ display: 'block', fontSize: 11, fontWeight: 500, color: S.dim, marginTop: 2 }}>
                     {hechas > 0 ? `Se pierden las ${hechas} series cargadas` : 'Lo saca del entreno de hoy'}
                   </span>
@@ -1253,7 +1459,7 @@ export function ActiveWorkoutScreen() {
         const cargadas = terminar ? seriesCargadas(activeWorkout, exercises) : []
         const sinHacer = activeWorkout.exercises
           .filter((ex, i) => !ex.sets.some((st) => st.completed) && !cargadas.some((c) => c.exIdx === i))
-          .map((ex) => exercises.find((e) => e.id === ex.exerciseId)?.nameEs ?? 'Ejercicio')
+          .map((ex) => exercises.find((e) => e.id === ex.exerciseId)?.nameEs ?? 'Ejercicio desconocido')
         const nombres = sinHacer.length <= 2
           ? sinHacer.join(' y ')
           : `${sinHacer.slice(0, 2).join(', ')} y ${sinHacer.length - 2} más`
@@ -1321,7 +1527,11 @@ export function ActiveWorkoutScreen() {
         )
       })()}
 
-      {modalExercise && <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />}
+      {modalExercise && (
+        <Suspense fallback={null}>
+          <ExerciseModal exercise={modalExercise} onClose={() => setModalExercise(null)} />
+        </Suspense>
+      )}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
+import { Dialog } from './Dialog'
 import { useStore, useAllExercises } from '../store/useStore'
+import { deltaColor } from '../utils/_pendiente'
 import { muscleGroupConfig } from '../data/muscleGroups'
 import { ExerciseThumbnail } from './ExerciseThumbnail'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
 import { MuscleIcon } from './MuscleIcon'
 import { formatKg } from '../utils/format'
 import { formatDuration } from '../utils/duration'
@@ -51,7 +53,8 @@ function textoValor(kind: RecordKind, v: number): string {
 }
 
 export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: string; onClose: () => void }) {
-  const { workouts, prs } = useStore()
+  const workouts = useStore((s) => s.workouts)
+  const prs = useStore((s) => s.prs)
   const allExercises = useAllExercises()
   const exercise = allExercises.find((e) => e.id === exerciseId)
   const pr = prs.find((p) => p.exerciseId === exerciseId)
@@ -97,7 +100,7 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
     new Date(ms).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' })
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col sheet-enter" style={{ background: S.bg }}>
+    <Dialog label={`Historial de ${exercise?.nameEs ?? 'ejercicio'}`} onClose={onClose} className="absolute inset-0 z-50 flex flex-col sheet-enter" style={{ background: S.bg }}>
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '48px 20px 16px', borderBottom: `1px solid ${S.line2}` }}>
         <div className="flex items-center gap-3">
@@ -105,7 +108,7 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
             onClick={onClose}
             aria-label="Volver"
             style={{
-              width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+              ...tappable, borderRadius: 12, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: S.surf2, border: `1px solid ${S.line2}`, color: S.dim,
               fontSize: 22, cursor: 'pointer', lineHeight: 1,
@@ -147,10 +150,11 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
                 <div className="num" style={{ fontSize: 22, fontWeight: 700, color: S.acc2 }}>
                   {textoRecord}
                 </div>
-                <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>🏆 Récord</div>
+                <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}><span aria-hidden="true">🏆</span> Récord</div>
               </div>
               <div style={{ flex: 1, background: S.surf, border: `1px solid ${S.line2}`, borderRadius: 16, padding: '12px 10px', textAlign: 'center' }}>
-                <div className="num" style={{ fontSize: 22, fontWeight: 700, color: change > 0 ? S.good : change < 0 ? S.bad : S.ink }}>
+                {/* Semántica de deltas: bajar no es un error, va en gris. */}
+                <div className="num" style={{ fontSize: 22, fontWeight: 700, color: change === 0 ? S.ink : deltaColor(change) }}>
                   {change > 0 ? '+' : change < 0 ? '−' : ''}{textoValor(kind, Math.abs(change))}<span style={{ fontSize: 12, color: S.dim, fontWeight: 500 }}>{unidad}</span>
                 </div>
                 <div style={{ fontSize: 11, color: S.dim, marginTop: 2 }}>Progreso</div>
@@ -214,6 +218,6 @@ export function ExerciseHistorySheet({ exerciseId, onClose }: { exerciseId: stri
           </>
         )}
       </div>
-    </div>
+    </Dialog>
   )
 }

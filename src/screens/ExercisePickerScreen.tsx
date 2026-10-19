@@ -1,13 +1,15 @@
-import { useState, useCallback, useMemo } from 'react'
+import { Suspense, lazy, useState, useCallback, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { muscleGroupConfig } from '../data/muscleGroups'
-import { ExerciseModal } from '../components/ExerciseModal'
 import { ExerciseThumbnail } from '../components/ExerciseThumbnail'
 import { CreateExerciseCard } from '../components/CreateExerciseCard'
 import { getExerciseSuggestion } from '../utils/aiCoach'
 import type { MuscleGroup, Exercise } from '../types'
 import { MuscleIcon } from '../components/MuscleIcon'
-import { S } from '../theme'
+import { S, tappable } from '../theme'
+
+// La ficha trae el catálogo de instrucciones: se baja al abrirla por primera vez.
+const ExerciseModal = lazy(() => import('../components/ExerciseModal').then((m) => ({ default: m.ExerciseModal })))
 
 interface Props {
   routineName: string
@@ -20,7 +22,13 @@ const muscleGroupOrder: MuscleGroup[] = [
 ]
 
 export function ExercisePickerScreen({ routineName }: Props) {
-  const { exercises, customExercises, activeRoutineId, routines, addExerciseToRoutine, setShowExercisePicker, anthropicApiKey } = useStore()
+  const exercises = useStore((s) => s.exercises)
+  const customExercises = useStore((s) => s.customExercises)
+  const activeRoutineId = useStore((s) => s.activeRoutineId)
+  const routines = useStore((s) => s.routines)
+  const addExerciseToRoutine = useStore((s) => s.addExerciseToRoutine)
+  const setShowExercisePicker = useStore((s) => s.setShowExercisePicker)
+  const anthropicApiKey = useStore((s) => s.anthropicApiKey)
   // Los ejercicios propios borrados (archivados) no se ofrecen para agregar.
   const allExercises = useMemo(() => [...exercises, ...customExercises.filter((e) => !e.archived)], [exercises, customExercises])
   const [search, setSearch] = useState('')
@@ -111,11 +119,13 @@ export function ExercisePickerScreen({ routineName }: Props) {
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => setShowExercisePicker(false)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+            aria-label="Volver"
+            className="rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
+              ...tappable,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.5)',
+              color: S.dim,
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -124,7 +134,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
           </button>
           <div>
             <h1 className="text-base font-bold text-ink">Elegir ejercicio</h1>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{routineName}</p>
+            <p className="text-xs" style={{ color: S.dim }}>{routineName}</p>
           </div>
           <div
             className="ml-auto flex rounded-xl overflow-hidden"
@@ -133,20 +143,22 @@ export function ExercisePickerScreen({ routineName }: Props) {
             <button
               onClick={() => setMode('browse')}
               className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              aria-pressed={mode === 'browse'}
               style={mode === 'browse' ? {
                 background: 'rgba(232,99,74,0.15)',
                 color: 'var(--acc)',
-              } : { color: 'rgba(255,255,255,0.3)' }}
+              } : { color: S.dim }}
             >
               Grupos
             </button>
             <button
               onClick={() => { setMode('search') }}
               className="px-3 py-1.5 text-xs font-semibold transition-colors"
+              aria-pressed={mode === 'search'}
               style={mode === 'search' ? {
                 background: 'rgba(232,99,74,0.15)',
                 color: 'var(--acc)',
-              } : { color: 'rgba(255,255,255,0.3)' }}
+              } : { color: S.dim }}
             >
               Buscar
             </button>
@@ -155,10 +167,11 @@ export function ExercisePickerScreen({ routineName }: Props) {
 
         {mode === 'search' && (
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: 'rgba(255,255,255,0.25)' }}>🔍</span>
+            <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: S.mute }}>🔍</span>
             <input
               type="text"
               placeholder="Buscar o escribir uno nuevo..."
+              aria-label="Buscar o escribir un ejercicio nuevo"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
@@ -180,7 +193,7 @@ export function ExercisePickerScreen({ routineName }: Props) {
               <span className="text-xl flex-shrink-0">🤖</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink truncate">{aiSuggestion.exercise.nameEs}</p>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>{aiSuggestion.reason}</p>
+                <p className="text-xs" style={{ color: S.dim }}>{aiSuggestion.reason}</p>
               </div>
               <button
                 onClick={() => { handleAdd(aiSuggestion.exercise.id); setAiSuggestion(null) }}
@@ -295,7 +308,9 @@ export function ExercisePickerScreen({ routineName }: Props) {
 
       {/* Exercise detail modal */}
       {detailExercise && (
-        <ExerciseModal exercise={detailExercise} onClose={() => setDetailExercise(null)} />
+        <Suspense fallback={null}>
+          <ExerciseModal exercise={detailExercise} onClose={() => setDetailExercise(null)} />
+        </Suspense>
       )}
     </div>
   )
@@ -324,26 +339,31 @@ function ExerciseRow({
       {/* Tapping icon/name → detail */}
       <button
         onClick={onDetail}
+        aria-label={`Ver ${exercise.nameEs}`}
         className="flex items-center gap-3 flex-1 min-w-0 text-left"
       >
         <ExerciseThumbnail exercise={exercise} size={44} />
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-ink text-sm truncate">{exercise.nameEs}</p>
-          <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>{exercise.primaryMuscles.join(', ')}</p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: S.dim }}>{exercise.primaryMuscles.join(', ')}</p>
         </div>
       </button>
 
       {/* Add button */}
       <button
         onClick={onAdd}
-        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all font-bold text-lg"
+        aria-label={isAdded ? `${exercise.nameEs} ya está en la rutina` : `Agregar ${exercise.nameEs}`}
+        aria-pressed={isAdded}
+        className="rounded-full flex items-center justify-center flex-shrink-0 transition-all font-bold text-lg"
         style={isAdded ? {
+          ...tappable,
           background: 'rgba(232,99,74,0.15)',
           color: 'var(--acc)',
           border: '1px solid rgba(232,99,74,0.3)',
         } : {
+          ...tappable,
           background: 'rgba(255,255,255,0.06)',
-          color: 'rgba(255,255,255,0.4)',
+          color: S.dim,
           border: '1px solid rgba(255,255,255,0.08)',
         }}
       >
