@@ -151,7 +151,10 @@ Cada rutina está armada en bloques (circuito de entrada, principal, tabata),
 con la superserie del full body marcada. Las series y reps de base son las de
 las semanas 1-2-3; las de las semanas 4-5-6 van en `alt` y se eligen con el
 selector *Semanas 1-3 / 4-6* de la rutina, que cambia también lo que se carga
-en el entreno. Los descansos y las aclaraciones ("por pierna") quedan en la
+en el entreno. La semana del plan la calcula `semanaActual`
+(`src/utils/program.ts`) en un solo lugar, y los domingos ya habla de la semana
+que arranca al día siguiente: Inicio, Ajustes, el informe y la estampa de cada
+entreno dicen lo mismo. Los descansos y las aclaraciones ("por pierna") quedan en la
 nota. Las rutinas guardadas antes de esto se completan solas al abrir la app
 (`completarPlanMile`).
 
@@ -223,6 +226,22 @@ en un solo lugar. El
 cronómetro es un vidrio sobre el entreno, que se ve detrás desenfocado; si el
 navegador no desenfoca, o el teléfono pide menos transparencia, el fondo va
 opaco.
+
+Tres reglas más, desde la 1.5.0:
+
+- **Un solo formato numérico.** Todo lo que sólo se lee sale de `formatNum` /
+  `formatMedida` (`src/utils/format.ts`): coma decimal, punto de miles y sin
+  ceros de más ("58,2 kg", "67,5 cm", "3.650"). Los campos que se editan siguen
+  aceptando punto.
+- **Las bajas no son errores.** `deltaColor` (`src/theme.ts`) pinta una
+  diferencia en verde si sube, en `dim` si baja o no cambia, en ámbar si es un
+  récord y en `dim` siempre cuando es neutra (el peso corporal). El rojo queda
+  para los errores. La única excepción es Progreso → Resumen del mes, que sigue
+  marcando las bajas en rojo.
+- **Escala de 4 px y dos alturas de fila.** `space` y `row` en
+  `design-tokens.js` (`SP[1]`…`SP[8]` = 4…32, `ROW.compact` 44, `ROW.regular`
+  56, `ROW.loose` 60) salen como clases de Tailwind (`p-sp-4`, `h-row-compact`)
+  y variables CSS (`--sp-4`, `--row-regular`).
 
 ## Android
 
