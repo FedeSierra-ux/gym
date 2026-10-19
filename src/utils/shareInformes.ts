@@ -12,11 +12,11 @@ const ARRIBA = 260
 const ABAJO = 1580
 const CORAL = '#E8634A'
 const VERDE = '#34D399'
-const ROJO = '#f87171'
 const MUTE = '#7C8396'
 
 export type TonoCambio = 'sube' | 'baja' | 'igual'
-const colorTono = (t: TonoCambio) => (t === 'sube' ? VERDE : t === 'baja' ? ROJO : MUTE)
+// Subida en verde, baja en gris: el rojo queda para errores, también en la imagen.
+const colorTono = (t: TonoCambio) => (t === 'sube' ? VERDE : t === 'baja' ? DIM : MUTE)
 
 function fondo(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = BG

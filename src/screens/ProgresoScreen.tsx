@@ -12,6 +12,7 @@ import { formatDuration } from '../utils/duration'
 import { R, S, T } from '../theme'
 import type { MuscleGroup } from '../types'
 import { formatKg } from '../utils/format'
+import { deltaColor, ROW, SP } from '../utils/_pendiente3'
 import { compararPeriodos, resumenPeriodo, type Delta } from '../utils/periodSummary'
 import {
   ciclosParaListar, fechaLarga, rangoCiclo, rangosParaComparar, textoHoras, textoMarca, textoPct, type ModoComparacion,
@@ -47,12 +48,36 @@ function formatDelta(kind: ExerciseSeries['kind'], change: number): string {
   return `${formatKg(Math.round(v * 10) / 10)} ${unidadDe(kind)}`
 }
 
-/** El cambio para la columna angosta de la fila, sin unidad: "↑7,5". */
+/** El cambio para la píldora de la fila, sin unidad ni signo: "7,5", "15s". */
 function deltaCorto(kind: ExerciseSeries['kind'], change: number): string {
-  if (change === 0) return '='
   const v = Math.abs(change)
-  const n = kind === 'tiempo' ? `${Math.round(v)}s` : formatKg(Math.round(v * 10) / 10)
-  return `${change > 0 ? '↑' : '↓'}${n}`
+  return kind === 'tiempo' ? `${Math.round(v)}s` : formatKg(Math.round(v * 10) / 10)
+}
+
+/** Un selector nativo con forma de chip: el sistema abre su propia hoja, que es la que mejor se toca. */
+function Selector<V extends string>({ label, value, opciones, onChange, ancho }: {
+  label: string; value: V; opciones: [V, string][]; onChange: (v: V) => void
+  /** Proporción del ancho de la fila (flex). */
+  ancho?: number
+}) {
+  return (
+    <span style={{ position: 'relative', flex: ancho ?? 1, minWidth: 0, display: 'flex' }}>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value as V)}
+        style={{
+          flex: 1, minWidth: 0, minHeight: ROW.compact, padding: `0 ${SP[8]}px 0 ${SP[4]}px`, borderRadius: 999,
+          background: S.surf, border: `1px solid ${S.line2}`, color: S.ink, fontSize: 16, fontWeight: 600, // 16px: Safari hace zoom al enfocar campos más chicos
+          appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
+      >
+        {opciones.map(([v, texto]) => <option key={v} value={v}>{texto}</option>)}
+      </select>
+      <span aria-hidden="true" style={{ position: 'absolute', right: SP[4], top: '50%', transform: 'translateY(-50%)', color: S.dim, fontSize: T.body, pointerEvents: 'none' }}>▾</span>
+    </span>
+  )
 }
 
 /* ------------------------------------------------------------------- Series */
@@ -432,10 +457,15 @@ function FilaEjercicio({ serie, abierta, onToggle, onHistorial }: {
   if (!ex) return null
   const cfg = muscleGroupConfig[ex.muscleGroup]
   const subió = serie.change > 0
-  const bajó = serie.change < 0
   const estancado = estaEstancado(serie)
   const fecha = new Date(serie.lastDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
   const valores = serie.points.map(p => p.value)
+  // Subida en verde, baja en gris: bajar no es un error. Estancado va aparte.
+  const colorDelta = estancado ? S.mute : deltaColor(serie.change)
+  // La cifra sola, con la unidad en gris al lado: "32 kg", "12 reps", "1:30 min".
+  const texto = formatValor(serie)
+  const corte = texto.lastIndexOf(' ')
+  const [cifra, unidad] = corte > 0 ? [texto.slice(0, corte), texto.slice(corte + 1)] : [texto, '']
 
   return (
     <div style={{ borderTop: `1px solid ${S.line}` }}>
@@ -444,32 +474,41 @@ function FilaEjercicio({ serie, abierta, onToggle, onHistorial }: {
         aria-expanded={abierta}
         aria-label={`${ex.nameEs}: ${formatValor(serie)}${serie.change ? `, ${subió ? 'subió' : 'bajó'} ${formatDelta(serie.kind, serie.change)}` : ''}${estancado ? ', estancado' : ''}`}
         style={{
-          display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 48px 70px 50px', alignItems: 'center', gap: 8,
-          width: '100%', minHeight: 52, padding: '8px 0', background: 'none', border: 'none', textAlign: 'left',
+          display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 56px auto 52px', alignItems: 'center', gap: SP[3],
+          width: '100%', minHeight: ROW.regular, padding: `${SP[2]}px 0`, background: 'none', border: 'none', textAlign: 'left',
           cursor: 'pointer', color: 'inherit',
         }}
       >
         <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: T.bodyLg, fontWeight: 600, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {ex.nameEs}
           </span>
-          <span style={{ display: 'block', fontSize: 11, color: S.dim, marginTop: 1 }}>
+          <span style={{ display: 'block', fontSize: T.caption, color: S.dim, marginTop: 1 }}>
             <span className="num">{serie.sessions}</span> {serie.sessions === 1 ? 'sesión' : 'sesiones'} · {fecha}
           </span>
         </span>
-        <span style={{ height: 22 }}>
+        <span style={{ height: 28 }}>
           {/* Un solo código de color por fila: la línea neutra y el punto con el color del cambio. */}
-          {valores.length > 1 && <Sparkline values={valores} color={S.dim} puntoColor={subió ? S.good : bajó ? S.bad : S.dim} width={48} height={22} />}
+          {valores.length > 1 && <Sparkline values={valores} color={S.dim} puntoColor={colorDelta} width={56} height={28} />}
         </span>
-        <span className="num" style={{ fontSize: 13, fontWeight: 700, color: S.ink, textAlign: 'right', whiteSpace: 'nowrap' }}>
-          {formatValor(serie)}
+        <span className="num" style={{ fontSize: T.title, fontWeight: 600, color: S.ink, textAlign: 'right', whiteSpace: 'nowrap' }}>
+          {cifra}{unidad && <span style={{ fontSize: T.caption, fontWeight: 400, color: S.dim }}> {unidad}</span>}
         </span>
-        <span className="num" style={{ fontSize: 12, fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', color: estancado ? S.mute : subió ? S.good : bajó ? S.bad : S.mute }}>
-          {estancado ? <IconoPausa /> : deltaCorto(serie.kind, serie.change)}
+        <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <span
+            className="num"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 3, minWidth: ROW.compact, height: 24, padding: `0 ${SP[2]}px`,
+              borderRadius: 999, fontSize: T.caption, fontWeight: 700, whiteSpace: 'nowrap', color: colorDelta,
+              background: subió && !estancado ? 'rgba(52,211,153,0.14)' : S.surf2,
+            }}
+          >
+            {estancado ? <IconoPausa /> : serie.change === 0 ? '=' : <><span aria-hidden="true">{subió ? '↑' : '↓'}</span>{deltaCorto(serie.kind, serie.change)}</>}
+          </span>
         </span>
       </button>
       {abierta && (
-        <div style={{ padding: '2px 0 12px' }}>
+        <div style={{ padding: `2px 0 ${SP[3]}px` }}>
           {valores.length > 1 && (
             <div style={{ marginBottom: 10 }}>
               <Sparkline
@@ -490,7 +529,7 @@ function FilaEjercicio({ serie, abierta, onToggle, onHistorial }: {
                 : serie.change !== 0 ? <>{subió ? 'Subió' : 'Bajó'} <span className="num">{formatDelta(serie.kind, serie.change)}</span></> : 'Sin cambios'}
             </span>
             <button onClick={onHistorial}
-              style={{ minHeight: 36, padding: '0 12px', borderRadius: 12, background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              style={{ minHeight: ROW.compact, padding: `0 ${SP[3]}px`, borderRadius: R.md, background: S.surf2, border: `1px solid ${S.line2}`, color: S.ink, fontSize: T.caption, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
               Historial
             </button>
           </div>
@@ -506,21 +545,43 @@ function FilaEjercicio({ serie, abierta, onToggle, onHistorial }: {
  */
 function AvisoEstancados({ series }: { series: ExerciseSeries[] }) {
   const exercises = useAllExercises()
+  const [abierto, setAbierto] = useState(false)
   if (!series.length) return null
   const ejemplo = series.find(s => s.kind === 'kg')
   const nombre = ejemplo ? exercises.find(e => e.id === ejemplo.exerciseId)?.nameEs : undefined
   const descarga = ejemplo ? Math.round((ejemplo.current * 0.9) / 2.5) * 2.5 : 0
+  // Una fila compacta: el consejo completo se abre al tocar, así no empuja la lista.
   return (
-    <div role="note" style={{ background: S.surf2, border: `1px solid ${S.line2}`, borderRadius: 16, padding: '12px 14px', marginBottom: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: S.ink }}>
-        <IconoPausa /> <span className="num">{series.length}</span> {series.length === 1 ? 'ejercicio sin mejorar' : 'ejercicios sin mejorar'}
-      </div>
-      <p style={{ fontSize: 12, color: S.dim, marginTop: 4, lineHeight: 1.45 }}>
-        Llevan {SESIONES_ESTANCADO} sesiones o más sin superar su marca. Probá una semana de descarga al 90 % del peso
-        {ejemplo && nombre && descarga > 0 && <> (en {nombre}, <span className="num" style={{ color: S.ink }}>{formatKg(descarga)} kg</span>)</>}
-        {' '}y volvé a subir, o cambiá a una variante del ejercicio.
-      </p>
-    </div>
+    <section aria-label="Ejercicios sin mejorar" style={{ background: S.surf, border: `1px solid ${S.line2}`, borderRadius: R.lg, marginBottom: SP[4] }}>
+      <button
+        onClick={() => setAbierto(v => !v)}
+        aria-expanded={abierto}
+        style={{
+          display: 'flex', alignItems: 'center', gap: SP[3], width: '100%', minHeight: ROW.regular, padding: `${SP[2]}px ${SP[2]}px ${SP[2]}px ${SP[4]}px`,
+          background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: 'inherit',
+        }}
+      >
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: R.sm, flexShrink: 0, background: S.surf2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <IconoPausa />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: T.bodyLg, fontWeight: 700, color: S.ink }}>
+            <span className="num">{series.length}</span> {series.length === 1 ? 'ejercicio sin mejorar' : 'ejercicios sin mejorar'}
+          </span>
+          <span style={{ display: 'block', fontSize: T.caption, color: S.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {SESIONES_ESTANCADO}+ sesiones sin superar la marca · probá descarga al 90 %
+          </span>
+        </span>
+        <span aria-hidden="true" style={{ width: ROW.compact, height: ROW.compact, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.dim, fontSize: T.h2, transform: abierto ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>›</span>
+      </button>
+      {abierto && (
+        <p style={{ fontSize: T.caption, color: S.dim, padding: `0 ${SP[4]}px ${SP[3]}px`, lineHeight: 1.45 }}>
+          Llevan {SESIONES_ESTANCADO} sesiones o más sin superar su marca. Probá una semana de descarga al 90 % del peso
+          {ejemplo && nombre && descarga > 0 && <> (en {nombre}, <span className="num" style={{ color: S.ink }}>{formatKg(descarga)} kg</span>)</>}
+          {' '}y volvé a subir, o cambiá a una variante del ejercicio.
+        </p>
+      )}
+    </section>
   )
 }
 
@@ -600,7 +661,26 @@ export function ProgresoScreen() {
           ))}
         </div>
 
-        {tab !== 'resumen' && <div style={{ display: 'flex', background: S.surf, borderRadius: 16, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
+        {/* Marcas: rango y grupo muscular en una sola fila de dos selectores. */}
+        {tab === 'fuerza' && (
+          <div style={{ display: 'flex', gap: SP[2], marginTop: SP[3] }}>
+            <Selector
+              label="Rango de tiempo"
+              value={period}
+              opciones={PERIODOS.map(([p, label]) => [p, label])}
+              onChange={setPeriod}
+              ancho={3}
+            />
+            <Selector
+              label="Grupo muscular"
+              value={selectedMuscle ?? 'todos'}
+              opciones={[['todos', 'Todos los grupos'], ...gruposConDatos.map((mg): [string, string] => [mg, muscleGroupConfig[mg as MuscleGroup]?.label ?? mg])]}
+              onChange={(v) => setSelectedMuscle(v === 'todos' ? null : v)}
+              ancho={4}
+            />
+          </div>
+        )}
+        {tab === 'musculos' && <div style={{ display: 'flex', background: S.surf, borderRadius: 16, padding: 3, border: `1px solid ${S.line2}`, marginTop: 8 }}>
           {PERIODOS.map(([p, label]) => (
             <button key={p} onClick={() => setPeriod(p)}
               style={{ flex: 1, minHeight: 40, borderRadius: 12, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: period === p ? S.surf2 : 'transparent', color: period === p ? S.ink : S.dim, transition: 'all 0.15s ease-out' }}>
@@ -617,42 +697,6 @@ export function ProgresoScreen() {
           <MusculosTab desde={desde} nowTs={nowTs} dias={dias} />
         ) : (
           <>
-            {gruposConDatos.length > 1 && (
-              <div
-                className="flex gap-2"
-                style={{ marginBottom: 14, overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: 4, scrollbarWidth: 'none', WebkitMaskImage: 'linear-gradient(to right, #000 88%, transparent)' }}
-              >
-                <button
-                  onClick={() => setSelectedMuscle(null)}
-                  style={{
-                    padding: '8px 14px', borderRadius: 20, flexShrink: 0, minHeight: 40,
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    background: selectedMuscle === null ? S.acc : S.surf2,
-                    border: `1px solid ${selectedMuscle === null ? S.acc : S.line2}`,
-                    color: selectedMuscle === null ? S.ink : S.dim,
-                  }}
-                >Todos</button>
-                {gruposConDatos.map(mg => {
-                  const cfg = muscleGroupConfig[mg as MuscleGroup]
-                  if (!cfg) return null
-                  const activo = selectedMuscle === mg
-                  return (
-                    <button
-                      key={mg}
-                      onClick={() => setSelectedMuscle(activo ? null : mg)}
-                      style={{
-                        padding: '8px 14px', borderRadius: 20, flexShrink: 0, minHeight: 40,
-                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: activo ? cfg.color + '33' : S.surf2,
-                        border: `1px solid ${activo ? cfg.color : S.line2}`,
-                        color: activo ? cfg.color : S.dim,
-                      }}
-                    >{cfg.label}</button>
-                  )
-                })}
-              </div>
-            )}
-
             {visibles.length === 0 ? (
               <div className="flex items-center justify-center" style={{ padding: '48px 0' }}>
                 <div className="text-center">
@@ -668,11 +712,14 @@ export function ProgresoScreen() {
               <>
                 <AvisoEstancados series={visibles.filter(estaEstancado)} />
                 <div className="flex flex-col gap-5">
-                  {secciones(visibles).map(([titulo, lista]) => lista.length > 0 && (
+                  {secciones(visibles).filter(([, lista]) => lista.length > 0).map(([titulo, lista], i) => (
                     <section key={titulo}>
-                      <h3 style={{ fontSize: 12, fontWeight: 700, color: S.dim, marginBottom: 2 }}>
-                        {titulo} <span className="num" style={{ color: S.mute, fontWeight: 500 }}>{lista.length}</span>
-                      </h3>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: SP[2], margin: `0 2px ${SP[1]}px` }}>
+                        <h3 className="eyebrow" style={{ color: S.ink }}>
+                          {titulo} <span className="num" style={{ color: S.dim }}>{lista.length}</span>
+                        </h3>
+                        {i === 0 && <span style={{ fontSize: T.caption, color: S.dim, whiteSpace: 'nowrap' }}>{period === 'todo' ? 'desde el primer entreno' : `últimos ${etiquetaPeriodo}`}</span>}
+                      </div>
                       <div>
                         {lista.map(serie => (
                           <FilaEjercicio
