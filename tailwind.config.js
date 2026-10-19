@@ -1,5 +1,5 @@
 import plugin from 'tailwindcss/plugin'
-import { colors as t, text, radius } from './design-tokens.js'
+import { colors as t, text, radius, row, space } from './design-tokens.js'
 
 /** `surf2` → `--surf2`, `onAcc` → `--on-acc`. */
 const variable = (nombre) => `--${nombre.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`
@@ -54,11 +54,18 @@ export default {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'monospace'],
       },
+      // La escala de espaciado (p-sp-4 = 16px) y las alturas de fila
+      // (h-row-compact, min-h-row-regular) salen de los mismos tokens.
+      spacing: {
+        ...Object.fromEntries(Object.entries(space).map(([k, v]) => [`sp-${k}`, `${v}px`])),
+        ...Object.fromEntries(Object.entries(row).map(([k, v]) => [`row-${k}`, `${v}px`])),
+      },
     },
   },
   plugins: [
-    // Las variables CSS (--bg, --acc, --mute…, y los radios --r-sm…--r-xl)
-    // salen de los mismos tokens: antes index.css las repetía a mano y se
+    // Las variables CSS (--bg, --acc, --mute…, los radios --r-sm…--r-xl, el
+    // espaciado --sp-1…--sp-8 y las filas --row-compact…--row-loose) salen de
+    // los mismos tokens: antes index.css las repetía a mano y se
     // desincronizaban. En clases, los radios de la escala son rounded-lg (8),
     // rounded-xl (12), rounded-2xl (16) y rounded-3xl (24), los de Tailwind.
     plugin(({ addBase }) => {
@@ -66,6 +73,8 @@ export default {
         ':root': Object.fromEntries([
           ...Object.entries(t).map(([k, v]) => [variable(k), v]),
           ...Object.entries(radius).map(([k, v]) => [`--r-${k}`, `${v}px`]),
+          ...Object.entries(space).map(([k, v]) => [`--sp-${k}`, `${v}px`]),
+          ...Object.entries(row).map(([k, v]) => [`--row-${k}`, `${v}px`]),
         ]),
       })
     }),

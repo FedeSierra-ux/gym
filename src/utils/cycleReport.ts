@@ -1,5 +1,5 @@
 import type { Exercise, Workout } from '../types'
-import { SEMANA_CAMBIO, SEMANAS_PROGRAMA, semanaDelPrograma } from './program'
+import { SEMANA_CAMBIO, SEMANAS_PROGRAMA, semanaActual as semanaEnCurso, semanaDelPrograma } from './program'
 import { computeRecords, type RecordKind } from './records'
 import {
   cambioPct, esMejorMarca, kindsPorEjercicio, mediana, mejorSerie, recordsEnRango, valorDeMarca, type Marca,
@@ -174,9 +174,10 @@ export function informeCiclo({
   const med = mediana(cambios)
   const records = recordsEnRango(computeRecords(hastaFin, exercises), inicio, fin, kinds).length
 
+  // La misma "semana actual" que la tarjeta del plan (un domingo ya es la que arranca mañana).
   let semanaActual: number | null = null
   if (nowTs !== undefined && nowTs >= inicio && nowTs < fin) {
-    const n = semanaDelPrograma(inicio, nowTs)
+    const n = semanaEnCurso({ inicio }, nowTs)
     if (n >= 1 && n <= SEMANAS_PROGRAMA) semanaActual = n
   }
 

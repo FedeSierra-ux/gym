@@ -11,7 +11,7 @@ import { computeRecords } from '../utils/records'
 import { conColores } from '../utils/trainingDays'
 import { tieneVariante } from '../utils/routineVariant'
 import type { WeekOverrides } from '../utils/weekPlan'
-import { faseDeSemana, finDeCiclo, inicioParaSemana, lunesDe, semanaDelPrograma, SEMANAS_PROGRAMA, type CicloPrograma, type ProgramaEstado } from '../utils/program'
+import { faseDeSemana, finDeCiclo, inicioParaSemana, lunesSiguiente, semanaActual, semanaDeEntreno, SEMANAS_PROGRAMA, type CicloPrograma, type ProgramaEstado } from '../utils/program'
 import { alFallarEscritura, createSafeStorage } from '../utils/safeStorage'
 
 interface AppState {
@@ -461,12 +461,25 @@ export const useStore = create<AppState>()(
           const inicio = inicioParaSemana(semana, nowTs)
           // El ciclo que se reemplaza queda guardado hasta donde llegó.
           const ciclosPrograma = s.programa && !s.programa.terminado && s.programa.inicio !== inicio
-            ? archivarCiclo(s.ciclosPrograma, s.workouts, s.programa.inicio, Math.min(inicio, finDeCiclo(s.programa.inicio), lunesDe(nowTs) + 7 * 86400000))
+            ? archivarCiclo(s.ciclosPrograma, s.workouts, s.programa.inicio, Math.min(inicio, finDeCiclo(s.programa.inicio), lunesSiguiente(nowTs)))
             : s.ciclosPrograma
+          const programa: ProgramaEstado = { inicio, fase }
           return {
-            programa: { inicio, fase },
+            programa,
             ciclosPrograma,
             routines: s.routines.map((r) => (tieneVariante(r) ? { ...r, variante: fase } : r)),
+            // Los entrenos ya hechos de este ciclo se vuelven a estampar con la
+            // semana corregida: el informe los prioriza sobre la fecha, y
+            // corregir "semana 1" por "semana 3" el jueves dejaba el del martes
+            // en la S1. Los que caen fuera del ciclo nuevo pierden la estampa.
+            workouts: s.workouts.map((w) => {
+              if (w.startedAt < inicio) return w
+              const n = semanaDeEntreno(programa, w.startedAt)
+              if (n === w.semanaPrograma) return w
+              const { semanaPrograma: _vieja, ...resto } = w
+              void _vieja
+              return n ? { ...resto, semanaPrograma: n } : resto
+            }),
           }
         })
       },
@@ -474,7 +487,7 @@ export const useStore = create<AppState>()(
       sincronizarPrograma: () => {
         const { programa, routines } = get()
         if (!programa || programa.terminado) return
-        const semana = semanaDelPrograma(programa.inicio, Date.now())
+        const semana = semanaActual(programa, Date.now())
         // Pasada la semana 6, Inicio pregunta si arrancás de nuevo; hasta entonces no se toca nada.
         if (semana > SEMANAS_PROGRAMA) return
         const fase = faseDeSemana(semana)
@@ -495,7 +508,7 @@ export const useStore = create<AppState>()(
               programa: { ...s.programa, terminado: true, fase: 'base' },
               ciclosPrograma: archivarCiclo(
                 s.ciclosPrograma, s.workouts, s.programa.inicio,
-                Math.min(finDeCiclo(s.programa.inicio), lunesDe(Date.now()) + 7 * 86400000),
+                Math.min(finDeCiclo(s.programa.inicio), lunesSiguiente(Date.now())),
               ),
               // Sin plan en curso, las rutinas vuelven a las series de base:
               // quedaban trabadas en Semanas 4-6.
@@ -649,12 +662,19 @@ export const useStore = create<AppState>()(
         // El set va en el próximo tick: durante la rehidratación el store
         // todavía se está armando y escribirle acá no persiste ni redibuja.
         queueMicrotask(() => {
-          useStore.setState((s) => ({
-            prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]),
-            // Una sola vez: si no, los bloques que el usuario sacó a mano volvían
-            // en cada arranque.
-            ...(s.planMileCompletado ? {} : { routines: s.routines.map(completarPlanMile), planMileCompletado: true }),
-          }))
+          // Un estado viejo o armado a mano puede tener algo raro adentro; si
+          // esto revienta nadie lo atrapa (está fuera del render) y la app no
+          // arranca nunca más. Mejor sin récords recalculados que sin app.
+          try {
+            useStore.setState((s) => ({
+              prs: computeRecords(s.workouts, [...s.exercises, ...s.customExercises]),
+              // Una sola vez: si no, los bloques que el usuario sacó a mano volvían
+              // en cada arranque.
+              ...(s.planMileCompletado ? {} : { routines: s.routines.map(completarPlanMile), planMileCompletado: true }),
+            }))
+          } catch (e) {
+            console.error('No se pudieron recalcular los récords al arrancar', e)
+          }
         })
       },
     }

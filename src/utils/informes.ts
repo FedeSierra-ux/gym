@@ -3,7 +3,7 @@ import type { FilaEjercicioCiclo } from './cycleReport'
 import { formatDuration } from './duration'
 import { formatKg } from './format'
 import type { Marca } from './periodSummary'
-import { finDeCiclo, semanaDelPrograma, SEMANAS_PROGRAMA, type CicloPrograma, type ProgramaEstado } from './program'
+import { finDeCiclo, semanaActual, SEMANAS_PROGRAMA, type CicloPrograma, type ProgramaEstado } from './program'
 import type { RecordKind } from './records'
 import { inicioDeFaltas, plannedDowSet } from './trainingDays'
 import { planDeSemana, type WeekOverrides, type WeekPlan } from './weekPlan'
@@ -104,9 +104,13 @@ export function planificadasPorSemana({ weekPlan, weekOverrides, weeklyGoal, rou
   const desde = inicioDeFaltas(inicioUso, workouts)
   const ids = routines.map((r) => r.id)
   return (lunes) => {
-    if (weeklyGoal != null) return desde != null && sumarDias(lunes, 7) <= desde ? 0 : weeklyGoal
-    const dows = plannedDowSet(planDeSemana(weekPlan, weekOverrides, lunes), ids)
-    return [...dows].filter((dow) => desde == null || sumarDias(lunes, dow) >= desde).length
+    const diasDesdeInicio = (dows: Iterable<number>) =>
+      [...dows].filter((dow) => desde == null || sumarDias(lunes, dow) >= desde).length
+    // Con meta, la semana en que se empezó a usar la app no puede pedir más
+    // entrenos que días le quedaban: instalada el sábado, la meta de 3 marcaba
+    // tres faltas imposibles.
+    if (weeklyGoal != null) return Math.min(weeklyGoal, diasDesdeInicio([0, 1, 2, 3, 4, 5, 6]))
+    return diasDesdeInicio(plannedDowSet(planDeSemana(weekPlan, weekOverrides, lunes), ids))
   }
 }
 
@@ -120,7 +124,7 @@ export interface CicloListado extends CicloPrograma {
 export function ciclosParaListar(programa: ProgramaEstado | null, ciclos: CicloPrograma[], nowTs: number): CicloListado[] {
   const out: CicloListado[] = []
   if (programa && !programa.terminado) {
-    const semana = semanaDelPrograma(programa.inicio, nowTs)
+    const semana = semanaActual(programa, nowTs)
     if (semana >= 1) {
       const enCurso = semana <= SEMANAS_PROGRAMA
       out.push({ inicio: programa.inicio, fin: finDeCiclo(programa.inicio), enCurso, semana: enCurso ? semana : null })

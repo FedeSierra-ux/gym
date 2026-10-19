@@ -1,6 +1,6 @@
 import type { BodyMeasure, Exercise, PR, Workout } from '../types'
 import type { CicloPrograma } from './program'
-import { lunesDe } from './program'
+import { finDeCiclo, lunesDe } from './program'
 import {
   compararPeriodos, entrenosEn, resumenPeriodo, type ComparacionPeriodos, type RecordDelPeriodo, type ResumenPeriodo,
 } from './periodSummary'
@@ -176,7 +176,9 @@ export function resumenAnual({
     mejorRachaSemanas = Math.max(mejorRachaSemanas, racha)
   }
 
-  const ciclosCompletados = ciclos.filter((c) => c.fin > desde && c.fin <= hasta).length
+  // Sólo los que llegaron al final de la semana 6: un plan reiniciado en la
+  // semana 4 queda archivado (para su informe) pero no es un ciclo completo.
+  const ciclosCompletados = ciclos.filter((c) => c.fin > desde && c.fin <= hasta && c.fin >= finDeCiclo(c.inicio)).length
 
   const medidas = measures.filter((m) => m.date >= desde && m.date < hasta).sort((a, b) => a.date - b.date)
   const peso = cambioMedida(medidas, 'weightKg')
